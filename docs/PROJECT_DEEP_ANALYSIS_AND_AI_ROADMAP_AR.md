@@ -63,21 +63,21 @@
 | Tenancy | مكتمل جزئياً بدرجة قوية | shared DB + `tenant_id` + global scope + DB constraints + tests. الخطر المتبقي هو مراجعة أي `withoutGlobalScope`. |
 | Billing | مكتمل جزئياً | plans/features/subscriptions/invoices/manual payments/lifecycle موجودة، لكن revenue ops وPDFs وledger/dunning التجاري غير مكتملة. |
 | Shipping | مكتمل جزئياً | wilayas/communes/rates/companies/shipments/returns موجودة، لكن integrations وtemplates وCOD reconciliation غير موجودة. |
-| Production Readiness | مكتمل جزئياً | Dockerfiles وenv production examples وrunbook وhealth/readiness foundation موجودة. يوجد CI workflow baseline في الجذر، لكنه غير مثبت كـ merge gate فعلي بعد. لا reverse proxy config، ولا backup/restore drill، ولا monitoring/error tracking. |
+| Production Readiness | مكتمل جزئياً | Dockerfiles وenv production examples وrunbook وhealth/readiness foundation وsecurity headers baseline موجودة. يوجد CI workflow baseline في الجذر، لكنه غير مثبت كـ merge gate فعلي بعد. لا reverse proxy config، ولا backup/restore drill، ولا monitoring/error tracking. |
 
 ### أكبر 5 مخاطر حالية
 
 1. `مطلوب P0`: Repository hygiene غير محسوم. الجذر ليس git repository، بينما `backend/` فقط يحتوي `.git`. توجد ملفات محلية مثل `backend/.env` و`storefront/.env.local` ويجب التأكد أنها غير ملتزمة أو ضمن أي حزمة تسليم.
 2. `مطلوب P0`: يوجد CI workflow baseline في `.github/workflows/quality.yml`، لكنه غير فعال عملياً كـ merge gate حتى تحسم استراتيجية المستودع ويعمل داخل GitHub.
-3. `مطلوب P0`: Production readiness غير مكتمل رغم بدء أساس Docker/runbook/CI/health baseline: لا image builds مثبتة في CI، لا backup/restore drill، لا monitoring/security headers.
+3. `مطلوب P0`: Production readiness غير مكتمل رغم بدء أساس Docker/runbook/CI/health/security baseline: لا image builds مثبتة في CI، لا backup/restore drill، لا monitoring/error tracking، ولا reverse proxy config.
 4. `مطلوب P0/P1`: بيئة Playwright غير موثوقة حالياً: `pnpm` غير متاح في PATH، وChromium فشل بسبب `libnspr4.so`.
-5. `مطلوب P1`: Checkout idempotency foundation أصبح موجوداً، لكن يحتاج cleanup job للـ expired records، tuning عملي للـ limits، وتشغيل فعلي داخل CI/observability قبل beta واسع.
+5. `مطلوب P1`: Checkout idempotency foundation والتنظيف المجدول أصبحا موجودين، لكن يحتاجان tuning عملي للـ limits، metrics، وتشغيلاً فعلياً داخل CI/observability قبل beta واسع.
 
 ### أفضل ترتيب منطقي للمرحلة القادمة
 
 1. إغلاق Repository Hygiene + Local Dev Reliability المتبقي.
 2. تفعيل CI Quality Gates على المستودع الحقيقي.
-3. إكمال Production Readiness Foundation المتبقية: backup/restore drill، monitoring، security headers، reverse proxy.
+3. إكمال Production Readiness Foundation المتبقية: backup/restore drill، monitoring/error tracking، reverse proxy، وتضييق CSP بعد التحقق.
 4. تثبيت Playwright/e2e أو smoke بديل في CI.
 5. Merchant Onboarding Foundation.
 6. Storefront UX/Performance Polish.
@@ -86,7 +86,7 @@
 
 ---
 
-## 2. نتائج التحقق الفعلية بتاريخ 2026-05-06
+## 2. نتائج التحقق الفعلية بتاريخ 2026-05-07
 
 ### Backend
 
@@ -102,7 +102,7 @@ php artisan migrate:status
 
 النتائج المثبتة:
 
-- `php artisan test`: `142 passed (572 assertions)` بعد تنفيذ checkout idempotency وhealth/readiness foundation.
+- `php artisan test`: `147 passed (600 assertions)` بعد تنفيذ checkout idempotency وhealth/readiness foundation وsecurity headers baseline وprune command.
 - `php artisan route:list`: `135 routes`.
 - Storefront API routes: `11 routes`.
 - migrations: آخر migration مضافة ومطبقة محلياً هي `2026_05_07_000000_create_checkout_idempotency_records_table`.
@@ -135,7 +135,7 @@ npm run build
 
 | التناقض أو الادعاء القديم | التصحيح الحالي | الحالة |
 |---|---|---|
-| backend tests مذكورة سابقاً مرة كـ `127 passed` ومرة كـ `135 passed`. | آخر تحقق فعلي: `142 passed (572 assertions)`. | مكتمل |
+| backend tests مذكورة سابقاً بأكثر من رقم قديم. | آخر تحقق فعلي: `147 passed (600 assertions)`. | مكتمل |
 | Storefront e2e مذكور كـ `6 passed`. | غير مثبت في 2026-05-06 بسبب `pnpm` و`libnspr4.so`. | غير مثبت / يحتاج تحقق |
 | Milestone shipping كان يقول إن seed البلديات جزئي. | الكود والاختبارات الحالية تثبت `58 active wilayas` و`1541 active communes`. | مكتمل كـ geography v1 |
 | السبرنت التالي كان Merchant Onboarding مباشرة. | يعاد ترتيبه بعد Repository Hygiene وProduction Readiness وCI activation وCheckout Idempotency. | مصحح |
@@ -149,13 +149,13 @@ npm run build
 | المجال | الحالة | الموجود فعلاً | الناقص | المخاطر | الأولوية | الخطوة التالية |
 |---|---|---|---|---|---|---|
 | Architecture | مكتمل جزئياً | Modular monolith، backend/storefront منفصلان، وثائق architecture موجودة. | ADRs غير موجودة، وحدود modules غير موثقة كقرارات رسمية. | قرارات كبيرة قد تتغير بدون سجل. | P1 | إضافة `docs/adr/` لاحقاً وتوثيق القرارات. |
-| Backend Laravel | مكتمل جزئياً | Laravel 13، Actions، Models، Policies، Resources، Tests. | بعض orchestration في controllers، لا health commands. | تضخم `app/` مع نمو المجالات. | P1 | نقل المنطق المتكرر إلى Actions/Support عند التطوير. |
+| Backend Laravel | مكتمل جزئياً | Laravel 13، Actions، Models، Policies، Resources، Tests، وأوامر/مسارات health readiness. | بعض orchestration في controllers. | تضخم `app/` مع نمو المجالات. | P1 | نقل المنطق المتكرر إلى Actions/Support عند التطوير. |
 | Filament Admin Panel | مكتمل جزئياً | admin resources للخطط، المتاجر، الاشتراكات، الفواتير، الدعم، audit. | system status، revenue dashboard، runbooks داخل اللوحة. | تشغيل المنصة يحتاج DB/manual inspection. | P1 | إضافة operational dashboards بعد Phase 0.5. |
 | Filament Vendor Panel | مكتمل جزئياً | catalog/orders/shipping/billing/support/settings/theme/resources، tenant switcher. | onboarding wizard، readiness checklist، UX يومية أعمق. | التاجر قد يحتاج مطور لإكمال الإعداد. | P1 | Merchant Onboarding بعد P0. |
 | Support Panel | مكتمل جزئياً | `/support` panel، support tickets، platform support role. | messages, attachments, SLA, macros. | الدعم لا يزال CRUD أكثر من helpdesk. | P1 | Support Center v2 لاحقاً. |
 | Tenancy | مكتمل جزئياً قوي | `CurrentTenant`, `TenantResolver`, middleware, `BelongsToTenant`, policies, DB constraints. | مراجعة دورية لكل `withoutGlobalScope`. | أي bypass خاطئ قد يسبب data leak. | P0 مستمر | قاعدة مراجعة إلزامية واختبارات isolation لأي مجال جديد. |
-| Database Schema | مكتمل جزئياً قوي | 43 migrations، ULIDs، tenant constraints، money minor units، JSONB، وجدول checkout idempotency records. | stock movements، variants، support messages، cleanup job للـ expired idempotency records. | schema الحالي قوي لكن ليس كاملاً تجارياً. | P1 | stock movements ثم variants. |
-| Checkout / Orders | مكتمل جزئياً أقوى | quick checkout، cart payload، totals server-side، inventory lock، order status transitions، `Idempotency-Key`، duplicate window، rate limits by IP/phone/store، abuse logging. | tuning للـ limits، cleanup job، phone confirmation workflow، real e2e للـ checkout. | spam checkout أقل خطراً لكنه يحتاج observability وتشغيل production. | P1 | cleanup/tuning ثم phone confirmation. |
+| Database Schema | مكتمل جزئياً قوي | 43 migrations، ULIDs، tenant constraints، money minor units، JSONB، وجدول checkout idempotency records مع prune command. | stock movements، variants، support messages. | schema الحالي قوي لكن ليس كاملاً تجارياً. | P1 | stock movements ثم variants. |
+| Checkout / Orders | مكتمل جزئياً أقوى | quick checkout، cart payload، totals server-side، inventory lock، order status transitions، `Idempotency-Key`، duplicate window، rate limits by IP/phone/store، abuse logging، وتنظيف سجلات idempotency المنتهية. | tuning للـ limits، phone confirmation workflow، real e2e للـ checkout، metrics. | spam checkout أقل خطراً لكنه يحتاج observability وتشغيل production. | P1 | tuning/metrics ثم phone confirmation. |
 | Payments | مكتمل جزئياً | COD، manual payment actions، refund/fail flows. | payment integrations، callbacks/webhooks، reconciliation. | future callbacks تحتاج signature/idempotency. | P1 | manual reconciliation ثم integrations. |
 | Subscriptions / Billing | مكتمل جزئياً | plans, features, subscriptions, invoices, manual subscription payments, lifecycle, grace/suspension. | invoice PDF، dunning كامل، revenue dashboard، tax/commercial invoice، ledger. | billing جيد داخلياً لا يكفي revenue operations. | P1 | Billing/revenue ops v2. |
 | Shipping / Delivery | مكتمل جزئياً | 58 wilayas، 1541 communes، rates، companies، shipments، failed reasons، returns. | provider integrations، rate templates، free shipping، COD collection reconciliation. | operational shipping complexity في الجزائر. | P1 | Shipping Engine v2. |
@@ -174,9 +174,9 @@ npm run build
 | Analytics | مكتمل جزئياً | vendor analytics tests/widgets موجودة. | conversion funnel، failed delivery analytics، revenue by wilaya. | قرارات تجارية بدون analytics كافية. | P1/P2 | analytics roadmap بعد onboarding. |
 | Audit Logs | مكتمل جزئياً قوي | audit logs، policies immutable تقريباً، tests. | coverage لكل الأحداث المستقبلية، export controls. | أي event مالي جديد يحتاج audit. | P0 مستمر | تحديث audit عند كل workflow حساس. |
 | Notifications | مكتمل جزئياً | subscription notifications وtenant invitations موجودة. | order/customer/vendor/support notifications الشاملة. | النظام لا يزال صامتاً في عمليات مهمة. | P1 | Notification domain events. |
-| Security | مكتمل جزئياً | policies، tenant isolation، throttles عامة، invitation hashing مثبت بالاختبارات، audit. | 2FA، CSP، session hardening، secrets handling، vulnerability scanning. | لا يصلح production بدون hardening. | P0 | Security roadmap أدناه. |
-| Testing | مكتمل جزئياً قوي للbackend | 142 tests، 572 assertions، 24 feature test files، checkout idempotency tests، system health tests، Playwright specs موجودة، وCI workflow baseline موجود. | e2e غير قابل للتشغيل محلياً حالياً، CI غير مثبت كـ gate فعلي، security/production tests ناقصة. | regression risk مع AI agents. | P0 | تفعيل CI Quality Gates وإصلاح e2e env. |
-| DevOps | مكتمل جزئياً | docker-compose محلي، Dockerfiles أولية، env production examples، production runbook، health/readiness foundation، CI workflow baseline. | CI غير مفعل كـ merge gate، reverse proxy config، backups، monitoring. | production غير جاهز. | P0 | إكمال Production Readiness Foundation وتفعيل CI. |
+| Security | مكتمل جزئياً | policies، tenant isolation، throttles عامة، invitation hashing مثبت بالاختبارات، audit، security headers baseline في Laravel وNext.js. | 2FA، CSP production tightening، session hardening، vulnerability scanning، secret rotation workflow. | لا يصلح production بدون hardening. | P0 | Security roadmap أدناه. |
+| Testing | مكتمل جزئياً قوي للbackend | 147 tests، 600 assertions، 26 feature test files، checkout idempotency/prune tests، system health tests، security headers tests، Playwright specs موجودة، وCI workflow baseline موجود. | e2e غير قابل للتشغيل محلياً حالياً، CI غير مثبت كـ gate فعلي، security/production tests المتقدمة ناقصة. | regression risk مع AI agents. | P0 | تفعيل CI Quality Gates وإصلاح e2e env. |
+| DevOps | مكتمل جزئياً | docker-compose محلي، Dockerfiles أولية، env production examples، production runbook، health/readiness foundation، security headers baseline، CI workflow baseline. | CI غير مفعل كـ merge gate، reverse proxy config، backups، monitoring. | production غير جاهز. | P0 | إكمال Production Readiness Foundation وتفعيل CI. |
 | Documentation | مكتمل جزئياً | architecture/security/testing/tenancy/storefront docs موجودة. | runbooks production، clean clone setup، ADRs. | docs هندسية جيدة لكن التشغيل ناقص. | P0/P1 | Phase 0.5 ثم ADRs. |
 | Developer Experience | مكتمل جزئياً | composer/npm scripts، docs workflow. | pnpm availability، clean setup verification، root repo strategy. | setup يحتاج تخمين. | P0 | Local Dev Reliability. |
 | AI/Codex Workflow | مكتمل جزئياً | roadmap وworkflow docs. | quality gates وADRs وقواعد صارمة مرتبطة بـ CI. | AI قد يضيف تغييرات واسعة بدون حواجز. | P0/P1 | CI + Codex rules. |
@@ -282,13 +282,13 @@ npm run build
 
 الحالة: محدث في 2026-05-07
 
-تم بدء Repository Hygiene + Local Dev Reliability وProduction Readiness Foundation وCI baseline وCheckout Idempotency foundation وHealth/Readiness foundation في 2026-05-07. لم تغلق مرحلة P0 بالكامل لأن استراتيجية المستودع، clean-clone rehearsal، CI الفعلي، backup/restore، وPlaywright/e2e لا تزال تحتاج إغلاقاً عملياً.
+تم بدء Repository Hygiene + Local Dev Reliability وProduction Readiness Foundation وCI baseline وCheckout Idempotency foundation وHealth/Readiness foundation وSecurity Headers baseline في 2026-05-07. لم تغلق مرحلة P0 بالكامل لأن استراتيجية المستودع، clean-clone rehearsal، CI الفعلي، backup/restore، وPlaywright/e2e لا تزال تحتاج إغلاقاً عملياً.
 
 الترتيب المقترح:
 
 1. `P0` إغلاق المتبقي من Repository Hygiene + Local Dev Reliability.
 2. `P0` CI Quality Gates activation على المستودع الحقيقي.
-3. `P0` Production Readiness Foundation v1 المتبقية: backup/restore + monitoring/security headers + reverse proxy.
+3. `P0` Production Readiness Foundation v1 المتبقية: backup/restore + monitoring/error tracking + reverse proxy + CSP tightening.
 4. `P0/P1` Playwright/e2e reliability أو smoke بديل في CI.
 5. `P1` Merchant Onboarding Foundation.
 6. `P1` Storefront UX/Performance Polish.
@@ -327,20 +327,23 @@ npm run build
 - duplicate checkout window عند غياب header يعيد الطلب الموجود داخل نافذة قصيرة بدلاً من إنشاء duplicate واضح.
 - rate limiting مخصص حسب IP وphone وstore عبر `CheckoutAbuseGuard`.
 - logging لمحاولات rate-limit/idempotency conflict/duplicate replay مع hashes بدلاً من تسريب phone/IP الخام.
+- أمر `checkout-idempotency:prune` موجود مع خيار `--dry-run`.
+- الـ scheduler يشغل `checkout-idempotency:prune` يومياً عند 03:00.
 - الاختبارات تغطي:
   - عدم إنشاء طلبين لنفس key.
   - conflict عند payload مختلف.
   - tenant/store isolation لهذه الطبقة.
   - duplicate order window.
   - استمرار totals/inventory داخل Laravel.
+  - حذف السجلات المنتهية وترك السجلات النشطة.
+  - dry-run بدون حذف.
 
 الناقص:
 
-1. `P1`: job أو command لتنظيف `checkout_idempotency_records` المنتهية.
-2. `P1`: tuning عملي لقيم rate limits بعد مراقبة traffic حقيقي أو staging load.
-3. `P1`: dashboard/metrics لمحاولات checkout المرفوضة أو المعادة.
-4. `P1`: real integration e2e يثبت أن Next.js يرسل header وأن Laravel يعيد نفس order عند replay.
-5. `P1`: phone confirmation أو OTP اختياري للمتاجر المعرضة للسبام.
+1. `P1`: tuning عملي لقيم rate limits بعد مراقبة traffic حقيقي أو staging load.
+2. `P1`: dashboard/metrics لمحاولات checkout المرفوضة أو المعادة.
+3. `P1`: real integration e2e يثبت أن Next.js يرسل header وأن Laravel يعيد نفس order عند replay.
+4. `P1`: phone confirmation أو OTP اختياري للمتاجر المعرضة للسبام.
 
 ملاحظة تنفيذية: هذه المرحلة يجب أن تسبق onboarding العام لأن onboarding سيزيد عدد المتاجر العامة واحتمالية إساءة استخدام checkout.
 
@@ -368,11 +371,13 @@ npm run build
 - `php artisan system:health --scope=live|ready --format=json` موجود.
 - backend Docker `HEALTHCHECK` موجود للـ liveness.
 - CI baseline يشغل readiness smoke بعد migrations.
+- security headers baseline موجود عبر middleware في Laravel و`headers()` في Next.js.
+- أمر `checkout-idempotency:prune` موجود ومجدول يومياً لصيانة جدول idempotency.
 
 غير موجود أو غير مثبت:
 
 - reverse proxy config فعلي.
-- environment separation موثق:
+- environment separation موثق أولياً في runbook، لكنه غير مثبت بتشغيل staging/production فعلي:
   - local
   - testing
   - staging
@@ -403,7 +408,7 @@ npm run build
    - Next storefront
    - static/storage assets
 4. `مكتمل`: `.env.production.example` بدون أسرار للbackend والstorefront.
-5. `مطلوب P0`: ضمان `APP_DEBUG=false` في production docs.
+5. `مكتمل جزئياً`: `APP_DEBUG=false` موثق في production env examples، ويتبقى enforcement/check فعلي في deployment.
 6. `مكتمل جزئياً`: health endpoint/command يغطي:
    - DB
    - Redis
@@ -423,6 +428,7 @@ npm run build
     - maintenance mode when needed
     - rollback limits
 14. `مطلوب P1`: error tracking وstructured logs.
+15. `مكتمل جزئياً`: security headers baseline موجود، ويتبقى تضييق CSP والتحقق عبر browser/e2e قبل production.
 
 ### منجزات 2026-05-07
 
@@ -438,6 +444,8 @@ npm run build
 - إضافة أمر `php artisan system:health --scope=live|ready --format=json`.
 - إضافة backend Docker `HEALTHCHECK`.
 - إضافة readiness smoke إلى CI baseline.
+- إضافة security headers baseline للـ backend والـ storefront.
+- إضافة `checkout-idempotency:prune` مع `--dry-run` وجدولته يومياً.
 
 Definition of Done:
 
@@ -523,15 +531,22 @@ Jobs منفصلة:
 - domain verification tokens وحالات domain.
 - audit logs وسياسة immutable تقريباً.
 - database constraints لعلاقات tenant حساسة.
+- security headers baseline:
+  - `X-Content-Type-Options`
+  - `X-Frame-Options`
+  - `Referrer-Policy`
+  - `Permissions-Policy`
+  - CSP واسع متوافق حالياً مع Filament/Livewire/storefront
+  - HSTS عند HTTPS
 
 ### ناقص
 
 - secrets handling رسمي.
 - `APP_DEBUG=false` production enforcement docs.
-- CSP/security headers.
+- CSP production tightening بعد browser/e2e validation.
 - 2FA للـ super admin.
 - 2FA للـ tenant owner.
-- rate limits أكثر تفصيلاً by phone/store/IP.
+- rate limits operational tuning by phone/store/IP.
 - admin session security/device management.
 - dependency vulnerability scanning.
 - log redaction policy.
@@ -543,19 +558,19 @@ Jobs منفصلة:
 ### مطلوب قبل beta
 
 1. Phase 0.5 secrets/repository hygiene.
-2. checkout idempotency cleanup/tuning بعد تنفيذ foundation.
+2. checkout idempotency tuning وmetrics بعد تنفيذ foundation والتنظيف المجدول.
 3. 2FA للـ super admin.
-4. security headers baseline.
-5. review شامل لـ `withoutGlobalScope('current_tenant')`.
-6. مراقبة rate limits by IP/phone/store للـ checkout وضبطها بعد staging.
-7. log redaction للهواتف والعناوين عند الحاجة.
+4. review شامل لـ `withoutGlobalScope('current_tenant')`.
+5. مراقبة rate limits by IP/phone/store للـ checkout وضبطها بعد staging.
+6. log redaction للهواتف والعناوين عند الحاجة.
+7. تثبيت security headers smoke في CI عند تفعيل workflow.
 
 ### مطلوب قبل production
 
 1. 2FA للـ tenant owner أو enforceable policy.
 2. backup encryption وrestore drill.
 3. vulnerability scanning في CI.
-4. production CSP مضبوط مع Filament وstorefront.
+4. production CSP مضبوط ومختبر مع Filament وstorefront.
 5. signed webhooks/payment callbacks عند إضافة integrations.
 6. file upload MIME/size/visibility validation.
 7. session/device management للحسابات الحساسة.
@@ -747,8 +762,8 @@ Model::query()
 ### Backend
 
 - الإطار: Pest 4 فوق PHPUnit 12.
-- آخر تحقق: `142 passed (572 assertions)`.
-- Feature test files المثبتة تقريباً: `23`.
+- آخر تحقق: `147 passed (600 assertions)`.
+- Feature test files المثبتة: `26`.
 - المجالات المغطاة:
   - tenancy
   - tenant switcher
@@ -765,6 +780,8 @@ Model::query()
   - support
   - audit
   - analytics
+  - system health/readiness
+  - security headers
 
 ### Storefront
 
@@ -784,14 +801,16 @@ Model::query()
 
 1. `P0`: إصلاح Playwright dependencies وpnpm.
 2. `P0`: CI يشغل backend + storefront build.
-3. `مكتمل جزئياً`: checkout idempotency tests الأساسية موجودة داخل `QuickCheckoutTest`.
+3. `مكتمل جزئياً`: checkout idempotency tests الأساسية موجودة داخل `QuickCheckoutTest`، واختبارات prune موجودة داخل `CheckoutIdempotencyPruneTest`.
 4. `P1`: security tests للـ 2FA/session/rate limits عند إضافتها وتوسيع abuse analytics.
-5. `P1`: production readiness smoke tests:
+5. `مكتمل جزئياً`: production readiness smoke tests الأساسية موجودة:
    - health endpoint
    - readiness endpoint
-   - queue worker command
-6. `P1`: migration smoke في CI.
-7. `تشغيلي`: backup/restore drill ليس test آلياً بالضرورة لكنه مطلوب قبل production.
+   - `system:health` command
+   - security headers smoke
+6. `P1`: queue worker/scheduler smoke أو runbook verification.
+7. `P1`: migration smoke في CI.
+8. `تشغيلي`: backup/restore drill ليس test آلياً بالضرورة لكنه مطلوب قبل production.
 
 ---
 
@@ -849,14 +868,14 @@ ADRs المطلوبة:
 | Backend | 8.3 | domains واسعة واختبارات قوية. |
 | Tenancy | 8.5 | طبقات متعددة وDB constraints، مع خطر `withoutGlobalScope`. |
 | Database | 8.6 | schema قوي وقيود جيدة، وأضيفت idempotency records، لكن variants/stock movements ناقصة. |
-| Checkout | 8.5 | server-side totals وtransactions وidempotency وduplicate window وrate limits موجودة؛ ينقص cleanup/tuning/phone confirmation. |
+| Checkout | 8.6 | server-side totals وtransactions وidempotency وduplicate window وrate limits والتنظيف المجدول موجودة؛ ينقص tuning/metrics/phone confirmation. |
 | Storefront | 7.2 | أساس جيد ويرسل Idempotency-Key للcheckout، لكن caching/e2e reliability/image strategy ناقصة. |
-| Security | 6.6 | isolation وcheckout abuse baseline جيدان، production hardening ناقص. |
-| Testing | 8.2 | backend قوي وcheckout idempotency/system health tests مضافة وCI workflow baseline موجود، لكن e2e غير مثبت وCI لم يعمل كـ gate فعلي بعد. |
-| DevOps | 5.2 | docker-compose محلي وDockerfiles/runbook/health readiness/CI baseline موجودة، لكن لا monitoring/backup ولا CI مثبت فعلياً. |
+| Security | 6.9 | isolation وcheckout abuse وsecurity headers baseline موجودة، لكن 2FA/session/vulnerability scanning/CSP tightening ناقصة. |
+| Testing | 8.4 | backend قوي وcheckout idempotency/prune/system health/security headers tests مضافة وCI workflow baseline موجود، لكن e2e غير مثبت وCI لم يعمل كـ gate فعلي بعد. |
+| DevOps | 5.5 | docker-compose محلي وDockerfiles/runbook/health readiness/security headers/scheduler maintenance/CI baseline موجودة، لكن لا monitoring/backup ولا CI مثبت فعلياً. |
 | Documentation | 7.2 | docs هندسية جيدة، runbooks وADRs ناقصة. |
 | Product Readiness | 5.8 | foundation جيد، onboarding وUX التجاري ناقصان. |
-| Production Readiness | 4.7 | Dockerfiles وenv production examples وrunbook وhealth/readiness وCI baseline موجودة، لكن deployment/backup/monitoring غير مكتملة. |
+| Production Readiness | 5.0 | Dockerfiles وenv production examples وrunbook وhealth/readiness/security headers وCI baseline موجودة، لكن deployment/backup/monitoring غير مكتملة. |
 | AI-readiness | 7.0 | roadmap/workflow وCI baseline جيدة، لكن repo hygiene وgates الفعلية غير مكتملة. |
 
 ---
@@ -868,8 +887,8 @@ ADRs المطلوبة:
 1. Phase 0.5 Repository Hygiene.
 2. Production Readiness Foundation v1.
 3. CI Quality Gates activation.
-4. Checkout Idempotency cleanup/tuning وليس foundation.
-5. Security baseline: secrets, APP_DEBUG, headers, super admin 2FA.
+4. Checkout Idempotency tuning/metrics وليس foundation أو cleanup command.
+5. Security baseline: secrets, APP_DEBUG enforcement, CSP tightening, super admin 2FA.
 
 ### P1 بعد P0
 
@@ -920,7 +939,7 @@ ADRs المطلوبة:
 ### Checkout
 
 - `مكتمل جزئياً قوي`: idempotency records وabuse protection foundation.
-- `P1`: cleanup job للـ expired idempotency records.
+- `مكتمل`: command مجدول لتنظيف expired idempotency records، ويتبقى metrics/tuning.
 - `P1`: rate-limit tuning وabuse dashboard.
 - `P1`: phone confirmation workflow.
 - `P2`: abandoned cart.
@@ -1059,13 +1078,24 @@ npx --yes pnpm@10.33.2 exec playwright test
 - إضافة جدول `checkout_idempotency_records` وموديل/خدمات idempotency وabuse guard.
 - تمرير `Idempotency-Key` من Storefront Next.js إلى Laravel checkout.
 - إضافة اختبارات عدم إنشاء طلبين لنفس key، conflict عند payload مختلف، tenant/store isolation، وduplicate window.
-- تحديث آخر تحقق backend إلى `142 passed (572 assertions)`.
+- تسجيل تحقق وسيط بعد checkout idempotency قبل إضافات health/security اللاحقة.
 - تحديث تقييم Database وCheckout وStorefront وSecurity وTesting بعد تنفيذ checkout idempotency.
 - تنفيذ Health/Readiness Foundation للbackend.
 - إضافة `SystemHealthChecker` وendpoints للـ liveness/readiness.
 - إضافة أمر `system:health` بصيغة JSON/table.
 - إضافة readiness smoke إلى CI baseline وbackend Docker healthcheck.
 - تحديث تقييم DevOps وProduction Readiness بعد إضافة health/readiness foundation.
+- تنفيذ Security Headers baseline للbackend والstorefront.
+- إضافة middleware للـ Laravel يضبط headers الأساسية وHSTS عند HTTPS.
+- إضافة headers في `storefront/next.config.ts`.
+- إضافة اختبارات security headers smoke.
+- تسجيل تحقق backend بعد security headers baseline قبل إضافة prune command.
+- تحديث تقييم Security وTesting وDevOps وProduction Readiness بعد security headers baseline.
+- تنفيذ تنظيف سجلات checkout idempotency المنتهية عبر `checkout-idempotency:prune`.
+- جدولة أمر التنظيف يومياً عند 03:00.
+- إضافة اختبارات prune وdry-run.
+- تحديث آخر تحقق backend إلى `147 passed (600 assertions)`.
+- تحديث تقييم Checkout وTesting وDevOps بعد إغلاق cleanup command.
 
 ### 2026-05-06
 

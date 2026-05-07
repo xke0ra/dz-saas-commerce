@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AddSecurityHeaders;
 use App\Http\Middleware\ResolveTenantFromRequest;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
@@ -15,8 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command('billing:process')->dailyAt('02:00')->withoutOverlapping();
+        $schedule->command('checkout-idempotency:prune')->dailyAt('03:00')->withoutOverlapping();
     })
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->append(AddSecurityHeaders::class);
+
         $middleware->alias([
             'tenant.resolve' => ResolveTenantFromRequest::class,
         ]);

@@ -25,7 +25,7 @@ Frontend:
 
 Latest recorded verification:
 
-- Backend: `142 passed (572 assertions)`
+- Backend: `147 passed (600 assertions)`
 - Storefront build: passed
 - Storefront typecheck: passed
 - Storefront Playwright e2e: not currently verified in the 2026-05-06/2026-05-07 WSL environment. The test suite exists, but Chromium failed before executing scenarios because `libnspr4.so` was missing, and the configured `pnpm` command was not available in PATH.
@@ -69,6 +69,21 @@ php artisan system:health --scope=ready --format=json
 php artisan test tests/Feature/System/SystemHealthTest.php
 ```
 
+Run scheduled maintenance checks when scheduler commands change:
+
+```bash
+cd backend
+php artisan schedule:list
+php artisan test tests/Feature/Checkout/CheckoutIdempotencyPruneTest.php
+```
+
+Run browser/security header smoke tests when headers or middleware change:
+
+```bash
+cd backend
+php artisan test tests/Feature/Security/SecurityHeadersTest.php
+```
+
 Run migrations when database structure changes:
 
 ```bash
@@ -107,6 +122,7 @@ P0 areas:
 - authorization and policies
 - checkout totals
 - checkout idempotency and duplicate-window behavior
+- checkout idempotency pruning when retention behavior changes
 - checkout abuse limits by IP/phone/store when changed
 - inventory reservation and release
 - order status transitions
@@ -117,6 +133,7 @@ P0 areas:
 - public storefront availability rules
 - support access boundaries
 - system liveness/readiness endpoints and `system:health` command
+- security headers and CSP/HSTS smoke behavior when changed
 
 P1 areas:
 

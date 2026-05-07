@@ -20,6 +20,9 @@ Implemented in this foundation pass:
 - backend liveness/readiness endpoints
 - `php artisan system:health`
 - backend Docker `HEALTHCHECK` using liveness scope
+- backend security headers middleware
+- storefront security headers through Next.js `headers()`
+- scheduled checkout idempotency pruning command
 
 Still required:
 
@@ -30,6 +33,7 @@ Still required:
 - backup and restore drill
 - queue and scheduler process supervision
 - error tracking integration
+- CSP tightening after browser/e2e validation
 
 ## Image Build Commands
 
@@ -113,6 +117,11 @@ Scheduler process:
 ```bash
 php artisan schedule:work
 ```
+
+Scheduled commands currently registered:
+
+- `billing:process` daily at 02:00
+- `checkout-idempotency:prune` daily at 03:00
 
 Deployment/migration operator command:
 
@@ -262,7 +271,8 @@ Required but not implemented:
   - `X-Forwarded-For`
 - Body size limits for uploads.
 - Static asset caching.
-- Security headers.
+- Preserve or intentionally override application security headers.
+- Add edge-only headers only when they do not conflict with Laravel/Next.js behavior.
 
 ## Minimum Beta Gate
 

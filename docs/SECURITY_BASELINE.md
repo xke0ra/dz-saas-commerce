@@ -27,6 +27,8 @@ Currently present:
 - checkout idempotency records by tenant/store/key/request hash
 - checkout duplicate-window replay for repeated submissions without an idempotency key
 - public storefront throttling
+- backend security headers middleware
+- storefront security headers through Next.js `headers()`
 - cross-tenant database constraints for important relationships
 - audit log domain foundation
 
@@ -34,7 +36,7 @@ Current important gaps:
 
 - no documented 2FA setup
 - no full session/device management
-- no documented CSP/security headers
+- CSP baseline is intentionally broad for Filament/Livewire/storefront compatibility and still needs production tightening after browser/e2e validation
 - no documented production backup and restore test
 - no completed secrets rotation procedure
 - no formal vulnerability review workflow
@@ -108,6 +110,8 @@ Checkout idempotency:
 - Reusing the same key with the same payload returns the existing order.
 - Reusing the same key with a different payload returns conflict.
 - Logs use phone/IP hashes for suspicious checkout events.
+- Expired checkout idempotency records can be pruned with `php artisan checkout-idempotency:prune`.
+- The scheduler runs `checkout-idempotency:prune` daily at 03:00.
 
 These limits should be revisited before production using real traffic expectations.
 
@@ -128,7 +132,6 @@ Checkout must run critical changes in a transaction and lock inventory/product r
 
 Before broad beta, add:
 
-- cleanup for expired checkout idempotency records
 - operational metrics for rate-limited checkout attempts
 - real integration e2e for idempotent storefront checkout replay
 
@@ -203,16 +206,26 @@ Audit logs should be append-oriented. Mutation/deletion must be strongly restric
 
 ## Headers And Browser Security
 
-Before production, add and verify:
+Implemented baseline:
+
+- Laravel global middleware adds:
+  - `X-Content-Type-Options: nosniff`
+  - `X-Frame-Options: SAMEORIGIN`
+  - `Referrer-Policy: strict-origin-when-cross-origin`
+  - `Permissions-Policy` denying camera, microphone, geolocation, and payment
+  - a broad CSP compatible with the current Filament/Livewire/storefront stack
+  - HSTS only for HTTPS requests
+- Next.js storefront applies the same baseline headers through `next.config.ts`.
+- `backend/tests/Feature/Security/SecurityHeadersTest.php` covers the backend smoke behavior.
+
+Before production, tighten and verify:
 
 - HTTPS-only cookies
 - secure session settings
 - CSRF protection on dashboard forms
-- CSP suitable for Filament and storefront
-- `X-Frame-Options` or `frame-ancestors`
-- `X-Content-Type-Options`
-- `Referrer-Policy`
-- HSTS in production
+- CSP with fewer broad allowances after browser/e2e validation
+- reverse proxy behavior does not remove or contradict application headers
+- HSTS behavior behind the real TLS/reverse proxy layer
 
 ## File Uploads
 

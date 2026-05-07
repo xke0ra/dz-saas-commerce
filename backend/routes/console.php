@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Billing\ProcessBillingLifecycle;
+use App\Actions\Checkout\PruneCheckoutIdempotencyRecords;
 use App\Jobs\Billing\ProcessBillingLifecycleJob;
 use App\Support\System\SystemHealthChecker;
 use Illuminate\Foundation\Inspiring;
@@ -27,6 +28,22 @@ Artisan::command('billing:process {--sync : Run lifecycle processing immediately
 
     return Command::SUCCESS;
 })->purpose('Process SaaS billing renewal invoices, reminders, grace periods, overdue invoices, and subscription suspensions');
+
+Artisan::command('checkout-idempotency:prune {--dry-run : Count expired records without deleting them}', function (): int {
+    $pruner = app(PruneCheckoutIdempotencyRecords::class);
+
+    if ($this->option('dry-run')) {
+        $count = $pruner->count();
+        $this->info("Found {$count} expired checkout idempotency record(s).");
+
+        return Command::SUCCESS;
+    }
+
+    $deleted = $pruner->handle();
+    $this->info("Pruned {$deleted} expired checkout idempotency record(s).");
+
+    return Command::SUCCESS;
+})->purpose('Prune expired checkout idempotency records');
 
 Artisan::command('system:health {--scope=ready : Health scope: live or ready} {--format=table : Output format: table or json}', function (): int {
     $scope = strtolower((string) $this->option('scope'));
