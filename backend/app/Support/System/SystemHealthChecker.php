@@ -31,6 +31,7 @@ class SystemHealthChecker
     public function ready(): array
     {
         return $this->report('ready', [
+            $this->check('environment', fn (): array => $this->environmentCheck()),
             $this->check('database', fn (): array => $this->databaseCheck()),
             $this->check('cache', fn (): array => $this->cacheCheck()),
             $this->check('queue', fn (): array => $this->queueCheck()),
@@ -38,6 +39,38 @@ class SystemHealthChecker
             $this->check('redis', fn (): array => $this->redisCheck()),
             $this->check('search', fn (): array => $this->searchCheck()),
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function environmentCheck(): array
+    {
+        if ((string) config('app.env') !== 'production') {
+            return [
+                'status' => 'ok',
+                'message' => 'Production-only runtime safeguards are not required for this environment.',
+            ];
+        }
+
+        if ((bool) config('app.debug')) {
+            return [
+                'status' => 'failed',
+                'message' => 'APP_DEBUG must be false in production.',
+            ];
+        }
+
+        if (blank(config('app.key'))) {
+            return [
+                'status' => 'failed',
+                'message' => 'APP_KEY must be set in production.',
+            ];
+        }
+
+        return [
+            'status' => 'ok',
+            'message' => 'Production runtime safeguards passed.',
+        ];
     }
 
     /**

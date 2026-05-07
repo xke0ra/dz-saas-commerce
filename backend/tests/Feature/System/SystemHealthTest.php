@@ -23,7 +23,8 @@ it('reports readiness from the public health endpoint', function (): void {
 
     $checks = collect($response->json('checks'))->pluck('status', 'name');
 
-    expect($checks->get('database'))->toBe('ok')
+    expect($checks->get('environment'))->toBe('ok')
+        ->and($checks->get('database'))->toBe('ok')
         ->and($checks->get('cache'))->toBe('ok')
         ->and($checks->get('queue'))->toBe('ok')
         ->and($checks->get('storage'))->toBe('ok')
@@ -42,5 +43,41 @@ it('runs system health as a json artisan smoke command', function (): void {
     expect($exitCode)->toBe(0)
         ->and($payload['status'])->toBe('ok')
         ->and($payload['scope'])->toBe('ready')
-        ->and(collect($payload['checks'])->pluck('name')->all())->toContain('database', 'cache', 'queue', 'storage');
+        ->and(collect($payload['checks'])->pluck('name')->all())->toContain('environment', 'database', 'cache', 'queue', 'storage');
+});
+
+it('fails readiness when production debug mode is enabled', function (): void {
+    config([
+        'app.env' => 'production',
+        'app.debug' => true,
+        'app.key' => 'base64:test-production-key',
+    ]);
+
+    $response = $this->getJson('/api/system/health/ready');
+
+    $response
+        ->assertStatus(503)
+        ->assertJsonPath('status', 'failed');
+
+    $checks = collect($response->json('checks'))->pluck('status', 'name');
+
+    expect($checks->get('environment'))->toBe('failed');
+});
+
+it('fails readiness when the production app key is missing', function (): void {
+    config([
+        'app.env' => 'production',
+        'app.debug' => false,
+        'app.key' => null,
+    ]);
+
+    $response = $this->getJson('/api/system/health/ready');
+
+    $response
+        ->assertStatus(503)
+        ->assertJsonPath('status', 'failed');
+
+    $checks = collect($response->json('checks'))->pluck('status', 'name');
+
+    expect($checks->get('environment'))->toBe('failed');
 });

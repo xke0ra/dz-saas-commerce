@@ -20,6 +20,7 @@ Implemented in this foundation pass:
 - backend liveness/readiness endpoints
 - `php artisan system:health`
 - backend Docker `HEALTHCHECK` using liveness scope
+- production runtime safeguard checks for `APP_DEBUG` and `APP_KEY`
 - backend security headers middleware
 - storefront security headers through Next.js `headers()`
 - scheduled checkout idempotency pruning command
@@ -143,6 +144,7 @@ Implemented:
 
 Readiness checks:
 
+  - production runtime safeguards
   - PostgreSQL connectivity
   - Redis connectivity
   - queue backend connectivity
@@ -159,6 +161,7 @@ Notes:
 
 - liveness proves the Laravel process can boot.
 - readiness proves required runtime dependencies are reachable.
+- in production, readiness fails if `APP_DEBUG=true` or `APP_KEY` is missing.
 - Redis and Meilisearch are skipped when the current configuration does not require them.
 - The endpoints intentionally return operational status only, not secrets or connection strings.
 
@@ -279,7 +282,7 @@ Required but not implemented:
 Before beta:
 
 - Docker images build or at least pass build-plan checks in CI, then build/push when registry is selected.
-- `APP_DEBUG=false` verified for staging/production.
+- `APP_DEBUG=false` and `APP_KEY` verified through readiness in staging/production.
 - Queue worker and scheduler supervised.
 - Basic health/readiness checks exist.
 - Backup and restore documented.
