@@ -89,8 +89,10 @@ Production container foundation now exists as a first baseline:
 - `storefront/.env.production.example`
 - `docs/PRODUCTION_READINESS.md`
 - `docs/BACKUP_RESTORE_RUNBOOK.md`
+- `docs/REVERSE_PROXY_RUNBOOK.md`
+- `deploy/reverse-proxy/nginx-edge.conf.example`
 
-This does not yet make production readiness complete. Reverse proxy configuration, CI image builds, automated backups, restore drill execution, process supervision, and monitoring remain required before beta/production. Health/readiness and backup/restore documentation now exist as baselines.
+This does not yet make production readiness complete. Reverse proxy staging deployment, CI image builds, automated backups, restore drill execution, process supervision, and monitoring remain required before beta/production. Health/readiness, backup/restore documentation, and reverse proxy strategy now exist as baselines.
 
 ## Backend Domain Layout
 
@@ -248,6 +250,7 @@ Before commercial launch, the architecture must include:
 - 2FA for super admins and tenant owners
 - stricter rate limits for sensitive actions
 - security headers baseline and production CSP tightening
+- trusted proxy configuration for forwarded HTTPS/IP headers
 - tested backup and restore process; runbook exists but drill execution is still required
 - explicit audit trails for financial, tenant, order, and staff actions
 - least-privilege production credentials

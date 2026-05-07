@@ -63,13 +63,13 @@
 | Tenancy | مكتمل جزئياً بدرجة قوية | shared DB + `tenant_id` + global scope + DB constraints + tests. الخطر المتبقي هو مراجعة أي `withoutGlobalScope`. |
 | Billing | مكتمل جزئياً | plans/features/subscriptions/invoices/manual payments/lifecycle موجودة، لكن revenue ops وPDFs وledger/dunning التجاري غير مكتملة. |
 | Shipping | مكتمل جزئياً | wilayas/communes/rates/companies/shipments/returns موجودة، لكن integrations وtemplates وCOD reconciliation غير موجودة. |
-| Production Readiness | مكتمل جزئياً | Dockerfiles وenv production examples وrunbook وhealth/readiness foundation وsecurity headers baseline وفحص production runtime safeguards وbackup/restore runbook موجودة. يوجد CI workflow baseline في الجذر، لكنه غير مثبت كـ merge gate فعلي بعد. لا reverse proxy config، ولا restore drill منفذ، ولا monitoring/error tracking. |
+| Production Readiness | مكتمل جزئياً | Dockerfiles وenv production examples وrunbooks وhealth/readiness foundation وsecurity headers baseline وفحص production runtime safeguards وbackup/restore runbook وreverse proxy baseline موجودة. يوجد CI workflow baseline في الجذر، لكنه غير مثبت كـ merge gate فعلي بعد. لا staging proxy deployment، ولا restore drill منفذ، ولا monitoring/error tracking. |
 
 ### أكبر 5 مخاطر حالية
 
 1. `مطلوب P0`: Repository hygiene غير محسوم. الجذر ليس git repository، بينما `backend/` فقط يحتوي `.git`. توجد ملفات محلية مثل `backend/.env` و`storefront/.env.local` ويجب التأكد أنها غير ملتزمة أو ضمن أي حزمة تسليم.
 2. `مطلوب P0`: يوجد CI workflow baseline في `.github/workflows/quality.yml`، لكنه غير فعال عملياً كـ merge gate حتى تحسم استراتيجية المستودع ويعمل داخل GitHub.
-3. `مطلوب P0`: Production readiness غير مكتمل رغم بدء أساس Docker/runbook/CI/health/security/backup baseline: لا image builds مثبتة في CI، لا restore drill منفذ، لا monitoring/error tracking، ولا reverse proxy config.
+3. `مطلوب P0`: Production readiness غير مكتمل رغم بدء أساس Docker/runbook/CI/health/security/backup/proxy baseline: لا image builds مثبتة في CI، لا restore drill منفذ، لا monitoring/error tracking، ولا reverse proxy مثبت في staging.
 4. `مطلوب P0/P1`: بيئة Playwright غير موثوقة حالياً: `pnpm` غير متاح في PATH، وChromium فشل بسبب `libnspr4.so`.
 5. `مطلوب P1`: Checkout idempotency foundation والتنظيف المجدول أصبحا موجودين، لكن يحتاجان tuning عملي للـ limits، metrics، وتشغيلاً فعلياً داخل CI/observability قبل beta واسع.
 
@@ -77,7 +77,7 @@
 
 1. إغلاق Repository Hygiene + Local Dev Reliability المتبقي.
 2. تفعيل CI Quality Gates على المستودع الحقيقي.
-3. إكمال Production Readiness Foundation المتبقية: تنفيذ restore drill، monitoring/error tracking، reverse proxy، وتضييق CSP بعد التحقق.
+3. إكمال Production Readiness Foundation المتبقية: تنفيذ restore drill، monitoring/error tracking، نشر reverse proxy في staging، وتضييق CSP بعد التحقق.
 4. تثبيت Playwright/e2e أو smoke بديل في CI.
 5. Merchant Onboarding Foundation.
 6. Storefront UX/Performance Polish.
@@ -102,7 +102,7 @@ php artisan migrate:status
 
 النتائج المثبتة:
 
-- `php artisan test`: `149 passed (608 assertions)` بعد تنفيذ checkout idempotency وhealth/readiness foundation وsecurity headers baseline وprune command وproduction runtime safeguards.
+- `php artisan test`: `150 passed (610 assertions)` بعد تنفيذ checkout idempotency وhealth/readiness foundation وsecurity headers baseline وprune command وproduction runtime safeguards وtrusted proxy baseline.
 - `php artisan route:list`: `135 routes`.
 - Storefront API routes: `11 routes`.
 - migrations: آخر migration مضافة ومطبقة محلياً هي `2026_05_07_000000_create_checkout_idempotency_records_table`.
@@ -135,7 +135,7 @@ npm run build
 
 | التناقض أو الادعاء القديم | التصحيح الحالي | الحالة |
 |---|---|---|
-| backend tests مذكورة سابقاً بأكثر من رقم قديم. | آخر تحقق فعلي: `149 passed (608 assertions)`. | مكتمل |
+| backend tests مذكورة سابقاً بأكثر من رقم قديم. | آخر تحقق فعلي: `150 passed (610 assertions)`. | مكتمل |
 | Storefront e2e مذكور كـ `6 passed`. | غير مثبت في 2026-05-06 بسبب `pnpm` و`libnspr4.so`. | غير مثبت / يحتاج تحقق |
 | Milestone shipping كان يقول إن seed البلديات جزئي. | الكود والاختبارات الحالية تثبت `58 active wilayas` و`1541 active communes`. | مكتمل كـ geography v1 |
 | السبرنت التالي كان Merchant Onboarding مباشرة. | يعاد ترتيبه بعد Repository Hygiene وProduction Readiness وCI activation وCheckout Idempotency. | مصحح |
@@ -164,7 +164,7 @@ npm run build
 | Catalog / Products | مكتمل جزئياً | categories, products, images, status, search, storefront APIs. | variants/options، tags/collections، import/export، SEO fields. | متاجر حقيقية تحتاج variants. | P1 | Product Variants and Catalog Maturity. |
 | Inventory | مكتمل جزئياً | inventory item per product، reservation/release/settle، backorders. | stock movements، variant inventory، low stock notifications. | audit المخزون محدود. | P1 | stock movements قبل multi-warehouse. |
 | Coupons / Promotions | مكتمل جزئياً | coupons، usage limits، plan feature gate، checkout discount server-side. | promotion campaigns، free shipping coupons، advanced targeting. | coupon abuse يحتاج rules أوسع رغم وجود rate/idempotency أساسياً. | P1 | promotion rules وabuse analytics. |
-| Domains | مكتمل جزئياً | custom domains، verification token، active/failed/disabled، resolver. | production DNS runbook، SSL/reverse proxy strategy. | domain activation يحتاج تشغيل production واضح. | P0/P1 | توثيق reverse proxy/domain runbook. |
+| Domains | مكتمل جزئياً | custom domains، verification token، active/failed/disabled، resolver، reverse proxy runbook أولي. | production DNS runbook، staging validation للـ SSL/custom domains. | domain activation يحتاج تشغيل production واضح. | P0/P1 | تجربة custom domain خلف proxy في staging. |
 | Store Settings | مكتمل جزئياً | store settings resource/API exposure. | legal/commercial completeness، readiness validation. | نشر متجر ناقص البيانات. | P1 | onboarding checklist. |
 | Theme Settings | مكتمل جزئياً | theme colors, hero, trust/contact sections foundation. | theme templates، image optimization، section builder. | storefronts قد تبدو متشابهة. | P1/P2 | backend-driven theme configuration. |
 | Storefront Next.js | مكتمل جزئياً | home/products/product/categories/search/cart/track/legal/SEO. | caching/revalidation، rich empty/error/loading states، image strategy، accessibility audit. | `no-store` يضغط backend. | P1 | performance/UX polish. |
@@ -174,9 +174,9 @@ npm run build
 | Analytics | مكتمل جزئياً | vendor analytics tests/widgets موجودة. | conversion funnel، failed delivery analytics، revenue by wilaya. | قرارات تجارية بدون analytics كافية. | P1/P2 | analytics roadmap بعد onboarding. |
 | Audit Logs | مكتمل جزئياً قوي | audit logs، policies immutable تقريباً، tests. | coverage لكل الأحداث المستقبلية، export controls. | أي event مالي جديد يحتاج audit. | P0 مستمر | تحديث audit عند كل workflow حساس. |
 | Notifications | مكتمل جزئياً | subscription notifications وtenant invitations موجودة. | order/customer/vendor/support notifications الشاملة. | النظام لا يزال صامتاً في عمليات مهمة. | P1 | Notification domain events. |
-| Security | مكتمل جزئياً | policies، tenant isolation، throttles عامة، invitation hashing مثبت بالاختبارات، audit، security headers baseline، وفشل readiness عند `APP_DEBUG=true` أو `APP_KEY` مفقود في production. | 2FA، CSP production tightening، session hardening، vulnerability scanning، secret rotation workflow. | لا يصلح production بدون hardening. | P0 | Security roadmap أدناه. |
-| Testing | مكتمل جزئياً قوي للbackend | 149 tests، 608 assertions، 26 feature test files، checkout idempotency/prune tests، system health tests، production runtime safeguards tests، security headers tests، Playwright specs موجودة، وCI workflow baseline موجود. | e2e غير قابل للتشغيل محلياً حالياً، CI غير مثبت كـ gate فعلي، security/production tests المتقدمة ناقصة. | regression risk مع AI agents. | P0 | تفعيل CI Quality Gates وإصلاح e2e env. |
-| DevOps | مكتمل جزئياً | docker-compose محلي، Dockerfiles أولية، env production examples، production runbook، backup/restore runbook، health/readiness foundation، production runtime safeguards، security headers baseline، CI workflow baseline. | CI غير مفعل كـ merge gate، reverse proxy config، automated backups، restore drill منفذ، monitoring. | production غير جاهز. | P0 | إكمال Production Readiness Foundation وتفعيل CI. |
+| Security | مكتمل جزئياً | policies، tenant isolation، throttles عامة، invitation hashing مثبت بالاختبارات، audit، security headers baseline، trusted proxy config/test، وفشل readiness عند `APP_DEBUG=true` أو `APP_KEY` مفقود في production. | 2FA، CSP production tightening، session hardening، vulnerability scanning، secret rotation workflow. | لا يصلح production بدون hardening. | P0 | Security roadmap أدناه. |
+| Testing | مكتمل جزئياً قوي للbackend | 150 tests، 610 assertions، 27 feature test files، checkout idempotency/prune tests، system health tests، production runtime safeguards tests، security/trusted proxy tests، Playwright specs موجودة، وCI workflow baseline موجود. | e2e غير قابل للتشغيل محلياً حالياً، CI غير مثبت كـ gate فعلي، security/production tests المتقدمة ناقصة. | regression risk مع AI agents. | P0 | تفعيل CI Quality Gates وإصلاح e2e env. |
+| DevOps | مكتمل جزئياً | docker-compose محلي، Dockerfiles أولية، env production examples، production/reverse-proxy/backup runbooks، Nginx edge example، health/readiness foundation، production runtime safeguards، security headers baseline، CI workflow baseline. | CI غير مفعل كـ merge gate، reverse proxy غير منشور في staging، automated backups، تنفيذ restore drill، monitoring. | production غير جاهز. | P0 | إكمال Production Readiness Foundation وتفعيل CI. |
 | Documentation | مكتمل جزئياً | architecture/security/testing/tenancy/storefront docs موجودة. | runbooks production، clean clone setup، ADRs. | docs هندسية جيدة لكن التشغيل ناقص. | P0/P1 | Phase 0.5 ثم ADRs. |
 | Developer Experience | مكتمل جزئياً | composer/npm scripts، docs workflow. | pnpm availability، clean setup verification، root repo strategy. | setup يحتاج تخمين. | P0 | Local Dev Reliability. |
 | AI/Codex Workflow | مكتمل جزئياً | roadmap وworkflow docs. | quality gates وADRs وقواعد صارمة مرتبطة بـ CI. | AI قد يضيف تغييرات واسعة بدون حواجز. | P0/P1 | CI + Codex rules. |
@@ -288,7 +288,7 @@ npm run build
 
 1. `P0` إغلاق المتبقي من Repository Hygiene + Local Dev Reliability.
 2. `P0` CI Quality Gates activation على المستودع الحقيقي.
-3. `P0` Production Readiness Foundation v1 المتبقية: تنفيذ restore drill + automated backups + monitoring/error tracking + reverse proxy + CSP tightening.
+3. `P0` Production Readiness Foundation v1 المتبقية: تنفيذ restore drill + automated backups + monitoring/error tracking + staging reverse proxy validation + CSP tightening.
 4. `P0/P1` Playwright/e2e reliability أو smoke بديل في CI.
 5. `P1` Merchant Onboarding Foundation.
 6. `P1` Storefront UX/Performance Polish.
@@ -375,10 +375,12 @@ npm run build
 - أمر `checkout-idempotency:prune` موجود ومجدول يومياً لصيانة جدول idempotency.
 - readiness يحتوي فحص `environment` يفشل في production عند `APP_DEBUG=true` أو `APP_KEY` مفقود.
 - `docs/BACKUP_RESTORE_RUNBOOK.md` موجود كإجراء أولي للنسخ الاحتياطي والاستعادة.
+- `docs/REVERSE_PROXY_RUNBOOK.md` و`deploy/reverse-proxy/nginx-edge.conf.example` موجودان.
+- `backend/config/trustedproxy.php` موجود مع `TRUSTED_PROXIES` في env examples.
 
 غير موجود أو غير مثبت:
 
-- reverse proxy config فعلي.
+- reverse proxy staging deployment غير مثبت.
 - environment separation موثق أولياً في runbook، لكنه غير مثبت بتشغيل staging/production فعلي:
   - local
   - testing
@@ -403,12 +405,13 @@ npm run build
 
 1. `مكتمل جزئياً`: Dockerfile backend production موجود ويحتاج CI build validation.
 2. `مكتمل جزئياً`: Dockerfile storefront production موجود ويحتاج CI build validation.
-3. `مطلوب P0`: reverse proxy strategy/config:
+3. `مكتمل جزئياً`: reverse proxy strategy/config:
    - TLS termination
    - custom domains
    - Laravel API
    - Next storefront
    - static/storage assets
+   - المتبقي: staging deployment وTLS/custom-domain validation.
 4. `مكتمل`: `.env.production.example` بدون أسرار للbackend والstorefront.
 5. `مكتمل جزئياً`: `APP_DEBUG=false` موثق في production env examples ومفحوص في readiness عند `APP_ENV=production`، ويتبقى إثباته داخل deployment/staging فعلي.
 6. `مكتمل جزئياً`: health endpoint/command يغطي:
@@ -421,7 +424,7 @@ npm run build
 8. `مطلوب P0`: queue worker supervision/runbook تفصيلي.
 9. `مطلوب P0`: scheduler supervision/runbook تفصيلي.
 10. `مطلوب P0`: failed jobs handling مع alerts.
-11. `مكتمل جزئياً`: backup/restore runbook موجود، ويتبقى automated backup configuration وrestore drill منفذ.
+11. `مكتمل جزئياً`: backup/restore runbook موجود، ويتبقى automated backup configuration وتنفيذ restore drill.
 12. `مطلوب P1`: storage production strategy:
     - local dev: public/local/MinIO
     - production: S3-compatible private/public buckets
@@ -450,6 +453,9 @@ npm run build
 - إضافة `checkout-idempotency:prune` مع `--dry-run` وجدولته يومياً.
 - إضافة فحص production runtime safeguards داخل readiness.
 - إضافة `docs/BACKUP_RESTORE_RUNBOOK.md` كإجراء تشغيلي أولي.
+- إضافة `docs/REVERSE_PROXY_RUNBOOK.md`.
+- إضافة `deploy/reverse-proxy/nginx-edge.conf.example`.
+- إضافة trusted proxy config واختبار forwarded HTTPS/HSTS.
 
 Definition of Done:
 
@@ -575,7 +581,7 @@ Jobs منفصلة:
 ### مطلوب قبل production
 
 1. 2FA للـ tenant owner أو enforceable policy.
-2. backup encryption وrestore drill منفذ.
+2. backup encryption وتنفيذ restore drill.
 3. vulnerability scanning في CI.
 4. production CSP مضبوط ومختبر مع Filament وstorefront.
 5. signed webhooks/payment callbacks عند إضافة integrations.
@@ -769,8 +775,8 @@ Model::query()
 ### Backend
 
 - الإطار: Pest 4 فوق PHPUnit 12.
-- آخر تحقق: `149 passed (608 assertions)`.
-- Feature test files المثبتة: `26`.
+- آخر تحقق: `150 passed (610 assertions)`.
+- Feature test files المثبتة: `27`.
 - المجالات المغطاة:
   - tenancy
   - tenant switcher
@@ -790,6 +796,7 @@ Model::query()
   - system health/readiness
   - production runtime safeguards
   - security headers
+  - trusted proxy behavior
 
 ### Storefront
 
@@ -817,6 +824,7 @@ Model::query()
    - `system:health` command
    - production `APP_DEBUG`/`APP_KEY` safeguard
    - security headers smoke
+   - trusted proxy/HSTS smoke
 6. `P1`: queue worker/scheduler smoke أو runbook verification.
 7. `P1`: migration smoke في CI.
 8. `تشغيلي`: backup/restore runbook موجود، لكن restore drill ليس test آلياً بالضرورة ويجب تنفيذه قبل production.
@@ -879,12 +887,12 @@ ADRs المطلوبة:
 | Database | 8.6 | schema قوي وقيود جيدة، وأضيفت idempotency records، لكن variants/stock movements ناقصة. |
 | Checkout | 8.6 | server-side totals وtransactions وidempotency وduplicate window وrate limits والتنظيف المجدول موجودة؛ ينقص tuning/metrics/phone confirmation. |
 | Storefront | 7.2 | أساس جيد ويرسل Idempotency-Key للcheckout، لكن caching/e2e reliability/image strategy ناقصة. |
-| Security | 7.0 | isolation وcheckout abuse وsecurity headers وproduction debug/key safeguards موجودة، لكن 2FA/session/vulnerability scanning/CSP tightening ناقصة. |
-| Testing | 8.5 | backend قوي وcheckout idempotency/prune/system health/security headers/production safeguards tests مضافة وCI workflow baseline موجود، لكن e2e غير مثبت وCI لم يعمل كـ gate فعلي بعد. |
-| DevOps | 5.7 | docker-compose محلي وDockerfiles/runbooks/health readiness/security headers/scheduler maintenance/production safeguards/CI baseline موجودة، لكن لا monitoring ولا automated backups ولا CI مثبت فعلياً. |
-| Documentation | 7.4 | docs هندسية جيدة وأضيف runbook للbackup/restore، لكن ADRs وبعض runbooks التشغيلية ما زالت ناقصة. |
+| Security | 7.1 | isolation وcheckout abuse وsecurity headers وproduction debug/key safeguards وtrusted proxy baseline موجودة، لكن 2FA/session/vulnerability scanning/CSP tightening ناقصة. |
+| Testing | 8.6 | backend قوي وcheckout idempotency/prune/system health/security headers/production safeguards/trusted proxy tests مضافة وCI workflow baseline موجود، لكن e2e غير مثبت وCI لم يعمل كـ gate فعلي بعد. |
+| DevOps | 5.9 | docker-compose محلي وDockerfiles/runbooks/Nginx proxy example/health readiness/security headers/scheduler maintenance/production safeguards/CI baseline موجودة، لكن لا monitoring ولا automated backups ولا CI مثبت فعلياً. |
+| Documentation | 7.6 | docs هندسية جيدة وأضيفت runbooks للbackup/restore وreverse proxy، لكن ADRs وبعض runbooks التشغيلية ما زالت ناقصة. |
 | Product Readiness | 5.8 | foundation جيد، onboarding وUX التجاري ناقصان. |
-| Production Readiness | 5.2 | Dockerfiles وenv production examples وrunbooks وhealth/readiness/security headers وproduction safeguards وCI baseline موجودة، لكن deployment/automated backups/restore drill/monitoring غير مكتملة. |
+| Production Readiness | 5.5 | Dockerfiles وenv production examples وrunbooks وreverse proxy baseline وhealth/readiness/security headers وproduction safeguards وCI baseline موجودة، لكن staging deployment/automated backups/restore drill/monitoring غير مكتملة. |
 | AI-readiness | 7.0 | roadmap/workflow وCI baseline جيدة، لكن repo hygiene وgates الفعلية غير مكتملة. |
 
 ---
@@ -1107,11 +1115,17 @@ npx --yes pnpm@10.33.2 exec playwright test
 - تحديث تقييم Checkout وTesting وDevOps بعد إغلاق cleanup command.
 - إضافة production runtime safeguards إلى readiness: فشل عند `APP_DEBUG=true` أو غياب `APP_KEY` في production.
 - إضافة اختبارات لهذه الحالات داخل `SystemHealthTest`.
-- تحديث آخر تحقق backend إلى `149 passed (608 assertions)`.
+- تسجيل تحقق backend بعد production safeguards قبل إضافة trusted proxy baseline.
 - تحديث تقييم Security وTesting وDevOps وProduction Readiness بعد production safeguards.
 - إضافة `docs/BACKUP_RESTORE_RUNBOOK.md`.
 - تحديث Production Readiness وSecurity Baseline والroadmap لتمييز documented backup/restore عن restore drill غير المنفذ.
 - تحديث تقييم DevOps وDocumentation وProduction Readiness بعد إضافة runbook.
+- إضافة Reverse Proxy baseline: Nginx edge example وrunbook.
+- إضافة trusted proxy config و`TRUSTED_PROXIES` إلى env examples.
+- إضافة اختبار يثبت أن forwarded HTTPS/HSTS يعمل فقط من proxy موثوق.
+- التحقق من Nginx config عبر `nginx -t` داخل Docker مع host aliases.
+- تحديث آخر تحقق backend إلى `150 passed (610 assertions)`.
+- تحديث تقييم Security وTesting وDevOps وDocumentation وProduction Readiness بعد proxy baseline.
 
 ### 2026-05-06
 

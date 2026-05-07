@@ -25,7 +25,7 @@ Frontend:
 
 Latest recorded verification:
 
-- Backend: `149 passed (608 assertions)`
+- Backend: `150 passed (610 assertions)`
 - Storefront build: passed
 - Storefront typecheck: passed
 - Storefront Playwright e2e: not currently verified in the 2026-05-06/2026-05-07 WSL environment. The test suite exists, but Chromium failed before executing scenarios because `libnspr4.so` was missing, and the configured `pnpm` command was not available in PATH.
@@ -135,6 +135,7 @@ P0 areas:
 - system liveness/readiness endpoints and `system:health` command
 - production runtime safeguards for `APP_DEBUG` and `APP_KEY`
 - security headers and CSP/HSTS smoke behavior when changed
+- trusted proxy behavior for `X-Forwarded-Proto` / HSTS behind reverse proxies
 
 P1 areas:
 

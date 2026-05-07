@@ -30,6 +30,8 @@ Currently present:
 - backend security headers middleware
 - storefront security headers through Next.js `headers()`
 - readiness fails in production when `APP_DEBUG=true` or `APP_KEY` is missing
+- trusted proxy config through `TRUSTED_PROXIES`
+- test coverage for forwarded HTTPS only from configured proxies
 - cross-tenant database constraints for important relationships
 - audit log domain foundation
 

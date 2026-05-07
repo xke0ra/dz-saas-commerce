@@ -25,13 +25,15 @@ Implemented in this foundation pass:
 - storefront security headers through Next.js `headers()`
 - scheduled checkout idempotency pruning command
 - documented backup/restore runbook
+- documented reverse proxy runbook and Nginx edge example
+- Laravel trusted proxy config and tests
 
 Still required:
 
 - Prove CI inside GitHub Actions on the real repository root
 - CI build jobs for both images when registry/promotion strategy is selected
 - image vulnerability scanning
-- reverse proxy configuration
+- reverse proxy deployment in staging and TLS/custom-domain validation
 - automated backup configuration and restore drill execution
 - queue and scheduler process supervision
 - error tracking integration
@@ -269,18 +271,27 @@ Store-level unavailability is domain logic and already exists conceptually throu
 
 ## Reverse Proxy Strategy
 
-Required but not implemented:
+Documented:
 
-- TLS termination.
-- Custom domain routing.
-- Forwarded headers:
-  - `X-Forwarded-Host`
-  - `X-Forwarded-Proto`
-  - `X-Forwarded-For`
-- Body size limits for uploads.
-- Static asset caching.
-- Preserve or intentionally override application security headers.
-- Add edge-only headers only when they do not conflict with Laravel/Next.js behavior.
+- `docs/REVERSE_PROXY_RUNBOOK.md`
+- `deploy/reverse-proxy/nginx-edge.conf.example`
+- `backend/config/trustedproxy.php`
+
+Implemented baseline:
+
+- Nginx example routes Laravel backend hosts to PHP-FPM on `backend:9000`.
+- Nginx example routes storefront/custom domains to Next.js on `storefront:3000`.
+- Forwarded headers are documented and passed in the example config.
+- `TRUSTED_PROXIES` is documented in backend env examples.
+- Nginx example syntax was checked with Docker using temporary host aliases.
+
+Still required:
+
+- Staging deployment.
+- TLS termination validation.
+- Custom domain routing validation.
+- Browser/e2e verification behind the proxy.
+- Final CSP/HSTS tuning after proxy deployment.
 
 ## Minimum Beta Gate
 
@@ -291,5 +302,6 @@ Before beta:
 - Queue worker and scheduler supervised.
 - Basic health/readiness checks exist.
 - Backup and restore documented; restore drill executed at least once.
+- Reverse proxy deployed and verified in staging.
 - Security headers baseline exists.
 - Playwright or equivalent smoke checks run reliably in CI.

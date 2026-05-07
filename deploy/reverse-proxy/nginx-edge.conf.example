@@ -1,0 +1,122 @@
+worker_processes auto;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    server_tokens off;
+    sendfile on;
+    keepalive_timeout 65;
+    client_max_body_size 20m;
+
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log /var/log/nginx/access.log main;
+    error_log /var/log/nginx/error.log warn;
+
+    upstream laravel_fpm {
+        server backend:9000;
+        keepalive 16;
+    }
+
+    upstream storefront {
+        server storefront:3000;
+        keepalive 32;
+    }
+
+    map $http_upgrade $connection_upgrade {
+        default upgrade;
+        '' close;
+    }
+
+    # Trust only private proxy/load-balancer networks. Tighten these CIDRs in production.
+    set_real_ip_from 10.0.0.0/8;
+    set_real_ip_from 172.16.0.0/12;
+    set_real_ip_from 192.168.0.0/16;
+    real_ip_header X-Forwarded-For;
+    real_ip_recursive on;
+
+    # Backend/Admin/API host. This Nginx container must have Laravel public files
+    # mounted at /var/www/html/public while PHP executes in the backend:9000 FPM container.
+    server {
+        listen 8080;
+        server_name api.example.com admin.example.com support.example.com;
+
+        root /var/www/html/public;
+        index index.php;
+
+        location /build/ {
+            try_files $uri =404;
+            access_log off;
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
+
+        location /storage/ {
+            try_files $uri $uri/ =404;
+            access_log off;
+            expires 7d;
+            add_header Cache-Control "public, max-age=604800";
+        }
+
+        location / {
+            try_files $uri $uri/ /index.php?$query_string;
+        }
+
+        location ~ \.php$ {
+            try_files $uri =404;
+            include fastcgi_params;
+            fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+            fastcgi_param DOCUMENT_ROOT $realpath_root;
+            fastcgi_param HTTP_X_FORWARDED_FOR $proxy_add_x_forwarded_for;
+            fastcgi_param HTTP_X_FORWARDED_HOST $host;
+            fastcgi_param HTTP_X_FORWARDED_PROTO $http_x_forwarded_proto;
+            fastcgi_param HTTP_X_FORWARDED_PORT $http_x_forwarded_port;
+            fastcgi_pass laravel_fpm;
+            fastcgi_read_timeout 60s;
+        }
+
+        location ~ /\.(?!well-known).* {
+            deny all;
+        }
+    }
+
+    # Public storefront and custom domains. The storefront keeps the original
+    # Host header so it can resolve subdomains and future verified custom domains.
+    server {
+        listen 8080 default_server;
+        server_name example.com *.example.com _;
+
+        location /_next/static/ {
+            proxy_pass http://storefront;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+            proxy_set_header X-Forwarded-Port $http_x_forwarded_port;
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
+
+        location / {
+            proxy_pass http://storefront;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+            proxy_set_header X-Forwarded-Port $http_x_forwarded_port;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $connection_upgrade;
+            proxy_read_timeout 60s;
+        }
+    }
+}
