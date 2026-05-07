@@ -25,7 +25,7 @@ Frontend:
 
 Latest recorded verification:
 
-- Backend: `139 passed (551 assertions)` before adding health/readiness smoke tests; update after the next full backend suite run.
+- Backend: `142 passed (572 assertions)`
 - Storefront build: passed
 - Storefront typecheck: passed
 - Storefront Playwright e2e: not currently verified in the 2026-05-06/2026-05-07 WSL environment. The test suite exists, but Chromium failed before executing scenarios because `libnspr4.so` was missing, and the configured `pnpm` command was not available in PATH.
