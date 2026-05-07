@@ -63,13 +63,13 @@
 | Tenancy | مكتمل جزئياً بدرجة قوية | shared DB + `tenant_id` + global scope + DB constraints + tests. الخطر المتبقي هو مراجعة أي `withoutGlobalScope`. |
 | Billing | مكتمل جزئياً | plans/features/subscriptions/invoices/manual payments/lifecycle موجودة، لكن revenue ops وPDFs وledger/dunning التجاري غير مكتملة. |
 | Shipping | مكتمل جزئياً | wilayas/communes/rates/companies/shipments/returns موجودة، لكن integrations وtemplates وCOD reconciliation غير موجودة. |
-| Production Readiness | مكتمل جزئياً | Dockerfiles وenv production examples وrunbooks وhealth/readiness foundation وsecurity headers baseline وفحص production runtime safeguards وbackup/restore runbook وreverse proxy baseline موجودة. يوجد CI workflow baseline في الجذر، لكنه غير مثبت كـ merge gate فعلي بعد. لا staging proxy deployment، ولا restore drill منفذ، ولا monitoring/error tracking. |
+| Production Readiness | مكتمل جزئياً | Dockerfiles وenv production examples وrunbooks وhealth/readiness foundation وsecurity headers baseline وفحص production runtime safeguards وbackup/restore runbook وbackup automation examples وreverse proxy baseline وqueue/scheduler supervision runbook وmonitoring/alerting runbook موجودة. يوجد CI workflow baseline في الجذر، لكنه غير مثبت كـ merge gate فعلي بعد. لا staging proxy deployment، ولا backup schedules منشورة، ولا restore drill منفذ، ولا monitoring/error tracking integration أو alert routing فعلي. |
 
 ### أكبر 5 مخاطر حالية
 
-1. `مطلوب P0`: Repository hygiene غير محسوم. الجذر ليس git repository، بينما `backend/` فقط يحتوي `.git`. توجد ملفات محلية مثل `backend/.env` و`storefront/.env.local` ويجب التأكد أنها غير ملتزمة أو ضمن أي حزمة تسليم.
-2. `مطلوب P0`: يوجد CI workflow baseline في `.github/workflows/quality.yml`، لكنه غير فعال عملياً كـ merge gate حتى تحسم استراتيجية المستودع ويعمل داخل GitHub.
-3. `مطلوب P0`: Production readiness غير مكتمل رغم بدء أساس Docker/runbook/CI/health/security/backup/proxy baseline: لا image builds مثبتة في CI، لا restore drill منفذ، لا monitoring/error tracking، ولا reverse proxy مثبت في staging.
+1. `مطلوب P0`: Repository hygiene غير مغلق بالكامل. الجذر مثبت الآن كـ Git repository موحد، لكن توجد ملفات محلية مثل `backend/.env` و`storefront/.env.local` ويجب التأكد أنها غير ملتزمة أو ضمن أي حزمة تسليم، مع تنفيذ clean-clone rehearsal.
+2. `مطلوب P0`: يوجد CI workflow baseline في `.github/workflows/quality.yml`، لكنه غير فعال عملياً كـ merge gate حتى يعمل داخل GitHub ويُضبط كـ required check.
+3. `مطلوب P0`: Production readiness غير مكتمل رغم بدء أساس Docker/runbook/CI/health/security/backup/proxy/supervision/monitoring docs baseline: لا image builds مثبتة في CI، لا backup schedules منشورة، لا restore drill منفذ، لا monitoring/error tracking integration أو alert routing فعلي، ولا reverse proxy أو worker/scheduler supervision مثبت في staging.
 4. `مطلوب P0/P1`: بيئة Playwright غير موثوقة حالياً: `pnpm` غير متاح في PATH، وChromium فشل بسبب `libnspr4.so`.
 5. `مطلوب P1`: Checkout idempotency foundation والتنظيف المجدول أصبحا موجودين، لكن يحتاجان tuning عملي للـ limits، metrics، وتشغيلاً فعلياً داخل CI/observability قبل beta واسع.
 
@@ -77,7 +77,7 @@
 
 1. إغلاق Repository Hygiene + Local Dev Reliability المتبقي.
 2. تفعيل CI Quality Gates على المستودع الحقيقي.
-3. إكمال Production Readiness Foundation المتبقية: تنفيذ restore drill، monitoring/error tracking، نشر reverse proxy في staging، وتضييق CSP بعد التحقق.
+3. إكمال Production Readiness Foundation المتبقية: نشر backup schedules، تنفيذ restore drill، monitoring/error tracking integration، alert routing، نشر reverse proxy وworker/scheduler supervision في staging، وتضييق CSP بعد التحقق.
 4. تثبيت Playwright/e2e أو smoke بديل في CI.
 5. Merchant Onboarding Foundation.
 6. Storefront UX/Performance Polish.
@@ -139,7 +139,7 @@ npm run build
 | Storefront e2e مذكور كـ `6 passed`. | غير مثبت في 2026-05-06 بسبب `pnpm` و`libnspr4.so`. | غير مثبت / يحتاج تحقق |
 | Milestone shipping كان يقول إن seed البلديات جزئي. | الكود والاختبارات الحالية تثبت `58 active wilayas` و`1541 active communes`. | مكتمل كـ geography v1 |
 | السبرنت التالي كان Merchant Onboarding مباشرة. | يعاد ترتيبه بعد Repository Hygiene وProduction Readiness وCI activation وCheckout Idempotency. | مصحح |
-| Production readiness كان مقيم بدرجة أعلى من الدليل الفعلي. | بعد 2026-05-07 توجد Dockerfiles وrunbook وCI/health baseline أولية، لكن لا CI مثبت كـ gate فعلي ولا backup drill ولا monitoring، لذلك يبقى التقييم منخفضاً. | مصحح |
+| Production readiness كان مقيم بدرجة أعلى من الدليل الفعلي. | بعد 2026-05-07 توجد Dockerfiles وrunbooks وCI/health/backup automation/monitoring docs baseline أولية، لكن لا CI مثبت كـ gate فعلي ولا backup schedules منشورة ولا restore drill ولا monitoring integration أو alert routing، لذلك يبقى التقييم منخفضاً. | مصحح |
 | أوامر الواجهة موثقة بـ `pnpm` فقط. | `packageManager` يطلب pnpm، لكن PATH الحالي لا يحتويه. يجب توثيق تفعيل corepack/pnpm. | مطلوب |
 
 ---
@@ -148,7 +148,7 @@ npm run build
 
 | المجال | الحالة | الموجود فعلاً | الناقص | المخاطر | الأولوية | الخطوة التالية |
 |---|---|---|---|---|---|---|
-| Architecture | مكتمل جزئياً | Modular monolith، backend/storefront منفصلان، وثائق architecture موجودة. | ADRs غير موجودة، وحدود modules غير موثقة كقرارات رسمية. | قرارات كبيرة قد تتغير بدون سجل. | P1 | إضافة `docs/adr/` لاحقاً وتوثيق القرارات. |
+| Architecture | مكتمل جزئياً أقوى | Modular monolith، backend/storefront منفصلان، وثائق architecture موجودة، و`docs/adr/` يحتوي ADRs أساسية. | بعض ADRs ما زالت Proposed مثل caching/deployment topology، وحدود modules التفصيلية غير مفصلة بعد. | قرارات كبيرة أقل عرضة للتغيير العشوائي، لكن staging قد يغير topology. | P1 | تثبيت ADRs المقترحة بعد implementation/staging. |
 | Backend Laravel | مكتمل جزئياً | Laravel 13، Actions، Models، Policies، Resources، Tests، وأوامر/مسارات health readiness. | بعض orchestration في controllers. | تضخم `app/` مع نمو المجالات. | P1 | نقل المنطق المتكرر إلى Actions/Support عند التطوير. |
 | Filament Admin Panel | مكتمل جزئياً | admin resources للخطط، المتاجر، الاشتراكات، الفواتير، الدعم، audit. | system status، revenue dashboard، runbooks داخل اللوحة. | تشغيل المنصة يحتاج DB/manual inspection. | P1 | إضافة operational dashboards بعد Phase 0.5. |
 | Filament Vendor Panel | مكتمل جزئياً | catalog/orders/shipping/billing/support/settings/theme/resources، tenant switcher. | onboarding wizard، readiness checklist، UX يومية أعمق. | التاجر قد يحتاج مطور لإكمال الإعداد. | P1 | Merchant Onboarding بعد P0. |
@@ -176,10 +176,10 @@ npm run build
 | Notifications | مكتمل جزئياً | subscription notifications وtenant invitations موجودة. | order/customer/vendor/support notifications الشاملة. | النظام لا يزال صامتاً في عمليات مهمة. | P1 | Notification domain events. |
 | Security | مكتمل جزئياً | policies، tenant isolation، throttles عامة، invitation hashing مثبت بالاختبارات، audit، security headers baseline، trusted proxy config/test، وفشل readiness عند `APP_DEBUG=true` أو `APP_KEY` مفقود في production. | 2FA، CSP production tightening، session hardening، vulnerability scanning، secret rotation workflow. | لا يصلح production بدون hardening. | P0 | Security roadmap أدناه. |
 | Testing | مكتمل جزئياً قوي للbackend | 150 tests، 610 assertions، 27 feature test files، checkout idempotency/prune tests، system health tests، production runtime safeguards tests، security/trusted proxy tests، Playwright specs موجودة، وCI workflow baseline موجود. | e2e غير قابل للتشغيل محلياً حالياً، CI غير مثبت كـ gate فعلي، security/production tests المتقدمة ناقصة. | regression risk مع AI agents. | P0 | تفعيل CI Quality Gates وإصلاح e2e env. |
-| DevOps | مكتمل جزئياً | docker-compose محلي، Dockerfiles أولية، env production examples، production/reverse-proxy/backup runbooks، Nginx edge example، health/readiness foundation، production runtime safeguards، security headers baseline، CI workflow baseline. | CI غير مفعل كـ merge gate، reverse proxy غير منشور في staging، automated backups، تنفيذ restore drill، monitoring. | production غير جاهز. | P0 | إكمال Production Readiness Foundation وتفعيل CI. |
-| Documentation | مكتمل جزئياً | architecture/security/testing/tenancy/storefront docs موجودة. | runbooks production، clean clone setup، ADRs. | docs هندسية جيدة لكن التشغيل ناقص. | P0/P1 | Phase 0.5 ثم ADRs. |
-| Developer Experience | مكتمل جزئياً | composer/npm scripts، docs workflow. | pnpm availability، clean setup verification، root repo strategy. | setup يحتاج تخمين. | P0 | Local Dev Reliability. |
-| AI/Codex Workflow | مكتمل جزئياً | roadmap وworkflow docs. | quality gates وADRs وقواعد صارمة مرتبطة بـ CI. | AI قد يضيف تغييرات واسعة بدون حواجز. | P0/P1 | CI + Codex rules. |
+| DevOps | مكتمل جزئياً | docker-compose محلي، Dockerfiles أولية، env production examples، production/reverse-proxy/backup/queue-scheduler/monitoring runbooks، backup scripts/systemd timers examples، Nginx edge example، systemd examples، health/readiness foundation، production runtime safeguards، security headers baseline، CI workflow baseline. | CI غير مفعل كـ merge gate، reverse proxy غير منشور في staging، worker/scheduler supervision غير مثبت في staging، backup schedules غير منشورة، تنفيذ restore drill، monitoring/error tracking integration وalert routing. | production غير جاهز. | P0 | إكمال Production Readiness Foundation وتفعيل CI. |
+| Documentation | مكتمل جزئياً قوي | architecture/security/testing/tenancy/storefront docs وrunbooks وADRs موجودة. | user/operator docs التفصيلية ونتائج drills الفعلية. | docs هندسية جيدة لكن التشغيل الفعلي ناقص. | P0/P1 | إغلاق runbooks عبر staging/CI/drills. |
+| Developer Experience | مكتمل جزئياً | composer/npm scripts، docs workflow، root monorepo مثبت. | pnpm availability، clean setup verification. | setup يحتاج تحقق clean-clone. | P0 | Local Dev Reliability. |
+| AI/Codex Workflow | مكتمل جزئياً | roadmap وworkflow docs وADRs وقواعد Codex. | quality gates required فعلياً وربط كل sprint بنتائج CI. | AI قد يضيف تغييرات واسعة إذا لم تعمل gates. | P0/P1 | تفعيل CI required checks. |
 
 ---
 
@@ -193,9 +193,8 @@ npm run build
 
 ### أدلة الحالة الحالية
 
-- الجذر `/home/ahmed/projects/dz-saas-commerce` ليس git repository.
-- `backend/` يحتوي `.git`.
-- `storefront/` و`docs/` لا يظهران داخل git root موحد من الجذر الحالي.
+- الجذر `/home/ahmed/projects/dz-saas-commerce` هو Git repository موحد مثبت عبر `git rev-parse --show-toplevel`.
+- لا يظهر `backend/.git` في الفحص الحالي؛ backend وstorefront وdocs ضمن root monorepo.
 - توجد ملفات محلية: `backend/.env` و`storefront/.env.local`.
 - Dockerfiles production baseline موجودة الآن للbackend والstorefront.
 - لا توجد CI ظاهرة.
@@ -206,11 +205,9 @@ npm run build
 
 ### المهام
 
-1. `مطلوب`: تحديد استراتيجية المستودع:
-   - إما جعل الجذر repository واحداً يضم `backend/`, `storefront/`, `docs/`.
-   - أو توثيق سبب بقاء `backend/` فقط repository منفصل.
+1. `مكتمل`: استراتيجية المستودع الحالية مثبتة كـ root monorepo يضم `backend/`, `storefront/`, `docs/`, `deploy/`, و`docker-compose.yml`.
 2. `مكتمل جزئياً`: تم فحص أنماط secrets مع استبعاد `.env` المحلي و`vendor/node_modules`. النتائج المتبقية هي dummy local credentials في `docker-compose.yml` و`.env.example`. لا يزال يلزم فحص أي zip/codex handoff سابق خارج workspace الحالي.
-3. `مكتمل جزئياً`: `.gitignore` يمنع `.env` و`.env.local` في الجذر/backend/storefront. لا يزال يلزم تأكيد ذلك بعد حسم استراتيجية المستودع.
+3. `مكتمل جزئياً`: `.gitignore` يمنع `.env` و`.env.local` في الجذر/backend/storefront. لا يزال يلزم تأكيده عبر clean-clone/package rehearsal.
 4. `مطلوب`: تدوير أي secrets ظهرت في ملفات محلية أو حزم سابقة.
 5. `مكتمل`: تم تحديث `backend/.env.example` ليعكس PostgreSQL/Redis/Meilisearch/MinIO/Mailpit المحلي بقيم dummy development.
 6. `مكتمل`: تم تحديث `storefront/.env.example` لتوثيق API/asset/storefront base URLs وfallback store identifiers.
@@ -261,8 +258,8 @@ npm run build
 
 ### المتبقي لإغلاق Phase 0.5
 
-1. حسم استراتيجية المستودع من المالك: root monorepo أم repos منفصلة.
-2. تنفيذ clean-clone rehearsal فعلي بعد حسم Git strategy.
+1. تنفيذ clean-clone rehearsal فعلي على root monorepo.
+2. إثبات أن `.github/workflows/quality.yml` يعمل داخل GitHub على هذا الجذر.
 3. فحص أي ZIP أو handoff سابق خارج workspace الحالي.
 4. تدوير أي secrets كانت قد شاركت خارج الجهاز المحلي.
 5. إضافة `.env.production.example` ضمن Production Readiness.
@@ -282,20 +279,20 @@ npm run build
 
 الحالة: محدث في 2026-05-07
 
-تم بدء Repository Hygiene + Local Dev Reliability وProduction Readiness Foundation وCI baseline وCheckout Idempotency foundation وHealth/Readiness foundation وSecurity Headers baseline في 2026-05-07. لم تغلق مرحلة P0 بالكامل لأن استراتيجية المستودع، clean-clone rehearsal، CI الفعلي، backup/restore، وPlaywright/e2e لا تزال تحتاج إغلاقاً عملياً.
+تم بدء Repository Hygiene + Local Dev Reliability وProduction Readiness Foundation وCI baseline وCheckout Idempotency foundation وHealth/Readiness foundation وSecurity Headers baseline في 2026-05-07. استراتيجية المستودع مثبتة الآن كـ root monorepo، لكن مرحلة P0 لم تغلق بالكامل لأن clean-clone rehearsal، CI الفعلي، backup/restore، وPlaywright/e2e لا تزال تحتاج إغلاقاً عملياً.
 
 الترتيب المقترح:
 
 1. `P0` إغلاق المتبقي من Repository Hygiene + Local Dev Reliability.
 2. `P0` CI Quality Gates activation على المستودع الحقيقي.
-3. `P0` Production Readiness Foundation v1 المتبقية: تنفيذ restore drill + automated backups + monitoring/error tracking + staging reverse proxy validation + CSP tightening.
+3. `P0` Production Readiness Foundation v1 المتبقية: نشر backup schedules + تنفيذ restore drill + monitoring/error tracking integration + alert routing + staging reverse proxy validation + worker/scheduler supervision validation + CSP tightening.
 4. `P0/P1` Playwright/e2e reliability أو smoke بديل في CI.
 5. `P1` Merchant Onboarding Foundation.
 6. `P1` Storefront UX/Performance Polish.
 
 قبول السبرنت الأول:
 
-- root/repo strategy موثقة أو محسومة.
+- root monorepo مثبت وموثق.
 - clean-clone rehearsal موثق بنتيجة عملية.
 - أي أسرار شاركت خارج الجهاز المحلي تم تدويرها.
 - `.env.production.example` موجود الآن للbackend والstorefront، ويتبقى التحقق عبر CI/clean-clone.
@@ -375,8 +372,12 @@ npm run build
 - أمر `checkout-idempotency:prune` موجود ومجدول يومياً لصيانة جدول idempotency.
 - readiness يحتوي فحص `environment` يفشل في production عند `APP_DEBUG=true` أو `APP_KEY` مفقود.
 - `docs/BACKUP_RESTORE_RUNBOOK.md` موجود كإجراء أولي للنسخ الاحتياطي والاستعادة.
+- `deploy/backup/` يحتوي أمثلة scripts وsystemd timers للنسخ الاحتياطي وrestore drill المحمي للـ staging.
 - `docs/REVERSE_PROXY_RUNBOOK.md` و`deploy/reverse-proxy/nginx-edge.conf.example` موجودان.
 - `backend/config/trustedproxy.php` موجود مع `TRUSTED_PROXIES` في env examples.
+- `docs/QUEUE_SCHEDULER_RUNBOOK.md` موجود مع systemd examples.
+- `docs/MONITORING_ALERTING_RUNBOOK.md` موجود كخط أساس للمراقبة والتنبيهات وتتبع الأخطاء.
+- `backend/.env.production.example` يستخدم `LOG_STACK=stderr` كي تكون Laravel logs قابلة للجمع عبر منصة الحاويات.
 
 غير موجود أو غير مثبت:
 
@@ -387,12 +388,12 @@ npm run build
   - staging
   - production
 - CI فعلي داخل GitHub Actions غير مثبت.
-- queue worker runbook يحتاج تشغيل/إشراف production فعلي.
-- scheduler runbook يحتاج تشغيل/إشراف production فعلي.
-- failed jobs handling runbook يحتاج alerting وإجراءات تشغيلية أعمق.
-- log strategy.
-- error tracking strategy.
-- automated backup configuration.
+- queue worker/scheduler runbook موجود، لكنه غير مثبت بتشغيل staging/production فعلي.
+- failed jobs handling موثق، لكنه يحتاج alerting فعلي وإجراءات تشغيلية أعمق.
+- log strategy موثق أولياً، لكنه غير مثبت عبر log aggregation حقيقي.
+- error tracking strategy موثقة، لكن provider/integration غير موجود.
+- uptime checks وalert routing غير مثبتة.
+- backup automation examples موجودة، لكن backup schedules غير منشورة في staging/production.
 - restore drill execution.
 - storage strategy production S3-compatible.
 - Meilisearch production notes.
@@ -421,10 +422,10 @@ npm run build
    - Storage
    - Meilisearch
 7. `مكتمل`: readiness checks منفصلة عن liveness.
-8. `مطلوب P0`: queue worker supervision/runbook تفصيلي.
-9. `مطلوب P0`: scheduler supervision/runbook تفصيلي.
-10. `مطلوب P0`: failed jobs handling مع alerts.
-11. `مكتمل جزئياً`: backup/restore runbook موجود، ويتبقى automated backup configuration وتنفيذ restore drill.
+8. `مكتمل جزئياً`: queue worker supervision/runbook تفصيلي موجود، ويتبقى staging/production supervision.
+9. `مكتمل جزئياً`: scheduler supervision/runbook تفصيلي موجود، ويتبقى staging/production supervision.
+10. `مكتمل جزئياً`: failed jobs handling موثق، ويتبقى alerts وmonitoring integration.
+11. `مكتمل جزئياً`: backup/restore runbook وbackup automation examples موجودة، ويتبقى نشر الجداول فعلياً وتنفيذ restore drill.
 12. `مطلوب P1`: storage production strategy:
     - local dev: public/local/MinIO
     - production: S3-compatible private/public buckets
@@ -432,7 +433,7 @@ npm run build
     - backups before migrations
     - maintenance mode when needed
     - rollback limits
-14. `مطلوب P1`: error tracking وstructured logs.
+14. `مكتمل جزئياً`: monitoring/alerting/log strategy موثقة في runbook، ويتبقى error tracking provider، structured logs، centralized aggregation، وتنبيهات فعلية.
 15. `مكتمل جزئياً`: security headers baseline موجود، ويتبقى تضييق CSP والتحقق عبر browser/e2e قبل production.
 
 ### منجزات 2026-05-07
@@ -453,9 +454,15 @@ npm run build
 - إضافة `checkout-idempotency:prune` مع `--dry-run` وجدولته يومياً.
 - إضافة فحص production runtime safeguards داخل readiness.
 - إضافة `docs/BACKUP_RESTORE_RUNBOOK.md` كإجراء تشغيلي أولي.
+- إضافة `deploy/backup/` مع scripts examples للـ PostgreSQL backup وobject storage sync وstaging restore drill.
+- إضافة systemd service/timer examples لجداول backup.
 - إضافة `docs/REVERSE_PROXY_RUNBOOK.md`.
 - إضافة `deploy/reverse-proxy/nginx-edge.conf.example`.
 - إضافة trusted proxy config واختبار forwarded HTTPS/HSTS.
+- إضافة `docs/QUEUE_SCHEDULER_RUNBOOK.md`.
+- إضافة systemd examples للـ queue worker والـ scheduler.
+- إضافة `docs/MONITORING_ALERTING_RUNBOOK.md`.
+- تحديث `backend/.env.production.example` إلى `LOG_STACK=stderr` لتجميع logs عبر الحاويات.
 
 Definition of Done:
 
@@ -475,7 +482,7 @@ Definition of Done:
 الدليل الحالي:
 
 - تمت إضافة `.github/workflows/quality.yml` كـ baseline لجذر المشروع.
-- الجذر الحالي ليس Git repository، بينما `backend/` فقط يحتوي `.git`. لذلك لا تعتبر هذه المرحلة مكتملة أو فعالة كـ merge gate حتى تحسم استراتيجية المستودع ويثبت تشغيل workflow داخل GitHub.
+- الجذر الحالي Git repository موحد، لكن لا تعتبر هذه المرحلة مكتملة أو فعالة كـ merge gate حتى يثبت تشغيل workflow داخل GitHub ويُضبط كـ required check.
 - لم يتم تشغيل workflow فعلياً داخل GitHub Actions بعد.
 - تم فحص Dockerfiles محلياً عبر `docker buildx build --check` للـ backend والـ storefront بدون warnings.
 
@@ -520,8 +527,8 @@ Jobs منفصلة:
 
 المتبقي:
 
-1. حسم هل الجذر يصبح Git repository/monorepo أم تبقى المستودعات منفصلة.
-2. تشغيل `.github/workflows/quality.yml` في GitHub Actions فعلياً وتصحيح أي فرق بين CI والبيئة المحلية.
+1. تشغيل `.github/workflows/quality.yml` في GitHub Actions فعلياً وتصحيح أي فرق بين CI والبيئة المحلية.
+2. ضبط workflow كـ required check على pull requests.
 3. إضافة image build/push jobs عند اعتماد registry.
 4. إضافة dependency vulnerability scanning.
 5. جعل e2e gate إلزامياً بعد إصلاح Playwright dependencies وتحديد mocked vs real integration coverage.
@@ -825,7 +832,7 @@ Model::query()
    - production `APP_DEBUG`/`APP_KEY` safeguard
    - security headers smoke
    - trusted proxy/HSTS smoke
-6. `P1`: queue worker/scheduler smoke أو runbook verification.
+6. `مكتمل جزئياً`: queue worker/scheduler runbook موجود، ويتبقى staging supervision smoke.
 7. `P1`: migration smoke في CI.
 8. `تشغيلي`: backup/restore runbook موجود، لكن restore drill ليس test آلياً بالضرورة ويجب تنفيذه قبل production.
 
@@ -833,24 +840,30 @@ Model::query()
 
 ## 16. Architecture Decision Records
 
-الحالة: مطلوب
+الحالة: مكتمل جزئياً
 
-يجب إنشاء `docs/adr/` لاحقاً كعمل مستقل. لم تتم إضافة ADR files بعد.
+تم إنشاء `docs/adr/` في 2026-05-07 لتقليل التغييرات المعمارية غير الموثقة عند العمل عبر Codex/AI agents.
 
-ADRs المطلوبة:
+ADRs المضافة:
 
-1. ADR: اختيار Modular Monolith بدلاً من Microservices.
-2. ADR: اختيار shared database tenancy.
-3. ADR: اختيار Laravel + Filament للـ backend.
-4. ADR: اختيار Next.js storefront منفصل.
-5. ADR: backend هو مصدر الحقيقة للأسعار والخصومات والشحن.
-6. ADR: عدم الوثوق بتوتال الواجهة.
-7. ADR: لماذا 69 wilayas ليست مفعلة الآن.
-8. ADR: لماذا marketplace مؤجل.
-9. ADR: strategy للدفع اليدوي ثم integrations لاحقاً.
-10. ADR: strategy للشحن الجزائري.
-11. ADR: storefront caching/revalidation strategy.
-12. ADR: production deployment topology.
+1. `Accepted`: Modular Monolith بدلاً من Microservices.
+2. `Accepted`: shared database tenancy.
+3. `Accepted`: Laravel + Filament للـ backend.
+4. `Accepted`: Next.js storefront منفصل.
+5. `Accepted`: backend هو مصدر الحقيقة للأسعار والخصومات والشحن.
+6. `Accepted`: عدم الوثوق بتوتال الواجهة.
+7. `Accepted`: 69 wilayas ليست مفعلة الآن.
+8. `Accepted`: marketplace مؤجل.
+9. `Accepted`: الدفع اليدوي أولاً ثم integrations لاحقاً.
+10. `Accepted`: strategy للشحن الجزائري.
+11. `Proposed`: storefront caching/revalidation strategy.
+12. `Proposed`: production deployment topology.
+
+المتبقي:
+
+- تثبيت ADR caching/revalidation بعد تنفيذ الخطة واختبارها.
+- تثبيت ADR production topology بعد staging deployment فعلي.
+- إضافة ADRs جديدة عند أي تغيير جوهري في tenancy، billing، payment integrations، أو deployment.
 
 ---
 
@@ -881,7 +894,7 @@ ADRs المطلوبة:
 
 | المجال | الدرجة | سبب مختصر |
 |---|---:|---|
-| Architecture | 8.0 | modular monolith واضح، لكن ADRs غير موجودة. |
+| Architecture | 8.3 | modular monolith واضح وADRs أساسية موجودة، لكن caching/deployment topology ما زالت Proposed. |
 | Backend | 8.3 | domains واسعة واختبارات قوية. |
 | Tenancy | 8.5 | طبقات متعددة وDB constraints، مع خطر `withoutGlobalScope`. |
 | Database | 8.6 | schema قوي وقيود جيدة، وأضيفت idempotency records، لكن variants/stock movements ناقصة. |
@@ -889,11 +902,11 @@ ADRs المطلوبة:
 | Storefront | 7.2 | أساس جيد ويرسل Idempotency-Key للcheckout، لكن caching/e2e reliability/image strategy ناقصة. |
 | Security | 7.1 | isolation وcheckout abuse وsecurity headers وproduction debug/key safeguards وtrusted proxy baseline موجودة، لكن 2FA/session/vulnerability scanning/CSP tightening ناقصة. |
 | Testing | 8.6 | backend قوي وcheckout idempotency/prune/system health/security headers/production safeguards/trusted proxy tests مضافة وCI workflow baseline موجود، لكن e2e غير مثبت وCI لم يعمل كـ gate فعلي بعد. |
-| DevOps | 5.9 | docker-compose محلي وDockerfiles/runbooks/Nginx proxy example/health readiness/security headers/scheduler maintenance/production safeguards/CI baseline موجودة، لكن لا monitoring ولا automated backups ولا CI مثبت فعلياً. |
-| Documentation | 7.6 | docs هندسية جيدة وأضيفت runbooks للbackup/restore وreverse proxy، لكن ADRs وبعض runbooks التشغيلية ما زالت ناقصة. |
+| DevOps | 6.2 | docker-compose محلي وDockerfiles/runbooks/Nginx proxy example/backup scripts/systemd timers/queue-scheduler systemd examples/monitoring docs/health readiness/security headers/scheduler maintenance/production safeguards/CI baseline موجودة، لكن لا monitoring integration ولا backup schedules منشورة ولا CI مثبت فعلياً. |
+| Documentation | 8.2 | docs هندسية جيدة وأضيفت runbooks للbackup/restore وreverse proxy وqueue/scheduler وmonitoring مع أمثلة backup automation وADRs، لكن drills/staging outcomes وبعض user/operator docs ما زالت ناقصة. |
 | Product Readiness | 5.8 | foundation جيد، onboarding وUX التجاري ناقصان. |
-| Production Readiness | 5.5 | Dockerfiles وenv production examples وrunbooks وreverse proxy baseline وhealth/readiness/security headers وproduction safeguards وCI baseline موجودة، لكن staging deployment/automated backups/restore drill/monitoring غير مكتملة. |
-| AI-readiness | 7.0 | roadmap/workflow وCI baseline جيدة، لكن repo hygiene وgates الفعلية غير مكتملة. |
+| Production Readiness | 5.8 | Dockerfiles وenv production examples وrunbooks وbackup automation examples وreverse proxy baseline وqueue/scheduler supervision docs وmonitoring docs وhealth/readiness/security headers وproduction safeguards وCI baseline موجودة، لكن staging deployment/backup schedules/restore drill/monitoring integration غير مكتملة. |
+| AI-readiness | 7.3 | roadmap/workflow وADRs وCI baseline جيدة، وroot monorepo مثبت الآن، لكن clean-clone rehearsal وgates الفعلية غير مكتملة. |
 
 ---
 
@@ -1006,7 +1019,7 @@ ADRs المطلوبة:
 - `P0`: Dockerfiles build validation في CI.
 - `P0`: health/readiness.
 - `P0`: backup/restore.
-- `P1`: monitoring/error tracking.
+- `P1`: monitoring/error tracking integration وalert routing.
 
 ---
 
@@ -1089,7 +1102,7 @@ npx --yes pnpm@10.33.2 exec playwright test
 - إضافة `docs/PRODUCTION_READINESS.md` كـ runbook إنتاجي أولي.
 - تحديث تقييم DevOps وProduction Readiness بعد إضافة Docker/runbook baseline.
 - إضافة `.github/workflows/quality.yml` كـ CI Quality Gates baseline للـ backend/storefront/Dockerfile checks وE2E اختياري.
-- تحديث حالة CI Quality Gates إلى `مكتمل جزئياً` لأن workflow موجود لكنه غير مثبت كـ merge gate فعلي بسبب وضع المستودع.
+- تحديث حالة CI Quality Gates إلى `مكتمل جزئياً` لأن workflow موجود لكنه غير مثبت كـ merge gate فعلي داخل GitHub.
 - تحديث تقييم Testing وDevOps وProduction Readiness وAI-readiness بعد إضافة CI baseline.
 - تنفيذ Checkout Idempotency and Abuse Protection foundation.
 - إضافة جدول `checkout_idempotency_records` وموديل/خدمات idempotency وabuse guard.
@@ -1120,12 +1133,30 @@ npx --yes pnpm@10.33.2 exec playwright test
 - إضافة `docs/BACKUP_RESTORE_RUNBOOK.md`.
 - تحديث Production Readiness وSecurity Baseline والroadmap لتمييز documented backup/restore عن restore drill غير المنفذ.
 - تحديث تقييم DevOps وDocumentation وProduction Readiness بعد إضافة runbook.
+- إضافة `deploy/backup/` مع scripts examples للنسخ الاحتياطي وrestore drill.
+- إضافة systemd backup service/timer examples وقالب backup env بدون أسرار.
+- تحديث Production Readiness وSecurity Baseline وArchitecture وTesting Strategy والroadmap لتمييز backup automation examples عن backup schedules غير المنشورة.
+- تحديث تقييم DevOps وDocumentation وProduction Readiness بعد backup automation baseline.
+- تصحيح حالة المستودع: الجذر مثبت كـ Git root موحد، ولا يظهر `backend/.git` في الفحص الحالي.
+- تحديث Local Development وDevelopment Workflow وTesting Strategy وProduction Readiness والroadmap بناءً على root monorepo الفعلي.
+- إنشاء `docs/adr/` مع 12 ADRs للقرارات الأساسية: modular monolith، tenancy، Laravel/Filament، Next.js، source of truth، client totals، 69 wilayas، marketplace، payments، shipping، caching، وdeployment topology.
+- تحديث Architecture وDevelopment Workflow والroadmap لاشتراط ADR عند تغيير قرار معماري.
+- تحديث تقييم Architecture وDocumentation وAI-readiness بعد إضافة ADRs.
 - إضافة Reverse Proxy baseline: Nginx edge example وrunbook.
 - إضافة trusted proxy config و`TRUSTED_PROXIES` إلى env examples.
 - إضافة اختبار يثبت أن forwarded HTTPS/HSTS يعمل فقط من proxy موثوق.
 - التحقق من Nginx config عبر `nginx -t` داخل Docker مع host aliases.
 - تحديث آخر تحقق backend إلى `150 passed (610 assertions)`.
 - تحديث تقييم Security وTesting وDevOps وDocumentation وProduction Readiness بعد proxy baseline.
+- إضافة Queue/Scheduler supervision runbook.
+- إضافة systemd examples للـ queue worker والـ scheduler.
+- تحديث Production Readiness وSecurity Baseline وTesting Strategy والroadmap لتمييز runbook عن staging supervision غير المثبت.
+- تشغيل smoke للأوامر التشغيلية: `schedule:list`, `queue:failed`, `billing:process --sync`, و`checkout-idempotency:prune --dry-run`.
+- تحديث تقييم DevOps وDocumentation وProduction Readiness بعد supervision docs.
+- إضافة Monitoring/Alerting runbook يربط health/readiness وfailed jobs وscheduler/logging بإجراءات مراقبة قابلة للتنفيذ.
+- تحديث `backend/.env.production.example` لاستخدام `LOG_STACK=stderr` في production container logging.
+- تحديث Production Readiness وSecurity Baseline وArchitecture وTesting Strategy والroadmap لتمييز monitoring documentation عن integration/alert routing غير المثبت.
+- تحديث تقييم DevOps وDocumentation وProduction Readiness بعد monitoring docs.
 
 ### 2026-05-06
 

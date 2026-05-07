@@ -1,0 +1,20 @@
+[Unit]
+Description=DZ SaaS Commerce Laravel Scheduler
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/dz-saas-commerce/backend
+ExecStart=/usr/bin/php artisan schedule:work
+Restart=always
+RestartSec=5
+TimeoutStopSec=60
+KillSignal=SIGTERM
+StandardOutput=journal
+StandardError=journal
+Environment=APP_ENV=production
+
+[Install]
+WantedBy=multi-user.target

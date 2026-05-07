@@ -1,0 +1,17 @@
+[Unit]
+Description=DZ SaaS Commerce PostgreSQL backup
+Documentation=file:/opt/dz-saas-commerce/docs/BACKUP_RESTORE_RUNBOOK.md
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+EnvironmentFile=/etc/dz-saas-commerce/backup.env
+ExecStart=/usr/bin/env bash /opt/dz-saas-commerce/deploy/backup/bin/postgres-backup.sh
+Nice=5
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+PrivateTmp=true
+NoNewPrivileges=true

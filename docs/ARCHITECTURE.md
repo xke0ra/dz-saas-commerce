@@ -90,9 +90,13 @@ Production container foundation now exists as a first baseline:
 - `docs/PRODUCTION_READINESS.md`
 - `docs/BACKUP_RESTORE_RUNBOOK.md`
 - `docs/REVERSE_PROXY_RUNBOOK.md`
+- `docs/QUEUE_SCHEDULER_RUNBOOK.md`
+- `docs/MONITORING_ALERTING_RUNBOOK.md`
+- `docs/adr/`
 - `deploy/reverse-proxy/nginx-edge.conf.example`
+- `deploy/backup/`
 
-This does not yet make production readiness complete. Reverse proxy staging deployment, CI image builds, automated backups, restore drill execution, process supervision, and monitoring remain required before beta/production. Health/readiness, backup/restore documentation, and reverse proxy strategy now exist as baselines.
+This does not yet make production readiness complete. Reverse proxy staging deployment, CI image builds, deployed backup schedules, restore drill execution, process supervision deployment, centralized log aggregation, alert routing, and error tracking integration remain required before beta/production. Health/readiness, backup/restore documentation, backup automation examples, reverse proxy strategy, queue/scheduler supervision documentation, and monitoring/alerting documentation now exist as baselines.
 
 ## Backend Domain Layout
 

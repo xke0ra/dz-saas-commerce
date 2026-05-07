@@ -1,0 +1,11 @@
+[Unit]
+Description=Run DZ SaaS Commerce object storage backup sync daily
+
+[Timer]
+OnCalendar=*-*-* 01:45:00 UTC
+Persistent=true
+RandomizedDelaySec=15m
+Unit=dz-saas-commerce-object-storage-backup.service
+
+[Install]
+WantedBy=timers.target

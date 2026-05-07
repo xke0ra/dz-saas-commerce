@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+umask 077
+
+require_var() {
+  local name="$1"
+
+  if [[ -z "${!name:-}" ]]; then
+    echo "Missing required environment variable: ${name}" >&2
+    exit 2
+  fi
+}
+
+require_var BACKUP_DIR
+
+BACKUP_NAME_PREFIX="${BACKUP_NAME_PREFIX:-dz_saas_commerce}"
+BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
+TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+BACKUP_NAME="${BACKUP_NAME_PREFIX}_${TIMESTAMP}.dump"
+BACKUP_PATH="${BACKUP_DIR}/${BACKUP_NAME}"
+TMP_PATH="${BACKUP_PATH}.tmp"
+
+mkdir -p "$BACKUP_DIR"
+
+cleanup() {
+  rm -f "$TMP_PATH"
+}
+
+trap cleanup EXIT
+
+if [[ -n "${DATABASE_URL:-}" ]]; then
+  pg_dump \
+    --format=custom \
+    --verbose \
+    --no-owner \
+    --no-acl \
+    --file="$TMP_PATH" \
+    "$DATABASE_URL"
+else
+  require_var DB_HOST
+  require_var DB_USERNAME
+  require_var DB_PASSWORD
+  require_var DB_DATABASE
+
+  PGPASSWORD="$DB_PASSWORD" pg_dump \
+    --host="$DB_HOST" \
+    --port="${DB_PORT:-5432}" \
+    --username="$DB_USERNAME" \
+    --dbname="$DB_DATABASE" \
+    --format=custom \
+    --verbose \
+    --no-owner \
+    --no-acl \
+    --file="$TMP_PATH"
+fi
+
+test -s "$TMP_PATH"
+pg_restore --list "$TMP_PATH" > "${TMP_PATH}.list"
+
+mv "$TMP_PATH" "$BACKUP_PATH"
+mv "${TMP_PATH}.list" "${BACKUP_PATH}.list"
+
+(
+  cd "$BACKUP_DIR"
+  sha256sum "$BACKUP_NAME" > "${BACKUP_NAME}.sha256"
+)
+
+find "$BACKUP_DIR" -type f -name "${BACKUP_NAME_PREFIX}_*.dump" -mtime +"$BACKUP_RETENTION_DAYS" -print -delete
+find "$BACKUP_DIR" -type f -name "${BACKUP_NAME_PREFIX}_*.dump.list" -mtime +"$BACKUP_RETENTION_DAYS" -print -delete
+find "$BACKUP_DIR" -type f -name "${BACKUP_NAME_PREFIX}_*.dump.sha256" -mtime +"$BACKUP_RETENTION_DAYS" -print -delete
+
+echo "PostgreSQL backup created: ${BACKUP_PATH}"

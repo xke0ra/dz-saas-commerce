@@ -29,7 +29,7 @@ Latest recorded verification:
 - Storefront build: passed
 - Storefront typecheck: passed
 - Storefront Playwright e2e: not currently verified in the 2026-05-06/2026-05-07 WSL environment. The test suite exists, but Chromium failed before executing scenarios because `libnspr4.so` was missing, and the configured `pnpm` command was not available in PATH.
-- CI baseline: `.github/workflows/quality.yml` exists, but has not yet been proven as an active GitHub Actions merge gate because the workspace root is not currently a Git repository.
+- CI baseline: `.github/workflows/quality.yml` exists, but has not yet been proven as an active required GitHub Actions merge gate.
 
 These numbers must be updated in the living roadmap when they change.
 
@@ -75,6 +75,34 @@ Run scheduled maintenance checks when scheduler commands change:
 cd backend
 php artisan schedule:list
 php artisan test tests/Feature/Checkout/CheckoutIdempotencyPruneTest.php
+```
+
+Run queue/scheduler operating smoke checks when supervision docs or scheduled commands change:
+
+```bash
+cd backend
+php artisan schedule:list
+php artisan queue:failed
+php artisan billing:process --sync
+php artisan checkout-idempotency:prune --dry-run
+```
+
+Run monitoring/readiness smoke checks when monitoring or production operations docs change:
+
+```bash
+cd backend
+php artisan system:health --scope=live --format=json
+php artisan system:health --scope=ready --format=json
+php artisan queue:failed
+php artisan schedule:list
+```
+
+Run backup automation syntax checks when backup scripts or systemd examples change:
+
+```bash
+bash -n deploy/backup/bin/postgres-backup.sh.example
+bash -n deploy/backup/bin/object-storage-sync.sh.example
+bash -n deploy/backup/bin/staging-restore-drill.sh.example
 ```
 
 Run browser/security header smoke tests when headers or middleware change:
@@ -136,6 +164,7 @@ P0 areas:
 - production runtime safeguards for `APP_DEBUG` and `APP_KEY`
 - security headers and CSP/HSTS smoke behavior when changed
 - trusted proxy behavior for `X-Forwarded-Proto` / HSTS behind reverse proxies
+- scheduler registration and failed-jobs smoke checks when operating commands change
 
 P1 areas:
 

@@ -12,6 +12,12 @@ The living roadmap is:
 
 - `docs/PROJECT_DEEP_ANALYSIS_AND_AI_ROADMAP_AR.md`
 
+Architecture decisions live in:
+
+- `docs/adr/`
+
+Do not change an accepted architecture decision without adding or updating an ADR.
+
 ## Before Any Change
 
 Inspect the relevant files:
@@ -24,10 +30,10 @@ rg -n "ComponentOrConcept" storefront/src storefront/tests
 Check worktree state:
 
 ```bash
-git -C backend status --short
+git status --short
 ```
 
-Note: the repository root is not currently a git repository. `backend/` is a git repository. Do not revert unrelated changes.
+Note: the repository root is the Git repository. Do not revert unrelated changes.
 
 ## Local Setup
 
@@ -40,7 +46,7 @@ Use `docs/LOCAL_DEVELOPMENT.md` as the local setup contract. It documents:
 - verification commands
 - generated artifacts that must not be committed or packaged
 
-The workspace root currently is not a Git repository. Until the repository strategy is normalized, check both the root-level hygiene files and the `backend/` Git worktree before making changes.
+The workspace root is the repository boundary. Check the full root worktree before making changes.
 
 ## Production Build Artifacts
 
@@ -64,8 +70,8 @@ The baseline workflow is:
 Current status:
 
 - The workflow defines backend, storefront, Dockerfile check, and optional storefront e2e jobs.
-- The workspace root is not currently a Git repository, so this workflow is not yet proven as an active merge gate.
-- Treat it as the target CI contract until repository strategy is normalized and the workflow runs inside GitHub Actions.
+- The workspace root is a Git repository, but this workflow is not yet proven as an active required merge gate.
+- Treat it as the target CI contract until it runs inside GitHub Actions and is configured as a required check.
 
 Required CI gates before broad AI/Codex development:
 

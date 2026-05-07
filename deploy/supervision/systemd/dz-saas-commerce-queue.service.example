@@ -1,0 +1,20 @@
+[Unit]
+Description=DZ SaaS Commerce Laravel Queue Worker
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/dz-saas-commerce/backend
+ExecStart=/usr/bin/php artisan queue:work redis --tries=3 --timeout=90 --sleep=3 --max-time=3600
+Restart=always
+RestartSec=5
+TimeoutStopSec=120
+KillSignal=SIGTERM
+StandardOutput=journal
+StandardError=journal
+Environment=APP_ENV=production
+
+[Install]
+WantedBy=multi-user.target

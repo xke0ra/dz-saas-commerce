@@ -25,8 +25,12 @@ Implemented in this foundation pass:
 - storefront security headers through Next.js `headers()`
 - scheduled checkout idempotency pruning command
 - documented backup/restore runbook
+- example backup automation scripts and systemd timers
 - documented reverse proxy runbook and Nginx edge example
 - Laravel trusted proxy config and tests
+- documented queue/scheduler supervision runbook and systemd examples
+- documented monitoring/alerting runbook
+- production logging example routes Laravel logs to `stderr` for container collection
 
 Still required:
 
@@ -34,9 +38,10 @@ Still required:
 - CI build jobs for both images when registry/promotion strategy is selected
 - image vulnerability scanning
 - reverse proxy deployment in staging and TLS/custom-domain validation
-- automated backup configuration and restore drill execution
-- queue and scheduler process supervision
+- deploy automated backup schedules and execute restore drill
+- queue and scheduler supervision deployment in staging/production
 - error tracking integration
+- real uptime checks, alert routing, and centralized log aggregation
 - CSP tightening after browser/e2e validation
 
 ## Image Build Commands
@@ -97,12 +102,16 @@ It currently checks:
 
 Limitations:
 
-- The workspace root is not currently a Git repository, so this workflow is not yet proven as an active pull request gate.
+- The workspace root is a Git repository, but this workflow is not yet proven as an active required pull request gate in GitHub Actions.
 - It does not yet build/push production images.
 - It does not yet run dependency vulnerability scanning.
 - E2E remains optional until Playwright dependencies and integration strategy are stable.
 
 ## Backend Runtime Processes
+
+Detailed runbook:
+
+- `docs/QUEUE_SCHEDULER_RUNBOOK.md`
 
 Web process:
 
@@ -113,7 +122,7 @@ php-fpm
 Queue worker process:
 
 ```bash
-php artisan queue:work redis --tries=3 --timeout=90 --sleep=3
+php artisan queue:work redis --tries=3 --timeout=90 --sleep=3 --max-time=3600
 ```
 
 Scheduler process:
@@ -126,6 +135,11 @@ Scheduled commands currently registered:
 
 - `billing:process` daily at 02:00
 - `checkout-idempotency:prune` daily at 03:00
+
+Example systemd units:
+
+- `deploy/supervision/systemd/dz-saas-commerce-queue.service.example`
+- `deploy/supervision/systemd/dz-saas-commerce-scheduler.service.example`
 
 Deployment/migration operator command:
 
@@ -175,6 +189,7 @@ Required operations:
 - Monitor failed jobs count.
 - Alert on repeated billing, domain verification, notification, or checkout-related job failures.
 - Define retry and manual resolution procedures.
+- Restart queue workers after deploy with `php artisan queue:restart`.
 
 Useful commands:
 
@@ -185,6 +200,28 @@ php artisan queue:flush
 ```
 
 Use `queue:flush` only after an operator decision; it destroys failure evidence.
+
+## Monitoring, Alerting, And Logs
+
+Detailed runbook:
+
+- `docs/MONITORING_ALERTING_RUNBOOK.md`
+
+Current documented baseline:
+
+- liveness/readiness checks are available for uptime monitors.
+- `system:health` can be used by operators and CI smoke checks.
+- queue/scheduler/failed-job checks are documented.
+- `backend/.env.production.example` uses `LOG_STACK=stderr` so container platforms can collect Laravel logs.
+
+Still required before production:
+
+- select and integrate an error tracking provider.
+- configure staging/production uptime checks.
+- configure centralized log aggregation.
+- configure alert routing and escalation.
+- verify PII redaction in logs and error events.
+- add alerts for failed jobs, queue/scheduler process failure, readiness failure, backup failure, and TLS/custom-domain issues.
 
 ## Storage Strategy
 
@@ -252,8 +289,8 @@ Documented:
 
 Required before production:
 
-- Automated PostgreSQL backups.
-- Object storage backup/replication policy.
+- Automated PostgreSQL backups deployed from the provided examples or a managed provider.
+- Object storage backup/replication policy deployed.
 - Execute and record restore procedure against staging.
 - Restore drill against staging at least once.
 - Backup encryption and access controls.
@@ -299,9 +336,10 @@ Before beta:
 
 - Docker images build or at least pass build-plan checks in CI, then build/push when registry is selected.
 - `APP_DEBUG=false` and `APP_KEY` verified through readiness in staging/production.
-- Queue worker and scheduler supervised.
+- Queue worker and scheduler supervised in staging/production.
 - Basic health/readiness checks exist.
 - Backup and restore documented; restore drill executed at least once.
 - Reverse proxy deployed and verified in staging.
+- Monitoring and alerting configured at least for readiness, failed jobs, queue/scheduler processes, and critical 5xx spikes.
 - Security headers baseline exists.
 - Playwright or equivalent smoke checks run reliably in CI.

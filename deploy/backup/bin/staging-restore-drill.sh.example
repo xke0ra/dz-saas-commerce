@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+require_var() {
+  local name="$1"
+
+  if [[ -z "${!name:-}" ]]; then
+    echo "Missing required environment variable: ${name}" >&2
+    exit 2
+  fi
+}
+
+require_var BACKUP_FILE
+require_var STAGING_DATABASE_URL
+require_var ALLOW_STAGING_RESTORE
+
+if [[ "$ALLOW_STAGING_RESTORE" != "true" ]]; then
+  echo "Refusing restore: set ALLOW_STAGING_RESTORE=true for an intentional staging drill." >&2
+  exit 2
+fi
+
+if [[ "$STAGING_DATABASE_URL" =~ prod|production ]]; then
+  echo "Refusing restore: STAGING_DATABASE_URL appears to reference production." >&2
+  exit 2
+fi
+
+if [[ ! -s "$BACKUP_FILE" ]]; then
+  echo "Backup file does not exist or is empty: ${BACKUP_FILE}" >&2
+  exit 2
+fi
+
+CHECKSUM_FILE="${BACKUP_FILE}.sha256"
+
+if [[ -f "$CHECKSUM_FILE" ]]; then
+  BACKUP_DIR="$(dirname "$BACKUP_FILE")"
+  BACKUP_BASENAME="$(basename "$BACKUP_FILE")"
+
+  (
+    cd "$BACKUP_DIR"
+    sha256sum --check "${BACKUP_BASENAME}.sha256"
+  )
+fi
+
+pg_restore --list "$BACKUP_FILE" >/tmp/dz_saas_restore_drill_list.txt
+
+pg_restore \
+  --verbose \
+  --clean \
+  --if-exists \
+  --no-owner \
+  --no-acl \
+  --dbname="$STAGING_DATABASE_URL" \
+  "$BACKUP_FILE"
+
+if [[ -n "${BACKEND_DIR:-}" ]]; then
+  cd "$BACKEND_DIR"
+  php artisan optimize:clear
+  php artisan migrate:status
+  php artisan system:health --scope=ready --format=json
+fi
+
+echo "Staging restore drill completed for: ${BACKUP_FILE}"

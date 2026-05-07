@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+require_var() {
+  local name="$1"
+
+  if [[ -z "${!name:-}" ]]; then
+    echo "Missing required environment variable: ${name}" >&2
+    exit 2
+  fi
+}
+
+require_var AWS_BUCKET
+require_var BACKUP_BUCKET
+
+BACKUP_PREFIX="${BACKUP_PREFIX:-dz-saas-commerce/object-storage}"
+TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+DESTINATION="s3://${BACKUP_BUCKET}/${BACKUP_PREFIX}/${TIMESTAMP}/"
+ENDPOINT_ARGS=()
+
+if [[ -n "${AWS_ENDPOINT:-}" ]]; then
+  ENDPOINT_ARGS=(--endpoint-url "$AWS_ENDPOINT")
+fi
+
+aws "${ENDPOINT_ARGS[@]}" s3 sync \
+  "s3://${AWS_BUCKET}" \
+  "$DESTINATION" \
+  --only-show-errors
+
+echo "Object storage backup sync completed: ${DESTINATION}"

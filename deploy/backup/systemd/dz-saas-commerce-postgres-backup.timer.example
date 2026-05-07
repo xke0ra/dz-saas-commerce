@@ -1,0 +1,11 @@
+[Unit]
+Description=Run DZ SaaS Commerce PostgreSQL backup daily
+
+[Timer]
+OnCalendar=*-*-* 01:15:00 UTC
+Persistent=true
+RandomizedDelaySec=15m
+Unit=dz-saas-commerce-postgres-backup.service
+
+[Install]
+WantedBy=timers.target

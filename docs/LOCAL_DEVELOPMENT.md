@@ -9,13 +9,13 @@ This is the clean-clone local setup contract for `dz-saas-commerce`. It intentio
 Current observed shape:
 
 - Workspace root: `dz-saas-commerce/`
-- Backend Git repository: `backend/.git`
-- Storefront and docs exist beside `backend/`, but the workspace root is not currently a Git repository.
+- Git repository root: `dz-saas-commerce/.git`
+- Backend, storefront, docs, deploy examples, and Docker Compose live in the same root repository.
 
-Before commercial development scales, choose one repository strategy and document it:
+Repository strategy:
 
-1. Prefer a single root repository containing `backend/`, `storefront/`, `docs/`, and `docker-compose.yml`; or
-2. Keep split repositories, but document ownership, release coordination, and where shared docs live.
+- Current strategy is a root monorepo.
+- Do not reintroduce nested Git repositories without an ADR explaining ownership, release coordination, and CI impact.
 
 ## Prerequisites
 

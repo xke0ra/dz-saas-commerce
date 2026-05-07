@@ -17,7 +17,7 @@ export default defineConfig({
     },
     {
       command:
-        "NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:3101 NEXT_PUBLIC_ASSET_BASE_URL=http://127.0.0.1:3101 NEXT_PUBLIC_DEFAULT_STORE=demo-store DEFAULT_STORE_IDENTIFIER=demo-store pnpm next dev --hostname 127.0.0.1 --port 3100",
+        "NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:3101 NEXT_PUBLIC_ASSET_BASE_URL=http://127.0.0.1:3101 NEXT_PUBLIC_DEFAULT_STORE=demo-store DEFAULT_STORE_IDENTIFIER=demo-store npx --yes pnpm@10.33.2 next dev --hostname 127.0.0.1 --port 3100",
       url: "http://127.0.0.1:3100",
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
@@ -30,4 +30,3 @@ export default defineConfig({
     },
   ],
 });
-

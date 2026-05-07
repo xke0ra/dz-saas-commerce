@@ -40,10 +40,11 @@ Current important gaps:
 - no documented 2FA setup
 - no full session/device management
 - CSP baseline is intentionally broad for Filament/Livewire/storefront compatibility and still needs production tightening after browser/e2e validation
-- backup/restore runbook exists, but no executed staging restore drill is recorded yet
+- backup/restore runbook and automation examples exist, but no deployed backup schedule or executed staging restore drill is recorded yet
 - no completed secrets rotation procedure
 - no formal vulnerability review workflow
 - no CI dependency vulnerability scanning
+- no production monitoring/error tracking integration or alert routing
 - production `.env.production.example` files exist, but real secret management and rotation are not implemented yet
 
 ## Authentication
@@ -245,11 +246,12 @@ Before enabling broader uploads:
 
 Required before commercial launch:
 
-- automated backups and a recorded staging restore drill
-- queue worker supervision
-- scheduler supervision
+- automated backups deployed from the examples or managed provider and a recorded staging restore drill
+- queue worker supervision runbook exists; staging/production supervision is not proven yet
+- scheduler supervision runbook exists; staging/production supervision is not proven yet
 - production logging without sensitive data leakage
-- error monitoring
+- monitoring/alerting runbook exists, but no production integration is proven yet
+- error tracking provider and PII redaction must be selected and verified
 - alerting for failed jobs and payment/billing failures
 - database connection least privilege
 
