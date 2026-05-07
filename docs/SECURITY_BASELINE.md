@@ -1,0 +1,253 @@
+# Security Baseline
+
+Last updated: 2026-05-07
+
+This document defines the minimum security posture expected as the platform moves toward commercial launch.
+
+## Security Principles
+
+- Tenant isolation is a security boundary.
+- The frontend is never trusted for money, inventory, discounts, shipping, payment, or subscription limits.
+- Authorization must be explicit through policies, gates, and tenant permissions.
+- Admin and vendor dashboards are sensitive operational surfaces.
+- Auditability is required for important business actions.
+
+## Current Security Controls
+
+Currently present:
+
+- Filament panel access through `User::canAccessPanel()`
+- platform roles: super admin and platform support
+- tenant roles and permissions through internal enums and tenant pivot data
+- policy registration in `App\Providers\AppServiceProvider`
+- tenant current context through scoped `CurrentTenant`
+- tenant global scope through `BelongsToTenant`
+- checkout rate limiting in `backend/routes/api.php`
+- checkout abuse guard by IP, phone, and store
+- checkout idempotency records by tenant/store/key/request hash
+- checkout duplicate-window replay for repeated submissions without an idempotency key
+- public storefront throttling
+- cross-tenant database constraints for important relationships
+- audit log domain foundation
+
+Current important gaps:
+
+- no documented 2FA setup
+- no full session/device management
+- no documented CSP/security headers
+- no documented production backup and restore test
+- no completed secrets rotation procedure
+- no formal vulnerability review workflow
+- no CI dependency vulnerability scanning
+- production `.env.production.example` files exist, but real secret management and rotation are not implemented yet
+
+## Authentication
+
+Required before production:
+
+- 2FA for super admins
+- 2FA for tenant owners where practical
+- clear password reset configuration
+- session timeout policy for admin/vendor panels
+- device/session visibility or revocation for sensitive accounts
+
+## Authorization
+
+Rules:
+
+- All Filament resources must be protected by policies.
+- Platform admin resources should normally require super admin.
+- Support panel resources should allow platform support only where intended.
+- Vendor resources must require tenant membership and tenant permission.
+- Super admin bypass must not bypass explicit deny rules for dangerous immutable records such as audit log mutation.
+
+When adding a new model:
+
+1. create policy
+2. register policy in `AppServiceProvider`
+3. add tests for allowed and denied roles
+
+## Tenant Isolation
+
+Tenant isolation must be enforced at multiple layers:
+
+- request tenant resolution
+- Eloquent global scopes
+- explicit tenant filters when bypassing scopes
+- policies
+- database constraints
+- tests
+
+Any `withoutGlobalScope('current_tenant')` must be reviewed as security-sensitive.
+
+## Public Storefront API
+
+Public endpoints must:
+
+- validate all input
+- throttle abuse-prone routes
+- return 404 for unavailable stores
+- avoid leaking another tenant's records
+- avoid exposing internal IDs where unnecessary
+- never trust client-calculated totals
+
+Current public throttles:
+
+- storefront group: `throttle:120,1`
+- checkout: `throttle:20,1`
+- track order: `throttle:60,1`
+- checkout abuse guard:
+  - IP scoped limit
+  - phone scoped limit
+  - store scoped limit
+
+Checkout idempotency:
+
+- `Idempotency-Key` is supported by Laravel checkout.
+- Next.js quick order sends `Idempotency-Key` through the route proxy.
+- Reusing the same key with the same payload returns the existing order.
+- Reusing the same key with a different payload returns conflict.
+- Logs use phone/IP hashes for suspicious checkout events.
+
+These limits should be revisited before production using real traffic expectations.
+
+## Checkout Security
+
+Checkout must always calculate on the backend:
+
+- product availability
+- price
+- subtotal
+- shipping fee
+- discount
+- inventory reservation
+- total
+- payment record
+
+Checkout must run critical changes in a transaction and lock inventory/product rows where needed.
+
+Before broad beta, add:
+
+- cleanup for expired checkout idempotency records
+- operational metrics for rate-limited checkout attempts
+- real integration e2e for idempotent storefront checkout replay
+
+## Data Protection
+
+Sensitive data currently includes:
+
+- customer names
+- phone numbers
+- addresses
+- order notes
+- payment proof metadata later
+- merchant legal/commercial fields later
+
+Required direction:
+
+- do not log sensitive payloads unnecessarily
+- avoid exposing full customer data to unauthorized staff
+- define export permissions before adding exports
+- define retention policy for support tickets, logs, and customer data
+
+## Secrets
+
+Rules:
+
+- no hardcoded passwords or tokens in application code
+- local sample credentials may live in local docker/dev examples only and must be clearly treated as dummy local values
+- production secrets must come from environment or secret manager
+- Meilisearch, S3, mail, payment, and shipping credentials must be rotatable
+- `.env` and `.env.local` must not be committed or included in clean delivery bundles
+- `.env.example` and `.env.testing.example` must contain only placeholders or local-only dummy values
+
+Before launch, document:
+
+- secret inventory
+- rotation process
+- production `.env` template without values
+
+2026-05-07 hygiene baseline:
+
+- root `.gitignore`, `backend/.gitignore`, and `storefront/.gitignore` now exclude local env files and generated dependency/build/test artifacts.
+- `backend/.env.testing.example` exists for testing setup.
+- `backend/.env.production.example` and `storefront/.env.production.example` exist with placeholders only.
+- `docs/LOCAL_DEVELOPMENT.md` documents local-only dummy credentials and clean workspace rules.
+- `docs/PRODUCTION_READINESS.md` documents the first production runbook baseline.
+- A scan excluding local `.env` files found local dummy credentials in `docker-compose.yml` and `.env.example`; these are acceptable only for local development and must be rotated outside local use.
+
+## Audit Logging
+
+Actions that require audit logs:
+
+- tenant created or suspended
+- subscription changed
+- invoice/payment confirmed or rejected
+- order status changed
+- shipment status changed
+- product deleted
+- staff invited or permissions changed
+- support ticket status/assignee changed
+- custom domain verified or removed
+
+Audit logs should include:
+
+- actor
+- tenant when relevant
+- auditable entity
+- event name
+- before/after metadata where useful
+- timestamp
+
+Audit logs should be append-oriented. Mutation/deletion must be strongly restricted.
+
+## Headers And Browser Security
+
+Before production, add and verify:
+
+- HTTPS-only cookies
+- secure session settings
+- CSRF protection on dashboard forms
+- CSP suitable for Filament and storefront
+- `X-Frame-Options` or `frame-ancestors`
+- `X-Content-Type-Options`
+- `Referrer-Policy`
+- HSTS in production
+
+## File Uploads
+
+Before enabling broader uploads:
+
+- restrict MIME types
+- restrict file size
+- store outside public path unless intentionally public
+- scan or validate files where possible
+- use signed/private URLs for sensitive files
+- separate tenant paths in object storage
+
+## Operational Security
+
+Required before commercial launch:
+
+- tested backups and restore
+- queue worker supervision
+- scheduler supervision
+- production logging without sensitive data leakage
+- error monitoring
+- alerting for failed jobs and payment/billing failures
+- database connection least privilege
+
+## Security Review Checklist
+
+Before shipping a sensitive feature:
+
+1. Is input validated?
+2. Is authorization explicit?
+3. Is tenant scope guaranteed?
+4. Is money calculated only server-side?
+5. Are dangerous state changes audited?
+6. Are rate limits and idempotency needed?
+7. Are sensitive fields hidden from unauthorized users?
+8. Are tests covering denied access?
+9. Are secrets kept out of code?
+10. Is the living roadmap updated if this changes the security posture?

@@ -1,0 +1,74 @@
+# Root hygiene for the dz-saas-commerce workspace.
+# Keep examples committed, keep local secrets and generated artifacts out.
+
+.DS_Store
+Thumbs.db
+*.log
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.testing.example
+!.env.production.example
+
+# Dependency directories
+backend/vendor/
+backend/node_modules/
+storefront/node_modules/
+
+# Framework/build artifacts
+backend/public/build/
+backend/public/hot
+backend/public/storage
+backend/storage/*.key
+backend/storage/logs/*
+!backend/storage/logs/.gitignore
+backend/storage/pail/
+backend/database/*.sqlite
+backend/database/*.sqlite-*
+backend/.phpunit.cache/
+backend/.phpunit.result.cache
+
+storefront/.next/
+storefront/out/
+storefront/dist/
+storefront/coverage/
+storefront/test-results/
+storefront/playwright-report/
+storefront/*.tsbuildinfo
+
+# Local editor/agent state
+.codex/
+.cursor/
+.nova/
+.zed/
+
+
+
+
+/backend/.env
+/backend/.env.*
+!/backend/.env.example
+
+/storefront/.env
+/storefront/.env.*
+!/storefront/.env.example
+
+node_modules/
+vendor/
+
+storage/logs/
+storage/framework/cache/
+storage/framework/sessions/
+storage/framework/views/
+
+.DS_Store
+Thumbs.db
+
+.next/
+dist/
+build/
+
+.idea/
+.vscode/

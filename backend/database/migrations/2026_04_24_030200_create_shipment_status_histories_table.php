@@ -1,0 +1,35 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('shipment_status_histories', function (Blueprint $table): void {
+            $table->ulid('id')->primary();
+            $table->foreignUlid('tenant_id')->constrained()->cascadeOnDelete();
+            $table->foreignUlid('shipment_id')->constrained()->cascadeOnDelete();
+            $table->string('from_status')->nullable();
+            $table->string('to_status');
+            $table->text('comment')->nullable();
+            $table->foreignId('changed_by_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamps();
+
+            $table->index(['tenant_id', 'shipment_id', 'created_at']);
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('shipment_status_histories');
+    }
+};
