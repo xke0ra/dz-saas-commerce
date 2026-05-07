@@ -24,6 +24,7 @@ Implemented in this foundation pass:
 - backend security headers middleware
 - storefront security headers through Next.js `headers()`
 - scheduled checkout idempotency pruning command
+- documented backup/restore runbook
 
 Still required:
 
@@ -31,7 +32,7 @@ Still required:
 - CI build jobs for both images when registry/promotion strategy is selected
 - image vulnerability scanning
 - reverse proxy configuration
-- backup and restore drill
+- automated backup configuration and restore drill execution
 - queue and scheduler process supervision
 - error tracking integration
 - CSP tightening after browser/e2e validation
@@ -243,11 +244,15 @@ After migration:
 
 ## Backup And Restore
 
+Documented:
+
+- `docs/BACKUP_RESTORE_RUNBOOK.md`
+
 Required before production:
 
 - Automated PostgreSQL backups.
 - Object storage backup/replication policy.
-- Documented restore procedure.
+- Execute and record restore procedure against staging.
 - Restore drill against staging at least once.
 - Backup encryption and access controls.
 
@@ -285,6 +290,6 @@ Before beta:
 - `APP_DEBUG=false` and `APP_KEY` verified through readiness in staging/production.
 - Queue worker and scheduler supervised.
 - Basic health/readiness checks exist.
-- Backup and restore documented.
+- Backup and restore documented; restore drill executed at least once.
 - Security headers baseline exists.
 - Playwright or equivalent smoke checks run reliably in CI.

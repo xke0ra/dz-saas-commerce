@@ -38,7 +38,7 @@ Current important gaps:
 - no documented 2FA setup
 - no full session/device management
 - CSP baseline is intentionally broad for Filament/Livewire/storefront compatibility and still needs production tightening after browser/e2e validation
-- no documented production backup and restore test
+- backup/restore runbook exists, but no executed staging restore drill is recorded yet
 - no completed secrets rotation procedure
 - no formal vulnerability review workflow
 - no CI dependency vulnerability scanning
@@ -243,7 +243,7 @@ Before enabling broader uploads:
 
 Required before commercial launch:
 
-- tested backups and restore
+- automated backups and a recorded staging restore drill
 - queue worker supervision
 - scheduler supervision
 - production logging without sensitive data leakage
