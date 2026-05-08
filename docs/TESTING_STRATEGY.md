@@ -1,6 +1,6 @@
 # Testing Strategy
 
-Last updated: 2026-05-07
+Last updated: 2026-05-08
 
 This document defines how the project should be tested as it grows into a commercial SaaS platform.
 
@@ -26,9 +26,11 @@ Frontend:
 Latest recorded verification:
 
 - Backend: `150 passed (610 assertions)`
-- Storefront build: passed
-- Storefront typecheck: passed
-- Storefront Playwright e2e: not currently verified in the 2026-05-06/2026-05-07 WSL environment. The test suite exists, but Chromium failed before executing scenarios because `libnspr4.so` was missing, and the configured `pnpm` command was not available in PATH.
+- Storefront Docker verification: `./storefront/scripts/verify-docker.sh all` passed on 2026-05-08.
+- Storefront install: `pnpm install --frozen-lockfile` passed in Docker with Node `v24.15.0` and pnpm `10.33.2`.
+- Storefront typecheck: passed.
+- Storefront build: passed.
+- Storefront Playwright e2e: `6 passed`.
 - CI baseline: `.github/workflows/quality.yml` exists, but has not yet been proven as an active required GitHub Actions merge gate.
 
 These numbers must be updated in the living roadmap when they change.
@@ -122,6 +124,23 @@ php artisan test
 
 ## Frontend Test Commands
 
+Preferred Docker verification from the repository root:
+
+```bash
+./storefront/scripts/verify-docker.sh all
+```
+
+Individual Docker checks:
+
+```bash
+./storefront/scripts/verify-docker.sh install
+./storefront/scripts/verify-docker.sh typecheck
+./storefront/scripts/verify-docker.sh build
+./storefront/scripts/verify-docker.sh e2e
+```
+
+Native WSL or Linux verification when Node/pnpm are installed in the same environment as the checkout:
+
 ```bash
 cd storefront
 corepack enable
@@ -133,14 +152,7 @@ pnpm test:e2e
 
 Do not run `pnpm typecheck` while `pnpm build` is regenerating `.next/types`.
 
-Temporary fallback when `pnpm` is unavailable:
-
-```bash
-cd storefront
-npm run typecheck
-npm run build
-npx --yes pnpm@10.33.2 exec playwright test
-```
+Do not mix a Windows Node runtime with a WSL-created pnpm `node_modules` tree over `\\wsl.localhost` paths. For reliable storefront verification, run Node and pnpm in the same environment that owns the checkout, or use a Dockerized storefront verification job.
 
 ## What Must Be Tested
 

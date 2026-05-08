@@ -1,1197 +1,1135 @@
-# تحليل شامل وخطة تطوير تنفيذية لمشروع dz-saas-commerce
+# التحليل العميق وخارطة الطريق الاستراتيجية لمنصة dz-saas-commerce
 
-آخر تحديث مثبت: 2026-05-07
+آخر تحديث: 2026-05-08
 
-نوع الوثيقة: Living Roadmap + Execution Contract لعمل الإنسان وCodex/AI agents على المشروع.
+نوع الوثيقة: مرجع استراتيجي أعلى + تحليل معماري + خارطة طريق تنفيذية طويلة المدى لعمل الإنسان وCodex على المشروع.
 
-نطاق التحقق المستخدم في هذا التحديث:
+هذه الوثيقة هي المرجع الأعلى لتطوير `dz-saas-commerce`. أي وثيقة roadmap تفصيلية أو sprint plan أو prompt موجه إلى Codex يجب ألا يتعارض معها. عند وجود تعارض بين هذه الوثيقة وملف آخر، يتم تحديث الملف الأدنى أو تسجيل الفجوة صراحة قبل تنفيذ الميزة.
 
-- `backend/`
-- `storefront/`
-- `docs/`
-- `docker-compose.yml`
-- ملفات الإعداد والاختبارات الموجودة فعلياً
+مصادر هذه النسخة:
 
-قاعدة أساسية: هذه الوثيقة لا تصف الطموح فقط. كل حالة مذكورة يجب أن تكون مبنية على أثر موجود في الكود أو على نتيجة تحقق عملية. عند الشك تصنف النقطة كـ `غير مثبت / يحتاج تحقق`.
+- قراءة بنية المستودع وملفات `backend/`, `storefront/`, `docs/`, `docker-compose.yml`, و`.github/workflows/quality.yml`.
+- نتائج فحص عملي محلية بتاريخ 2026-05-08.
+- الوثائق الموجودة فعلياً داخل `docs/`.
+- مبدأ المنتج المعلن: بناء منصة SaaS تجارة إلكترونية ضخمة شبيهة بـ Shopify، لكنها مخصصة للسوق الجزائري، بدون استعجال إطلاق غير ناضج.
 
-حالات التصنيف المعتمدة:
-
-- `مكتمل`
-- `مكتمل جزئياً`
-- `قيد البناء`
-- `مطلوب`
-- `مؤجل`
-- `غير مثبت / يحتاج تحقق`
-- `لا ينفذ الآن`
+قاعدة قراءة مهمة: هذه الوثيقة لا تعني أن المشروع جاهز للإنتاج. هي تميز بين ما هو موجود فعلاً، وما هو جيد كأساس، وما يحتاج إثباتاً تشغيلياً قبل beta أو production.
 
 ---
 
-## 0. الهدف النهائي للمنتج
+## 1. الخلاصة التنفيذية
 
-الهدف النهائي هو بناء منصة SaaS تجارة إلكترونية جزائرية كاملة، قابلة للبيع والتشغيل، تخدم:
+`dz-saas-commerce` مشروع monorepo متقدم لبناء منصة SaaS متعددة المستأجرين للتجارة الإلكترونية في الجزائر. النواة التجارية موجودة بدرجة جيدة: tenancy، كتالوج، مخزون، طلبات، دفع COD، شحن، اشتراكات، كوبونات، دومينات، إعدادات متجر، ثيمات، تدقيق، دعم، ولوحات Filament متعددة.
 
-1. مالك المنصة:
-   - إدارة tenants، المتاجر، الخطط، الاشتراكات، الفواتير، الدعم، والإيرادات.
-   - مراقبة المخاطر التشغيلية والتحصيل المالي وصحة النظام.
-   - بناء عروض تجارية قابلة للتوسع: خطط، add-ons، analytics، domains، support tiers.
+الخلفية `backend/` هي أقوى جزء في المشروع حالياً. هي مبنية بـ Laravel وFilament، وتستخدم Actions وسياسات وصلاحيات وقيود قاعدة بيانات واختبارات جيدة. الفحص العملي أثبت أن backend test suite يمر بنجاح: `150 passed (610 assertions)`.
 
-2. التاجر:
-   - إنشاء متجر احترافي بسرعة.
-   - إدارة المنتجات، الطلبات، الشحن، الدفع، العملاء، الموظفين، الدعم، والصفحات القانونية.
-   - الوصول لأول طلب حقيقي بدون تدخل مطور.
+الواجهة `storefront/` جيدة كبداية فعلية: صفحات متجر، منتجات، تصنيفات، بحث، سلة، checkout، تتبع طلب، SEO، robots، sitemap، وJSON-LD. تم تثبيت مسار Docker موحد لتشغيل install/typecheck/build/e2e، لكنها ما زالت تحتاج نضجاً واضحاً في pagination، sitemap scale، caching/revalidation، accessibility، وصقل تجربة checkout على الهاتف.
 
-3. الزبون النهائي:
-   - Storefront سريع وواضح.
-   - تجربة Arabic/RTL أساسية مع قابلية French لاحقاً.
-   - Quick order مناسب للسوق الجزائري.
-   - تتبع طلب، ثقة، وضوح في السعر والشحن والدفع.
+الجاهزية للإنتاج غير مكتملة. توجد Dockerfiles، health/readiness، runbooks، CI baseline، backup/proxy/monitoring docs، وأساس أمني، لكن لا يوجد بعد دليل كاف على staging deployment، required CI gates، image promotion، restore drill منفذ، monitoring/alerting فعلي، error tracking، أو security hardening كامل.
 
-المبدأ غير القابل للتفاوض: Laravel هو مصدر الحقيقة للأسعار، الخصومات، الشحن، المخزون، الدفع، الاشتراكات، وحدود الخطة. الواجهة لا تكون مصدراً موثوقاً لأي total أو قرار مالي.
+الهدف بعيد المدى ليس إطلاق متجر واحد، بل بناء منصة SaaS تجارية واسعة شبيهة بـ Shopify ومناسبة للجزائر. لذلك لا ينصح بالإطلاق قبل إغلاق التشغيل، الأمان، العزل بين المستأجرين، موثوقية CI، النسخ الاحتياطي، والمراقبة.
 
 ---
 
-## 1. ملخص تنفيذي محدث
+## 2. تعريف المنتج النهائي
 
-المشروع حالياً Modular Monolith عملي لمنصة SaaS e-commerce جزائرية. الخلفية مبنية على Laravel 13 وFilament 5.6، والواجهة العامة مبنية على Next.js 15 وReact 19. الكود تجاوز مرحلة البداية، لكنه لم يصل بعد إلى production-grade SaaS.
+المنتج النهائي ليس storefront فقط، وليس لوحة Filament فقط. هو `SaaS commerce platform` متعددة الأطراف.
 
-### درجة النضج حسب السطح
+### 2.1 مالك المنصة Platform Owner
 
-| المجال | الحالة | التقييم المختصر |
-|---|---|---|
-| Backend Laravel | مكتمل جزئياً بدرجة قوية | domains كثيرة موجودة مع Actions وPolicies واختبارات جيدة. |
-| Storefront Next.js | مكتمل جزئياً | home/products/cart/checkout/track-order/SEO موجودة، لكن caching وUX polish وimage strategy غير مكتملة. |
-| Tenancy | مكتمل جزئياً بدرجة قوية | shared DB + `tenant_id` + global scope + DB constraints + tests. الخطر المتبقي هو مراجعة أي `withoutGlobalScope`. |
-| Billing | مكتمل جزئياً | plans/features/subscriptions/invoices/manual payments/lifecycle موجودة، لكن revenue ops وPDFs وledger/dunning التجاري غير مكتملة. |
-| Shipping | مكتمل جزئياً | wilayas/communes/rates/companies/shipments/returns موجودة، لكن integrations وtemplates وCOD reconciliation غير موجودة. |
-| Production Readiness | مكتمل جزئياً | Dockerfiles وenv production examples وrunbooks وhealth/readiness foundation وsecurity headers baseline وفحص production runtime safeguards وbackup/restore runbook وbackup automation examples وreverse proxy baseline وqueue/scheduler supervision runbook وmonitoring/alerting runbook موجودة. يوجد CI workflow baseline في الجذر، لكنه غير مثبت كـ merge gate فعلي بعد. لا staging proxy deployment، ولا backup schedules منشورة، ولا restore drill منفذ، ولا monitoring/error tracking integration أو alert routing فعلي. |
+مالك المنصة يحتاج إلى:
 
-### أكبر 5 مخاطر حالية
+- إدارة tenants والمتاجر والخطط والاشتراكات والفواتير.
+- مراقبة الإيرادات، MRR/ARR، التحصيل، الاشتراكات المتأخرة، والتحويل من trial إلى paid.
+- إدارة الدعم، المخاطر، فشل jobs، صحة النظام، وحالات التعطيل.
+- التحكم في الخطط، الحدود، add-ons، الدومينات، الثيمات، وصلاحيات الفرق.
+- رؤية تشغيلية دقيقة قبل أن تتحول المشكلة إلى خسارة مالية أو تسريب بيانات.
 
-1. `مطلوب P0`: Repository hygiene غير مغلق بالكامل. الجذر مثبت الآن كـ Git repository موحد، لكن توجد ملفات محلية مثل `backend/.env` و`storefront/.env.local` ويجب التأكد أنها غير ملتزمة أو ضمن أي حزمة تسليم، مع تنفيذ clean-clone rehearsal.
-2. `مطلوب P0`: يوجد CI workflow baseline في `.github/workflows/quality.yml`، لكنه غير فعال عملياً كـ merge gate حتى يعمل داخل GitHub ويُضبط كـ required check.
-3. `مطلوب P0`: Production readiness غير مكتمل رغم بدء أساس Docker/runbook/CI/health/security/backup/proxy/supervision/monitoring docs baseline: لا image builds مثبتة في CI، لا backup schedules منشورة، لا restore drill منفذ، لا monitoring/error tracking integration أو alert routing فعلي، ولا reverse proxy أو worker/scheduler supervision مثبت في staging.
-4. `مطلوب P0/P1`: بيئة Playwright غير موثوقة حالياً: `pnpm` غير متاح في PATH، وChromium فشل بسبب `libnspr4.so`.
-5. `مطلوب P1`: Checkout idempotency foundation والتنظيف المجدول أصبحا موجودين، لكن يحتاجان tuning عملي للـ limits، metrics، وتشغيلاً فعلياً داخل CI/observability قبل beta واسع.
+### 2.2 التاجر Merchant
 
-### أفضل ترتيب منطقي للمرحلة القادمة
+التاجر يحتاج إلى:
 
-1. إغلاق Repository Hygiene + Local Dev Reliability المتبقي.
-2. تفعيل CI Quality Gates على المستودع الحقيقي.
-3. إكمال Production Readiness Foundation المتبقية: نشر backup schedules، تنفيذ restore drill، monitoring/error tracking integration، alert routing، نشر reverse proxy وworker/scheduler supervision في staging، وتضييق CSP بعد التحقق.
-4. تثبيت Playwright/e2e أو smoke بديل في CI.
-5. Merchant Onboarding Foundation.
-6. Storefront UX/Performance Polish.
+- إنشاء متجر احترافي بسرعة، بدون تدخل مطور.
+- ضبط البيانات القانونية والتجارية، الشحن، الدفع، الهوية البصرية، والدومين.
+- إدارة المنتجات، الصور، variants لاحقاً، المخزون، الطلبات، العملاء، الشحنات، المرتجعات، والكوبونات.
+- dashboard واضح: مبيعات، طلبات معلقة، مخزون منخفض، توصيلات فاشلة، فواتير، حدود الخطة.
+- تجربة يومية سريعة ومناسبة للعمل التجاري الجزائري، خصوصاً COD والتوصيل حسب الولاية والبلدية.
 
-هذا الترتيب يسبق Merchant Onboarding لأن البيئة، الأسرار، CI، وproduction operations لم تثبت بعد كجاهزة.
+### 2.3 الزبون Customer
 
----
+الزبون يحتاج إلى:
 
-## 2. نتائج التحقق الفعلية بتاريخ 2026-05-07
+- storefront سريع وواضح على الهاتف.
+- لغة عربية/RTL ممتازة، مع دعم فرنسي لاحقاً.
+- سعر واضح، شحن واضح، checkout مختصر، وتتبع طلب.
+- ثقة: معلومات قانونية، اتصال، سياسة شحن/إرجاع، صور جيدة، وأداء جيد.
+- عدم الاعتماد على أرقام مزيفة من الواجهة؛ backend يجب أن يؤكد السعر والشحن والمخزون.
 
-### Backend
+### 2.4 فريق الدعم Support
 
-الأوامر التي تم تشغيلها:
+فريق الدعم يحتاج إلى:
 
-```bash
-cd backend
-php artisan test
-php artisan route:list
-php artisan route:list --path=api/storefront
-php artisan migrate:status
-```
+- رؤية متعددة المستأجرين بدون خرق العزل.
+- إدارة tickets، تصعيد المشاكل، ربطها بالمتاجر والطلبات والفواتير.
+- صلاحيات محدودة: الدعم لا يجب أن يصبح super admin مقنعاً.
+- audit trail للعمليات الحساسة.
 
-النتائج المثبتة:
+### 2.5 النظام التشغيلي DevOps/Operations
 
-- `php artisan test`: `150 passed (610 assertions)` بعد تنفيذ checkout idempotency وhealth/readiness foundation وsecurity headers baseline وprune command وproduction runtime safeguards وtrusted proxy baseline.
-- `php artisan route:list`: `135 routes`.
-- Storefront API routes: `11 routes`.
-- migrations: آخر migration مضافة ومطبقة محلياً هي `2026_05_07_000000_create_checkout_idempotency_records_table`.
-- `php artisan migrate:status`: آخر migration بحالة `Ran`.
+التشغيل يحتاج إلى:
 
-### Storefront
-
-الأوامر التي تم تشغيلها:
-
-```bash
-cd storefront
-npm run typecheck
-npm run build
-./node_modules/.bin/playwright test
-```
-
-النتائج المثبتة:
-
-- `npm run typecheck`: نجح.
-- `npm run build`: نجح.
-- `npm run test:e2e` بصيغته الحالية فشل لأن `pnpm` غير موجود في PATH.
-- تشغيل Playwright مباشرة وصل إلى tests لكنه فشل قبل تنفيذ السيناريوهات لأن Chromium يفتقد `libnspr4.so`.
-- عند تشغيل Next dev يدوياً، أول compile للصفحة الرئيسية استغرق تقريباً 60 ثانية، لذلك `timeout: 120_000` في Playwright قد يكون حساساً على بيئات بطيئة.
-
-تصحيح مهم: الرقم القديم `Playwright e2e: 6 passed` يبقى نتيجة تاريخية في 2026-04-28، لكنه غير مثبت في بيئة 2026-05-06. الحالة الحالية: `غير مثبت / يحتاج إصلاح بيئة`.
+- CI مطلوب قبل الدمج.
+- staging يشبه production.
+- نسخ احتياطي مجدول ومثبت عبر restore drill.
+- مراقبة readiness، failed jobs، queue/scheduler، 5xx، TLS/custom domains، backups، وbilling jobs.
+- error tracking مع PII redaction.
+- إجراءات incident response وrollback.
 
 ---
 
-## 3. تصحيح التناقضات الداخلية
+## 3. المبادئ المعمارية غير القابلة للتفاوض
 
-| التناقض أو الادعاء القديم | التصحيح الحالي | الحالة |
-|---|---|---|
-| backend tests مذكورة سابقاً بأكثر من رقم قديم. | آخر تحقق فعلي: `150 passed (610 assertions)`. | مكتمل |
-| Storefront e2e مذكور كـ `6 passed`. | غير مثبت في 2026-05-06 بسبب `pnpm` و`libnspr4.so`. | غير مثبت / يحتاج تحقق |
-| Milestone shipping كان يقول إن seed البلديات جزئي. | الكود والاختبارات الحالية تثبت `58 active wilayas` و`1541 active communes`. | مكتمل كـ geography v1 |
-| السبرنت التالي كان Merchant Onboarding مباشرة. | يعاد ترتيبه بعد Repository Hygiene وProduction Readiness وCI activation وCheckout Idempotency. | مصحح |
-| Production readiness كان مقيم بدرجة أعلى من الدليل الفعلي. | بعد 2026-05-07 توجد Dockerfiles وrunbooks وCI/health/backup automation/monitoring docs baseline أولية، لكن لا CI مثبت كـ gate فعلي ولا backup schedules منشورة ولا restore drill ولا monitoring integration أو alert routing، لذلك يبقى التقييم منخفضاً. | مصحح |
-| أوامر الواجهة موثقة بـ `pnpm` فقط. | `packageManager` يطلب pnpm، لكن PATH الحالي لا يحتويه. يجب توثيق تفعيل corepack/pnpm. | مطلوب |
-
----
-
-## 4. حالة المشروع الحالية حسب الدومينات
-
-| المجال | الحالة | الموجود فعلاً | الناقص | المخاطر | الأولوية | الخطوة التالية |
-|---|---|---|---|---|---|---|
-| Architecture | مكتمل جزئياً أقوى | Modular monolith، backend/storefront منفصلان، وثائق architecture موجودة، و`docs/adr/` يحتوي ADRs أساسية. | بعض ADRs ما زالت Proposed مثل caching/deployment topology، وحدود modules التفصيلية غير مفصلة بعد. | قرارات كبيرة أقل عرضة للتغيير العشوائي، لكن staging قد يغير topology. | P1 | تثبيت ADRs المقترحة بعد implementation/staging. |
-| Backend Laravel | مكتمل جزئياً | Laravel 13، Actions، Models، Policies، Resources، Tests، وأوامر/مسارات health readiness. | بعض orchestration في controllers. | تضخم `app/` مع نمو المجالات. | P1 | نقل المنطق المتكرر إلى Actions/Support عند التطوير. |
-| Filament Admin Panel | مكتمل جزئياً | admin resources للخطط، المتاجر، الاشتراكات، الفواتير، الدعم، audit. | system status، revenue dashboard، runbooks داخل اللوحة. | تشغيل المنصة يحتاج DB/manual inspection. | P1 | إضافة operational dashboards بعد Phase 0.5. |
-| Filament Vendor Panel | مكتمل جزئياً | catalog/orders/shipping/billing/support/settings/theme/resources، tenant switcher. | onboarding wizard، readiness checklist، UX يومية أعمق. | التاجر قد يحتاج مطور لإكمال الإعداد. | P1 | Merchant Onboarding بعد P0. |
-| Support Panel | مكتمل جزئياً | `/support` panel، support tickets، platform support role. | messages, attachments, SLA, macros. | الدعم لا يزال CRUD أكثر من helpdesk. | P1 | Support Center v2 لاحقاً. |
-| Tenancy | مكتمل جزئياً قوي | `CurrentTenant`, `TenantResolver`, middleware, `BelongsToTenant`, policies, DB constraints. | مراجعة دورية لكل `withoutGlobalScope`. | أي bypass خاطئ قد يسبب data leak. | P0 مستمر | قاعدة مراجعة إلزامية واختبارات isolation لأي مجال جديد. |
-| Database Schema | مكتمل جزئياً قوي | 43 migrations، ULIDs، tenant constraints، money minor units، JSONB، وجدول checkout idempotency records مع prune command. | stock movements، variants، support messages. | schema الحالي قوي لكن ليس كاملاً تجارياً. | P1 | stock movements ثم variants. |
-| Checkout / Orders | مكتمل جزئياً أقوى | quick checkout، cart payload، totals server-side، inventory lock، order status transitions، `Idempotency-Key`، duplicate window، rate limits by IP/phone/store، abuse logging، وتنظيف سجلات idempotency المنتهية. | tuning للـ limits، phone confirmation workflow، real e2e للـ checkout، metrics. | spam checkout أقل خطراً لكنه يحتاج observability وتشغيل production. | P1 | tuning/metrics ثم phone confirmation. |
-| Payments | مكتمل جزئياً | COD، manual payment actions، refund/fail flows. | payment integrations، callbacks/webhooks، reconciliation. | future callbacks تحتاج signature/idempotency. | P1 | manual reconciliation ثم integrations. |
-| Subscriptions / Billing | مكتمل جزئياً | plans, features, subscriptions, invoices, manual subscription payments, lifecycle, grace/suspension. | invoice PDF، dunning كامل، revenue dashboard، tax/commercial invoice، ledger. | billing جيد داخلياً لا يكفي revenue operations. | P1 | Billing/revenue ops v2. |
-| Shipping / Delivery | مكتمل جزئياً | 58 wilayas، 1541 communes، rates، companies، shipments، failed reasons، returns. | provider integrations، rate templates، free shipping، COD collection reconciliation. | operational shipping complexity في الجزائر. | P1 | Shipping Engine v2. |
-| Returns | مكتمل جزئياً | return statuses/actions، restock/refund workflow، tests. | return labels/provider flow/customer UI. | returns قد تفصل عن shipments في الواقع. | P1 | ربط أعمق مع shipping/payment. |
-| Customers | مكتمل جزئياً | customer model، quick checkout create/update by phone. | customer portal، segmentation، privacy/export rules. | بيانات شخصية تحتاج ضوابط عرض وتصدير. | P1 | security/privacy controls قبل exports. |
-| Catalog / Products | مكتمل جزئياً | categories, products, images, status, search, storefront APIs. | variants/options، tags/collections، import/export، SEO fields. | متاجر حقيقية تحتاج variants. | P1 | Product Variants and Catalog Maturity. |
-| Inventory | مكتمل جزئياً | inventory item per product، reservation/release/settle، backorders. | stock movements، variant inventory، low stock notifications. | audit المخزون محدود. | P1 | stock movements قبل multi-warehouse. |
-| Coupons / Promotions | مكتمل جزئياً | coupons، usage limits، plan feature gate، checkout discount server-side. | promotion campaigns، free shipping coupons، advanced targeting. | coupon abuse يحتاج rules أوسع رغم وجود rate/idempotency أساسياً. | P1 | promotion rules وabuse analytics. |
-| Domains | مكتمل جزئياً | custom domains، verification token، active/failed/disabled، resolver، reverse proxy runbook أولي. | production DNS runbook، staging validation للـ SSL/custom domains. | domain activation يحتاج تشغيل production واضح. | P0/P1 | تجربة custom domain خلف proxy في staging. |
-| Store Settings | مكتمل جزئياً | store settings resource/API exposure. | legal/commercial completeness، readiness validation. | نشر متجر ناقص البيانات. | P1 | onboarding checklist. |
-| Theme Settings | مكتمل جزئياً | theme colors, hero, trust/contact sections foundation. | theme templates، image optimization، section builder. | storefronts قد تبدو متشابهة. | P1/P2 | backend-driven theme configuration. |
-| Storefront Next.js | مكتمل جزئياً | home/products/product/categories/search/cart/track/legal/SEO. | caching/revalidation، rich empty/error/loading states، image strategy، accessibility audit. | `no-store` يضغط backend. | P1 | performance/UX polish. |
-| Cart | مكتمل جزئياً | client-side localStorage per store، checkout items payload. | abandoned cart، server cart، stale product validation UX. | client cart قد يحتوي منتجات قديمة. | P1 | stale cart handling. |
-| SEO | مكتمل جزئياً | sitemap، robots، canonical، OpenGraph، JSON-LD basic. | pagination للسيت ماب الكبير، product SEO fields، richer structured data. | SEO جيد كأساس لا كاكتفاء تجاري. | P1 | advanced SEO fields. |
-| Search | مكتمل جزئياً | DB fallback، Scout/Meilisearch preparation. | indexing jobs/runbook، typo/synonyms/filter facets. | search production غير موثق. | P2 | Meilisearch production notes. |
-| Analytics | مكتمل جزئياً | vendor analytics tests/widgets موجودة. | conversion funnel، failed delivery analytics، revenue by wilaya. | قرارات تجارية بدون analytics كافية. | P1/P2 | analytics roadmap بعد onboarding. |
-| Audit Logs | مكتمل جزئياً قوي | audit logs، policies immutable تقريباً، tests. | coverage لكل الأحداث المستقبلية، export controls. | أي event مالي جديد يحتاج audit. | P0 مستمر | تحديث audit عند كل workflow حساس. |
-| Notifications | مكتمل جزئياً | subscription notifications وtenant invitations موجودة. | order/customer/vendor/support notifications الشاملة. | النظام لا يزال صامتاً في عمليات مهمة. | P1 | Notification domain events. |
-| Security | مكتمل جزئياً | policies، tenant isolation، throttles عامة، invitation hashing مثبت بالاختبارات، audit، security headers baseline، trusted proxy config/test، وفشل readiness عند `APP_DEBUG=true` أو `APP_KEY` مفقود في production. | 2FA، CSP production tightening، session hardening، vulnerability scanning، secret rotation workflow. | لا يصلح production بدون hardening. | P0 | Security roadmap أدناه. |
-| Testing | مكتمل جزئياً قوي للbackend | 150 tests، 610 assertions، 27 feature test files، checkout idempotency/prune tests، system health tests، production runtime safeguards tests، security/trusted proxy tests، Playwright specs موجودة، وCI workflow baseline موجود. | e2e غير قابل للتشغيل محلياً حالياً، CI غير مثبت كـ gate فعلي، security/production tests المتقدمة ناقصة. | regression risk مع AI agents. | P0 | تفعيل CI Quality Gates وإصلاح e2e env. |
-| DevOps | مكتمل جزئياً | docker-compose محلي، Dockerfiles أولية، env production examples، production/reverse-proxy/backup/queue-scheduler/monitoring runbooks، backup scripts/systemd timers examples، Nginx edge example، systemd examples، health/readiness foundation، production runtime safeguards، security headers baseline، CI workflow baseline. | CI غير مفعل كـ merge gate، reverse proxy غير منشور في staging، worker/scheduler supervision غير مثبت في staging، backup schedules غير منشورة، تنفيذ restore drill، monitoring/error tracking integration وalert routing. | production غير جاهز. | P0 | إكمال Production Readiness Foundation وتفعيل CI. |
-| Documentation | مكتمل جزئياً قوي | architecture/security/testing/tenancy/storefront docs وrunbooks وADRs موجودة. | user/operator docs التفصيلية ونتائج drills الفعلية. | docs هندسية جيدة لكن التشغيل الفعلي ناقص. | P0/P1 | إغلاق runbooks عبر staging/CI/drills. |
-| Developer Experience | مكتمل جزئياً | composer/npm scripts، docs workflow، root monorepo مثبت. | pnpm availability، clean setup verification. | setup يحتاج تحقق clean-clone. | P0 | Local Dev Reliability. |
-| AI/Codex Workflow | مكتمل جزئياً | roadmap وworkflow docs وADRs وقواعد Codex. | quality gates required فعلياً وربط كل sprint بنتائج CI. | AI قد يضيف تغييرات واسعة إذا لم تعمل gates. | P0/P1 | تفعيل CI required checks. |
+1. Laravel هو مصدر الحقيقة للأسعار، الشحن، الخصومات، المخزون، الاشتراكات، حالات الطلبات، الصلاحيات، والفواتير.
+2. Next.js storefront واجهة عرض وتجربة مستخدم. لا يحسب totals موثوقة، ولا يقرر خصماً أو شحناً أو مخزوناً أو حالة دفع.
+3. Tenant isolation حد أمني، وليس تفصيلاً تنظيمياً. أي تسريب بين tenants يعتبر incident.
+4. منطق الأعمال الحساس يوضع في Actions/Services/Domain classes، وليس داخل Controllers أو Filament Resources عندما يمكن تفادي ذلك.
+5. المال يخزن ويحسب بوحدات صغيرة `minor units`، مثل `price_minor` و`total_minor`.
+6. عمليات checkout، الدفع، المخزون، الاشتراكات، وتغيير الحالات يجب أن تستخدم transactions وأقفال مناسبة عند الحاجة.
+7. checkout وinventory يجب أن يكونا idempotent أو محميين بوضوح ضد التكرار والطلبات المتزامنة.
+8. أي استخدام لـ `withoutGlobalScope('current_tenant')` يحتاج مبرراً واختباراً، أو فلترة `tenant_id` صريحة.
+9. Public API يجب ألا يكشف معرفات داخلية غير ضرورية مثل `tenant_id` إلا لسبب مثبت.
+10. Policies وdatabase constraints جزء من التصميم، وليسا طبقة لاحقة.
+11. كل tenant-owned model جديد يحتاج tenant scoping أو استثناء موثق بوضوح.
+12. كل ميزة حساسة يجب أن تترك audit log عند تغيير مالي أو تشغيلي مهم.
+13. الوثائق والاختبارات جزء من Definition of Done.
+14. لا microservices الآن. modular monolith هو الخيار الصحيح حتى يثبت ضغط تشغيلي حقيقي يستدعي الفصل.
+15. لا marketplace كامل الآن. المشروع يجب أن ينضج كمنصة SaaS أولاً.
 
 ---
 
-## 5. Phase 0.5 - Repository Hygiene, Secrets, and Local Dev Reliability
-
-الأولوية: P0
-
-الحالة: مكتمل جزئياً
-
-سبب المرحلة: المشروع سيستمر بالتطور عبر Codex وAI agents. لذلك يجب أن تكون البيئة نظيفة، آمنة، قابلة للتكرار من clone نظيف، وخالية من أسرار أو artifacts غير مقصودة.
-
-### أدلة الحالة الحالية
-
-- الجذر `/home/ahmed/projects/dz-saas-commerce` هو Git repository موحد مثبت عبر `git rev-parse --show-toplevel`.
-- لا يظهر `backend/.git` في الفحص الحالي؛ backend وstorefront وdocs ضمن root monorepo.
-- توجد ملفات محلية: `backend/.env` و`storefront/.env.local`.
-- Dockerfiles production baseline موجودة الآن للbackend والstorefront.
-- لا توجد CI ظاهرة.
-- `storefront/package.json` يحدد `pnpm@10.33.2`، لكن `pnpm` غير متاح في PATH الحالي.
-- `.gitignore` موجود الآن في الجذر وداخل `backend/` و`storefront/` مع قواعد تمنع ملفات البيئة والـ dependencies والـ build/test artifacts.
-- `docs/LOCAL_DEVELOPMENT.md` موجود لتوثيق clean local setup.
-- `backend/.env.testing.example` موجود.
-
-### المهام
-
-1. `مكتمل`: استراتيجية المستودع الحالية مثبتة كـ root monorepo يضم `backend/`, `storefront/`, `docs/`, `deploy/`, و`docker-compose.yml`.
-2. `مكتمل جزئياً`: تم فحص أنماط secrets مع استبعاد `.env` المحلي و`vendor/node_modules`. النتائج المتبقية هي dummy local credentials في `docker-compose.yml` و`.env.example`. لا يزال يلزم فحص أي zip/codex handoff سابق خارج workspace الحالي.
-3. `مكتمل جزئياً`: `.gitignore` يمنع `.env` و`.env.local` في الجذر/backend/storefront. لا يزال يلزم تأكيده عبر clean-clone/package rehearsal.
-4. `مطلوب`: تدوير أي secrets ظهرت في ملفات محلية أو حزم سابقة.
-5. `مكتمل`: تم تحديث `backend/.env.example` ليعكس PostgreSQL/Redis/Meilisearch/MinIO/Mailpit المحلي بقيم dummy development.
-6. `مكتمل`: تم تحديث `storefront/.env.example` لتوثيق API/asset/storefront base URLs وfallback store identifiers.
-7. `مكتمل`: تمت إضافة `backend/.env.testing.example`.
-8. `مكتمل جزئياً`: تمت مراجعة وتحديث `.gitignore` بحيث يمنع:
-   - `.env`
-   - `.env.local`
-   - `vendor`
-   - `node_modules`
-   - `.next`
-   - `storage/logs`
-   - build artifacts
-   - local SQLite files
-   - coverage artifacts
-   - Playwright reports/test-results إذا لم تكن artifacts مقصودة
-9. `مكتمل جزئياً`: تم تجاهل dependencies/build artifacts. لم تتم إزالة الموجود محلياً لأن بعضها قد يكون مستخدماً في البيئة الحالية.
-10. `مكتمل`: تم توثيق local setup من clone نظيف في `docs/LOCAL_DEVELOPMENT.md`:
-    - backend install
-    - storefront install
-    - docker-compose services
-    - migrations
-    - seed demo data
-11. `مكتمل`: تم توثيق أوامر تشغيل backend:
-    - `php artisan serve`
-    - queue worker
-    - scheduler
-12. `مكتمل`: تم توثيق أوامر تشغيل storefront بصيغة صحيحة:
-    - تفعيل pnpm عبر corepack أو استخدام `npx pnpm@10.33.2`.
-    - عدم الاعتماد على `pnpm` غير موجود في PATH.
-13. `مكتمل`: تم توثيق أوامر الاختبار:
-    - backend tests
-    - storefront typecheck/build
-    - e2e مع system deps المطلوبة.
-14. `مكتمل`: تم توثيق كيفية تشغيل queue worker والسcheduler محلياً.
-15. `مكتمل`: تم توثيق seed بيانات demo آمنة بدون أسرار.
-
-### منجزات 2026-05-07
-
-- إضافة root `.gitignore` لحزمة workspace.
-- تحديث `backend/.gitignore` و`storefront/.gitignore`.
-- تحديث `backend/.env.example`.
-- إضافة `backend/.env.testing.example`.
-- تحديث `storefront/.env.example`.
-- إضافة `docs/LOCAL_DEVELOPMENT.md`.
-- تحديث `docs/DEVELOPMENT_WORKFLOW.md`.
-- تحديث `docs/TESTING_STRATEGY.md`.
-- تحديث `docs/SECURITY_BASELINE.md`.
-
-### المتبقي لإغلاق Phase 0.5
-
-1. تنفيذ clean-clone rehearsal فعلي على root monorepo.
-2. إثبات أن `.github/workflows/quality.yml` يعمل داخل GitHub على هذا الجذر.
-3. فحص أي ZIP أو handoff سابق خارج workspace الحالي.
-4. تدوير أي secrets كانت قد شاركت خارج الجهاز المحلي.
-5. إضافة `.env.production.example` ضمن Production Readiness.
-
-### Definition of Done
-
-- لا توجد secrets فعلية في الملفات الملتزمة أو الحزمة النظيفة.
-- يمكن تشغيل المشروع من clone نظيف اعتماداً على الوثائق فقط.
-- لا توجد `vendor`, `node_modules`, `.next`, build artifacts داخل الحزمة النظيفة.
-- أوامر backend وstorefront والاختبارات موثقة وقابلة للتنفيذ.
-- `pnpm` أو بديله موثق بوضوح.
-- Codex يستطيع فهم التشغيل دون تخمين.
-
----
-
-## 6. Immediate Next Sprint Recommendation
-
-الحالة: محدث في 2026-05-07
-
-تم بدء Repository Hygiene + Local Dev Reliability وProduction Readiness Foundation وCI baseline وCheckout Idempotency foundation وHealth/Readiness foundation وSecurity Headers baseline في 2026-05-07. استراتيجية المستودع مثبتة الآن كـ root monorepo، لكن مرحلة P0 لم تغلق بالكامل لأن clean-clone rehearsal، CI الفعلي، backup/restore، وPlaywright/e2e لا تزال تحتاج إغلاقاً عملياً.
-
-الترتيب المقترح:
-
-1. `P0` إغلاق المتبقي من Repository Hygiene + Local Dev Reliability.
-2. `P0` CI Quality Gates activation على المستودع الحقيقي.
-3. `P0` Production Readiness Foundation v1 المتبقية: نشر backup schedules + تنفيذ restore drill + monitoring/error tracking integration + alert routing + staging reverse proxy validation + worker/scheduler supervision validation + CSP tightening.
-4. `P0/P1` Playwright/e2e reliability أو smoke بديل في CI.
-5. `P1` Merchant Onboarding Foundation.
-6. `P1` Storefront UX/Performance Polish.
-
-قبول السبرنت الأول:
-
-- root monorepo مثبت وموثق.
-- clean-clone rehearsal موثق بنتيجة عملية.
-- أي أسرار شاركت خارج الجهاز المحلي تم تدويرها.
-- `.env.production.example` موجود الآن للbackend والstorefront، ويتبقى التحقق عبر CI/clean-clone.
-- Playwright system dependencies موثقة ومثبتة في CI لاحقاً.
-
----
-
-## 7. Checkout Idempotency and Abuse Protection
-
-الأولوية: P0 قبل أي beta عام
-
-الحالة الحالية: مكتمل جزئياً قوي
-
-الموجود فعلاً:
-
-- checkout route عليه `throttle:20,1`.
-- storefront API group عليه `throttle:120,1`.
-- track order عليه `throttle:60,1`.
-- Laravel يحسب totals ولا يثق بالواجهة.
-- checkout يعمل داخل transaction ويستخدم locks للمنتجات والمخزون.
-- جدول `checkout_idempotency_records` موجود ومربوط بـ tenant/store/order.
-- دعم `Idempotency-Key` في Laravel checkout.
-- Next.js quick order يرسل `Idempotency-Key` إلى route proxy، والـ proxy يمرره إلى Laravel.
-- request hash محفوظ لكل محاولة checkout.
-- customer phone محفوظ بصيغته normalized بعد validation.
-- نفس `Idempotency-Key` لنفس tenant/store/payload يعيد نفس الطلب ولا ينشئ طلباً ثانياً.
-- نفس `Idempotency-Key` مع payload مختلف يرجع `409 Conflict`.
-- نفس key يمكن استخدامه بأمان في tenant/store مختلفين بدون تسريب أو conflict عابر للـ tenants.
-- duplicate checkout window عند غياب header يعيد الطلب الموجود داخل نافذة قصيرة بدلاً من إنشاء duplicate واضح.
-- rate limiting مخصص حسب IP وphone وstore عبر `CheckoutAbuseGuard`.
-- logging لمحاولات rate-limit/idempotency conflict/duplicate replay مع hashes بدلاً من تسريب phone/IP الخام.
-- أمر `checkout-idempotency:prune` موجود مع خيار `--dry-run`.
-- الـ scheduler يشغل `checkout-idempotency:prune` يومياً عند 03:00.
-- الاختبارات تغطي:
-  - عدم إنشاء طلبين لنفس key.
-  - conflict عند payload مختلف.
-  - tenant/store isolation لهذه الطبقة.
-  - duplicate order window.
-  - استمرار totals/inventory داخل Laravel.
-  - حذف السجلات المنتهية وترك السجلات النشطة.
-  - dry-run بدون حذف.
-
-الناقص:
-
-1. `P1`: tuning عملي لقيم rate limits بعد مراقبة traffic حقيقي أو staging load.
-2. `P1`: dashboard/metrics لمحاولات checkout المرفوضة أو المعادة.
-3. `P1`: real integration e2e يثبت أن Next.js يرسل header وأن Laravel يعيد نفس order عند replay.
-4. `P1`: phone confirmation أو OTP اختياري للمتاجر المعرضة للسبام.
-
-ملاحظة تنفيذية: هذه المرحلة يجب أن تسبق onboarding العام لأن onboarding سيزيد عدد المتاجر العامة واحتمالية إساءة استخدام checkout.
-
----
-
-## 8. Production Readiness Foundation
-
-الأولوية: P0
-
-الحالة: مكتمل جزئياً
-
-الموجود فعلاً:
-
-- `docker-compose.yml` محلي للخدمات: PostgreSQL, Redis, Meilisearch, MinIO, Mailpit.
-- Laravel queue/scheduler capabilities موجودة ضمن الإطار.
-- storefront build production ينجح محلياً.
-- `backend/Dockerfile` موجود كـ PHP-FPM production baseline.
-- `storefront/Dockerfile` موجود كـ Next.js production baseline.
-- root/backend/storefront `.dockerignore` موجودة.
-- `backend/.env.production.example` موجود.
-- `storefront/.env.production.example` موجود.
-- `docs/PRODUCTION_READINESS.md` موجود كـ runbook أولي.
-- `GET /api/system/health/live` موجود.
-- `GET /api/system/health/ready` موجود.
-- `php artisan system:health --scope=live|ready --format=json` موجود.
-- backend Docker `HEALTHCHECK` موجود للـ liveness.
-- CI baseline يشغل readiness smoke بعد migrations.
-- security headers baseline موجود عبر middleware في Laravel و`headers()` في Next.js.
-- أمر `checkout-idempotency:prune` موجود ومجدول يومياً لصيانة جدول idempotency.
-- readiness يحتوي فحص `environment` يفشل في production عند `APP_DEBUG=true` أو `APP_KEY` مفقود.
-- `docs/BACKUP_RESTORE_RUNBOOK.md` موجود كإجراء أولي للنسخ الاحتياطي والاستعادة.
-- `deploy/backup/` يحتوي أمثلة scripts وsystemd timers للنسخ الاحتياطي وrestore drill المحمي للـ staging.
-- `docs/REVERSE_PROXY_RUNBOOK.md` و`deploy/reverse-proxy/nginx-edge.conf.example` موجودان.
-- `backend/config/trustedproxy.php` موجود مع `TRUSTED_PROXIES` في env examples.
-- `docs/QUEUE_SCHEDULER_RUNBOOK.md` موجود مع systemd examples.
-- `docs/MONITORING_ALERTING_RUNBOOK.md` موجود كخط أساس للمراقبة والتنبيهات وتتبع الأخطاء.
-- `backend/.env.production.example` يستخدم `LOG_STACK=stderr` كي تكون Laravel logs قابلة للجمع عبر منصة الحاويات.
-
-غير موجود أو غير مثبت:
-
-- reverse proxy staging deployment غير مثبت.
-- environment separation موثق أولياً في runbook، لكنه غير مثبت بتشغيل staging/production فعلي:
-  - local
-  - testing
-  - staging
-  - production
-- CI فعلي داخل GitHub Actions غير مثبت.
-- queue worker/scheduler runbook موجود، لكنه غير مثبت بتشغيل staging/production فعلي.
-- failed jobs handling موثق، لكنه يحتاج alerting فعلي وإجراءات تشغيلية أعمق.
-- log strategy موثق أولياً، لكنه غير مثبت عبر log aggregation حقيقي.
-- error tracking strategy موثقة، لكن provider/integration غير موجود.
-- uptime checks وalert routing غير مثبتة.
-- backup automation examples موجودة، لكن backup schedules غير منشورة في staging/production.
-- restore drill execution.
-- storage strategy production S3-compatible.
-- Meilisearch production notes.
-- Redis production notes.
-- database migration procedure.
-- zero/minimal downtime deployment notes.
-- maintenance mode/store unavailable behavior runbook.
-
-### المهام المطلوبة
-
-1. `مكتمل جزئياً`: Dockerfile backend production موجود ويحتاج CI build validation.
-2. `مكتمل جزئياً`: Dockerfile storefront production موجود ويحتاج CI build validation.
-3. `مكتمل جزئياً`: reverse proxy strategy/config:
-   - TLS termination
-   - custom domains
-   - Laravel API
-   - Next storefront
-   - static/storage assets
-   - المتبقي: staging deployment وTLS/custom-domain validation.
-4. `مكتمل`: `.env.production.example` بدون أسرار للbackend والstorefront.
-5. `مكتمل جزئياً`: `APP_DEBUG=false` موثق في production env examples ومفحوص في readiness عند `APP_ENV=production`، ويتبقى إثباته داخل deployment/staging فعلي.
-6. `مكتمل جزئياً`: health endpoint/command يغطي:
-   - DB
-   - Redis
-   - Queue
-   - Storage
-   - Meilisearch
-7. `مكتمل`: readiness checks منفصلة عن liveness.
-8. `مكتمل جزئياً`: queue worker supervision/runbook تفصيلي موجود، ويتبقى staging/production supervision.
-9. `مكتمل جزئياً`: scheduler supervision/runbook تفصيلي موجود، ويتبقى staging/production supervision.
-10. `مكتمل جزئياً`: failed jobs handling موثق، ويتبقى alerts وmonitoring integration.
-11. `مكتمل جزئياً`: backup/restore runbook وbackup automation examples موجودة، ويتبقى نشر الجداول فعلياً وتنفيذ restore drill.
-12. `مطلوب P1`: storage production strategy:
-    - local dev: public/local/MinIO
-    - production: S3-compatible private/public buckets
-13. `مطلوب P1`: database migration procedure:
-    - backups before migrations
-    - maintenance mode when needed
-    - rollback limits
-14. `مكتمل جزئياً`: monitoring/alerting/log strategy موثقة في runbook، ويتبقى error tracking provider، structured logs، centralized aggregation، وتنبيهات فعلية.
-15. `مكتمل جزئياً`: security headers baseline موجود، ويتبقى تضييق CSP والتحقق عبر browser/e2e قبل production.
-
-### منجزات 2026-05-07
-
-- إضافة `backend/Dockerfile`.
-- إضافة `storefront/Dockerfile`.
-- إضافة root/backend/storefront `.dockerignore`.
-- إضافة `backend/.env.production.example`.
-- إضافة `storefront/.env.production.example`.
-- إضافة `backend/docker/php-production.ini`.
-- إضافة `docs/PRODUCTION_READINESS.md`.
-- إضافة `App\Support\System\SystemHealthChecker`.
-- إضافة endpoints: `/api/system/health/live` و`/api/system/health/ready`.
-- إضافة أمر `php artisan system:health --scope=live|ready --format=json`.
-- إضافة backend Docker `HEALTHCHECK`.
-- إضافة readiness smoke إلى CI baseline.
-- إضافة security headers baseline للـ backend والـ storefront.
-- إضافة `checkout-idempotency:prune` مع `--dry-run` وجدولته يومياً.
-- إضافة فحص production runtime safeguards داخل readiness.
-- إضافة `docs/BACKUP_RESTORE_RUNBOOK.md` كإجراء تشغيلي أولي.
-- إضافة `deploy/backup/` مع scripts examples للـ PostgreSQL backup وobject storage sync وstaging restore drill.
-- إضافة systemd service/timer examples لجداول backup.
-- إضافة `docs/REVERSE_PROXY_RUNBOOK.md`.
-- إضافة `deploy/reverse-proxy/nginx-edge.conf.example`.
-- إضافة trusted proxy config واختبار forwarded HTTPS/HSTS.
-- إضافة `docs/QUEUE_SCHEDULER_RUNBOOK.md`.
-- إضافة systemd examples للـ queue worker والـ scheduler.
-- إضافة `docs/MONITORING_ALERTING_RUNBOOK.md`.
-- تحديث `backend/.env.production.example` إلى `LOG_STACK=stderr` لتجميع logs عبر الحاويات.
-
-Definition of Done:
-
-- production deployment يمكن شرحه وتشغيله من docs بدون تخمين.
-- health/readiness checks قابلة للاستخدام في orchestration.
-- backup/restore مجرب مرة واحدة على الأقل.
-- لا توجد production secrets داخل repo.
-
----
-
-## 9. CI Quality Gates
-
-الأولوية: P0/P1
-
-الحالة: مكتمل جزئياً
-
-الدليل الحالي:
-
-- تمت إضافة `.github/workflows/quality.yml` كـ baseline لجذر المشروع.
-- الجذر الحالي Git repository موحد، لكن لا تعتبر هذه المرحلة مكتملة أو فعالة كـ merge gate حتى يثبت تشغيل workflow داخل GitHub ويُضبط كـ required check.
-- لم يتم تشغيل workflow فعلياً داخل GitHub Actions بعد.
-- تم فحص Dockerfiles محلياً عبر `docker buildx build --check` للـ backend والـ storefront بدون warnings.
-
-### Pipeline الحالي المقترح والمنفذ كـ baseline
-
-Jobs منفصلة:
-
-1. Backend quality:
-   - `composer validate`
-   - `composer install --no-interaction --prefer-dist`
-   - `php artisan migrate:fresh --seed` في testing DB عند الإمكان
-   - `php artisan test`
-   - `php artisan route:list` smoke check
-   - PostgreSQL service للـ testing
-
-2. Storefront quality:
-   - تفعيل `pnpm@10.33.2` عبر corepack أو action مناسب
-   - `pnpm install --frozen-lockfile`
-   - `pnpm typecheck`
-   - `pnpm build`
-   - `pnpm lint` فقط إذا أضيف script رسمي
-
-3. E2E:
-   - install Playwright browsers/system deps
-   - تشغيل mock backend e2e حالياً عند تفعيل `RUN_E2E=true`
-   - upload artifacts عند الفشل
-
-4. Dockerfile checks:
-   - `docker buildx build --check -f backend/Dockerfile backend`
-   - `docker buildx build --check -f storefront/Dockerfile storefront`
-
-5. Dependency/cache:
-   - composer cache
-   - pnpm cache
-   - Playwright browser cache عند الإمكان
-
-قواعد merge:
-
-- يمنع merge إذا فشل backend tests أو storefront typecheck/build.
-- يجب منع merge إذا فشلت Dockerfile checks بعد تفعيل CI على المستودع الحقيقي.
-- e2e يمكن أن يبدأ optional بسبب اعتماده الحالي على mocks وsystem dependencies، ثم يصبح required قبل beta.
-
-المتبقي:
-
-1. تشغيل `.github/workflows/quality.yml` في GitHub Actions فعلياً وتصحيح أي فرق بين CI والبيئة المحلية.
-2. ضبط workflow كـ required check على pull requests.
-3. إضافة image build/push jobs عند اعتماد registry.
-4. إضافة dependency vulnerability scanning.
-5. جعل e2e gate إلزامياً بعد إصلاح Playwright dependencies وتحديد mocked vs real integration coverage.
-
----
-
-## 10. Security Roadmap
-
-### موجود
-
-- tenant isolation كحد أمني.
-- policies مسجلة لكثير من النماذج.
-- super admin bypass مع استثناءات audit log mutation.
-- public API throttles عامة.
-- checkout لا يثق بالواجهة.
-- invitation token hashing مثبت بالاختبارات.
-- domain verification tokens وحالات domain.
-- audit logs وسياسة immutable تقريباً.
-- database constraints لعلاقات tenant حساسة.
-- production runtime safeguards داخل readiness:
-  - يفشل عند `APP_DEBUG=true` في production.
-  - يفشل عند غياب `APP_KEY` في production.
-- security headers baseline:
-  - `X-Content-Type-Options`
-  - `X-Frame-Options`
-  - `Referrer-Policy`
-  - `Permissions-Policy`
-  - CSP واسع متوافق حالياً مع Filament/Livewire/storefront
-  - HSTS عند HTTPS
-
-### ناقص
-
-- secrets handling رسمي.
-- إثبات `APP_DEBUG=false` و`APP_KEY` عبر readiness في بيئة staging/production فعلية، لا محلياً فقط.
-- CSP production tightening بعد browser/e2e validation.
-- 2FA للـ super admin.
-- 2FA للـ tenant owner.
-- rate limits operational tuning by phone/store/IP.
-- admin session security/device management.
-- dependency vulnerability scanning.
-- log redaction policy.
-- backup encryption.
-- file upload validation strategy.
-- storage visibility strategy.
-- webhook/payment callback security للمستقبل.
-
-### مطلوب قبل beta
-
-1. Phase 0.5 secrets/repository hygiene.
-2. checkout idempotency tuning وmetrics بعد تنفيذ foundation والتنظيف المجدول.
-3. 2FA للـ super admin.
-4. review شامل لـ `withoutGlobalScope('current_tenant')`.
-5. مراقبة rate limits by IP/phone/store للـ checkout وضبطها بعد staging.
-6. log redaction للهواتف والعناوين عند الحاجة.
-7. تثبيت security headers smoke في CI عند تفعيل workflow.
-
-### مطلوب قبل production
-
-1. 2FA للـ tenant owner أو enforceable policy.
-2. backup encryption وتنفيذ restore drill.
-3. vulnerability scanning في CI.
-4. production CSP مضبوط ومختبر مع Filament وstorefront.
-5. signed webhooks/payment callbacks عند إضافة integrations.
-6. file upload MIME/size/visibility validation.
-7. session/device management للحسابات الحساسة.
-
----
-
-## 11. Tenancy Roadmap
-
-الحالة الحالية: مكتمل جزئياً قوي.
+## 4. تحليل البنية الحالية
+
+### 4.1 monorepo
+
+الشكل الحالي:
+
+- `backend/`: Laravel + Filament + API + domain logic.
+- `storefront/`: Next.js customer storefront.
+- `docs/`: وثائق معمارية وتشغيلية وADRs.
+- `deploy/`: أمثلة تشغيل مثل backup وreverse proxy وsupervision.
+- `docker-compose.yml`: خدمات محلية: PostgreSQL، Redis، Meilisearch، MinIO، Mailpit.
+- `.github/workflows/quality.yml`: CI baseline للbackend والstorefront وDocker checks وe2e اختياري.
+
+هذا الشكل مناسب الآن لأنه يحافظ على توافق backend وstorefront والوثائق في مستودع واحد، ويجعل Codex يعمل على سياق واحد.
+
+### 4.2 backend
+
+الـ backend مبني حول Laravel/Filament. الدومينات الأساسية موجودة فعلاً:
+
+- tenancy وidentity/RBAC.
+- stores وdomains وstore/theme settings.
+- catalog وcategories وproducts وimages.
+- inventory.
+- checkout وorders وpayments.
+- shipping وreturns.
+- billing/subscriptions/invoices.
+- coupons.
+- audit logs.
+- support tickets.
+- health/readiness.
+
+القوة الأساسية أن منطق الأعمال موجود غالباً في `app/Actions`، وهذا يقلل تضخم controllers ويجعل الاختبار أسهل. Filament يستخدم الموارد والصفحات لإدارة العمليات، لكن لا يجب أن يصبح مكان القرارات المالية أو التشغيلية.
+
+### 4.3 storefront
+
+الـ storefront مبني بـ Next.js. الموجود حالياً:
+
+- home.
+- products.
+- product details.
+- categories.
+- search.
+- cart.
+- quick checkout.
+- track order.
+- legal pages.
+- sitemap.
+- robots.
+- metadata وOpenGraph وJSON-LD.
+- API proxy routes لبعض عمليات checkout/geography/track.
+
+الفجوة الرئيسية: الواجهة صالحة كبداية، لكنها ليست بعد storefront تجاري ناضج لمتاجر كبيرة. أهم فجواتها هي catalog pagination، sitemap scale، caching/revalidation، states، accessibility، وصقل checkout mobile.
+
+### 4.4 docs
+
+مجلد `docs/` غني ومفيد. توجد وثائق معمارية وتشغيلية مهمة:
+
+- `ARCHITECTURE.md`
+- `DEVELOPMENT_WORKFLOW.md`
+- `LOCAL_DEVELOPMENT.md`
+- `TESTING_STRATEGY.md`
+- `PRODUCTION_READINESS.md`
+- `SECURITY_BASELINE.md`
+- `TENANCY_RULES.md`
+- `BACKUP_RESTORE_RUNBOOK.md`
+- `MONITORING_ALERTING_RUNBOOK.md`
+- `QUEUE_SCHEDULER_RUNBOOK.md`
+- `REVERSE_PROXY_RUNBOOK.md`
+- `ALGERIA_GEOGRAPHY.md`
+- `STOREFRONT_CART.md`
+- `STOREFRONT_SEO.md`
+- `STOREFRONT_THEME.md`
+- `docs/adr/*.md`
+
+هذه الوثيقة لا تستبدل كل تلك الملفات. هي تجمع الرؤية العليا وترتبط بها. التفاصيل التشغيلية تبقى في runbooks.
+
+### 4.5 Docker والتشغيل المحلي
+
+يوجد `docker-compose.yml` للخدمات المحلية. هذا جيد للتطوير، لكنه ليس دليلاً على production readiness. يوجد أيضاً Dockerfiles للbackend والstorefront، وأمثلة deployment. المطلوب لاحقاً هو إثبات build/push وتشغيل staging فعلي.
+
+### 4.6 CI
+
+يوجد workflow في `.github/workflows/quality.yml` يغطي:
+
+- backend composer/install/migrate/health/tests/routes.
+- storefront pnpm install/typecheck/build.
+- docker build plan checks.
+- e2e اختياري خلف متغير.
+
+الفجوة: لا يوجد دليل حالياً أنه مفعل كـ required merge gate في GitHub. قبل تكبير المشروع عبر Codex، يجب أن يصبح CI حاجزاً إلزامياً.
+
+### 4.7 Filament panels
+
+المشروع يستخدم ثلاث لوحات:
+
+- `admin`: مالك المنصة والإدارة العليا.
+- `vendor`: التجار وإدارة المتجر.
+- `support`: فريق الدعم.
+
+هذا التقسيم صحيح لمنتج SaaS. يجب الحفاظ عليه، وعدم خلط صلاحيات الدعم مع صلاحيات super admin أو التاجر.
+
+### 4.8 database/migrations
+
+قاعدة البيانات متقدمة نسبياً:
+
+- migrations كثيرة تغطي معظم الدومينات.
+- `tenant_id` في الجداول التجارية.
+- قيود مركبة cross-tenant في علاقات حساسة.
+- ULIDs.
+- تخزين المال بوحدات صغيرة.
+- جدول checkout idempotency.
+
+المرحلة القادمة يجب أن تضيف stock movement ledger وproduct variants بحذر، لأنهما سيؤثران على checkout والمخزون والطلبات.
+
+### 4.9 tenancy
 
 الموجود:
 
-- shared database tenancy.
-- `tenant_id` على الجداول التجارية.
-- `CurrentTenant` scoped service.
-- `TenantResolver` للـ host/user/session.
-- `ResolveTenantFromRequest` middleware.
-- `BelongsToTenant` global scope.
-- policies وtenant permissions.
-- composite DB constraints لعلاقات مهمة.
-- Filament vendor tenant context.
-- storefront tenant resolution by host ثم fallback identifier.
-- custom domains عبر `domains` مع verification.
-- tenant switcher v1.
-- tests tenant isolation في عدة مجالات.
+- `CurrentTenant`
+- `TenantResolver`
+- `ResolveTenantFromRequest`
+- `BelongsToTenant`
+- policies
+- database constraints
+- قواعد موثقة في `TENANCY_RULES.md`
 
-القاعدة الإلزامية:
+ملاحظة تحقق مهمة: أغلب tenant-owned models تستخدم `BelongsToTenant`. لكن `Store` لا يستخدمها حالياً ويملك `scopeForTenant` يدوي يعيد query غير مفلتر عند `tenant=null`. هذا قد يكون مقصوداً لتدفقات platform/store resolution، لكنه يحتاج مراجعة أمنية وتوثيقاً واختبارات واضحة، لأنه نموذج محوري في SaaS.
 
-أي استخدام لـ `withoutGlobalScope('current_tenant')` يجب أن يكون مبرراً ومصحوباً بفلترة `tenant_id` صريحة أو سياق admin/support واضح ومحمي بسياسة. المثال الآمن:
+### 4.10 checkout
 
-```php
-Model::query()
-    ->withoutGlobalScope('current_tenant')
-    ->where('tenant_id', $tenantId);
-```
+الموجود جيد:
 
-المخاطر:
+- Laravel يحسب الأسعار والشحن والخصومات والمجموع.
+- validation للبيانات الجزائرية مثل الهاتف والولاية والبلدية.
+- inventory reservation داخل transaction.
+- checkout idempotency عبر `Idempotency-Key`.
+- duplicate-window عند غياب المفتاح.
+- abuse guard حسب IP/phone/store.
+- Next.js يرسل item IDs/quantities ولا يرسل totals موثوقة.
 
-- admin/support cross-tenant queries تحتاج تمييزاً واضحاً.
-- أي resource جديد في Filament يجب أن يمنع cross-tenant select options.
-- public storefront resources يجب ألا تعرض internal tenant identifiers غير الضرورية.
+الفجوة: duplicate-window بدون key هو حماية best-effort، وليس ضماناً كاملاً تحت concurrency. في السيناريوهات الحساسة يجب فرض idempotency key من storefront أو إضافة dedupe أقوى.
 
-المهام:
-
-1. `P0 مستمر`: test tenant isolation لأي domain جديد.
-2. `P0 مستمر`: مراجعة `withoutGlobalScope` في code review/CI grep report.
-3. `P1`: إخفاء `tenant_id` من public StoreResource إن لم تكن هناك حاجة عامة له.
-4. `P1`: stale session tenant cleanup عند إزالة membership.
-
----
-
-## 12. Storefront Roadmap
-
-الحالة الحالية: مكتمل جزئياً.
-
-الموجود فعلاً:
-
-- Next.js app router.
-- store resolution عبر host/default store.
-- product listing.
-- product details.
-- categories.
-- search page/API.
-- cart client-side.
-- quick checkout.
-- cart checkout.
-- track order.
-- legal pages.
-- SEO metadata.
-- sitemap.
-- robots.
-- JSON-LD basic: Store, Product, BreadcrumbList.
-- theme colors/hero/trust/contact.
-- Arabic/RTL مع copy يدعم French جزئياً.
-- Playwright e2e specs مع mock backend موجودة.
-
-النواقص:
-
-- caching/revalidation: أغلب `storefrontFetch` يستخدم `cache: "no-store"`.
-- loading states محدودة.
-- error/empty states تحتاج polish.
-- image optimization strategy غير مكتملة؛ تستخدم صفحات كثيرة `img` وليس `next/image`. هذا ليس خطأ مطلقاً، لكنه يحتاج قراراً عملياً حسب مصدر الصور/CDN.
-- accessibility audit غير مثبت.
-- performance budget غير مثبت.
-- sitemap pagination للمتاجر الكبيرة غير موجود.
-- real integration e2e غير موجود؛ الموجود mocked e2e.
-- Playwright غير موثوق بيئياً حالياً.
-
-المهام:
-
-1. `P0`: إصلاح e2e environment.
-2. `P1`: إضافة caching/revalidation strategy:
-   - home
-   - categories
-   - product details
-   - theme/store settings
-3. `P1`: cache invalidation عند تحديث product/category/theme/store.
-4. `P1`: تحسين error/empty/loading states.
-5. `P1`: تحسين mobile UX للcheckout والسلة.
-6. `P1`: accessibility smoke checks.
-7. `P1/P2`: image optimization/CDN strategy.
-8. `P2`: French language strategy كاملة إن كانت هدفاً تجارياً قريباً.
-
----
-
-## 13. Billing Roadmap
-
-الحالة الحالية: مكتمل جزئياً.
+### 4.11 billing
 
 الموجود:
 
 - plans.
-- plan features.
+- features/limits.
 - subscriptions.
 - invoices.
-- subscription payments.
-- manual payment confirmation/rejection.
-- grace periods.
-- tenant/store suspension.
-- renewal reminders.
-- usage counters.
-- feature gates.
-- vendor billing overview.
-- billing lifecycle tests.
+- manual subscription payments.
+- lifecycle processing.
+- grace/suspension.
 
-الناقص:
+الناقص التجاري:
 
-- invoice PDF export.
-- payment proof upload/preview workflow التجاري الكامل.
-- tax/commercial invoice concerns.
-- ledger/accounting model.
-- revenue operations dashboard:
-  - MRR
-  - overdue
-  - churn
-  - active stores
-- plan upgrade/downgrade scheduling الكامل.
-- dunning workflow كامل.
-- reconciliation للمدفوعات اليدوية.
+- invoice PDF.
+- dunning كامل.
+- payment proof upload/review.
+- revenue dashboard.
+- MRR/ARR.
+- reconciliation وledger أوضح.
 
-الأولوية:
-
-- `P1`: revenue dashboard وinvoice PDF وmanual payment review.
-- `P1`: dunning notifications.
-- `P2`: ledger/accounting بعد تثبيت نموذج الإيرادات.
-
----
-
-## 14. Shipping Roadmap
-
-الحالة الحالية: مكتمل جزئياً.
+### 4.12 shipping
 
 الموجود:
 
-- 58 wilayas.
-- 1541 communes.
+- wilayas/communes.
 - shipping companies.
-- shipping rates.
-- delivery types: home/desk.
+- rates.
 - shipments.
-- shipment status histories.
+- shipment status transitions.
 - failed delivery reasons.
 - returns.
-- tracking number support.
 
 الناقص:
 
-- COD collection reconciliation.
-- delivery provider integration.
-- rate templates.
-- free shipping rules.
-- shipping zones.
-- provider labels.
-- failed delivery analytics.
-- delivery success rate dashboard.
+- shipping zones/templates.
+- home/desk delivery rules أوسع عند الحاجة.
+- COD reconciliation.
+- shipment batches.
+- provider abstraction قبل أي integration.
 
-69 ولاية:
+### 4.13 theme/storefront presentation
 
-- `مؤجل / research`: لا تفعل الآن.
-- السبب: لا يوجد داخل المشروع mapping موثوق ومختبر يربط 1541 commune بالتقسيم الجديد إلى 69 ولاية.
-- أي تفعيل قبل mapping رسمي سيكسر shipping rates وcheckout.
+الموجود:
 
----
+- theme settings.
+- hero.
+- trust badges.
+- contact/legal strip.
+- Arabic/French localization foundation.
 
-## 15. Testing Strategy محدثة
+الناقص:
 
-الحالة الحالية: مكتمل جزئياً.
+- theme sections قابلة للتكوين أكثر.
+- media/image strategy.
+- accessibility audit.
+- storefront readiness gates قبل publish.
 
-### Backend
+### 4.14 domains
 
-- الإطار: Pest 4 فوق PHPUnit 12.
-- آخر تحقق: `150 passed (610 assertions)`.
-- Feature test files المثبتة: `27`.
-- المجالات المغطاة:
-  - tenancy
-  - tenant switcher
-  - tenant integrity constraints
-  - catalog
-  - checkout
-  - orders
-  - payments
-  - shipping
-  - returns
-  - billing
-  - domains
-  - geography
-  - support
-  - audit
-  - analytics
-  - system health/readiness
-  - production runtime safeguards
-  - security headers
-  - trusted proxy behavior
+الموجود:
 
-### Storefront
+- domain records.
+- verification tokens.
+- active/failed/disabled states.
+- host-based resolution.
+- reverse proxy runbook.
 
-- Playwright specs موجودة وتغطي mocked e2e:
-  - home/listing
-  - SEO/crawl
-  - mobile navigation
-  - quick order
-  - cart order
-  - track order
-- الحالة الحالية: غير مثبتة بسبب environment failure.
-- يجب التمييز بين:
-  - mocked e2e: موجود كاختبارات.
-  - real integration e2e مع Laravel حقيقي: غير مثبت / مطلوب لاحقاً.
+الناقص:
 
-### المطلوب
+- staging validation حقيقي للدومينات.
+- TLS/custom domain routing proof.
+- monitoring لانتهاء الشهادات وفشل الدومينات.
 
-1. `P0`: إصلاح Playwright dependencies وpnpm.
-2. `P0`: CI يشغل backend + storefront build.
-3. `مكتمل جزئياً`: checkout idempotency tests الأساسية موجودة داخل `QuickCheckoutTest`، واختبارات prune موجودة داخل `CheckoutIdempotencyPruneTest`.
-4. `P1`: security tests للـ 2FA/session/rate limits عند إضافتها وتوسيع abuse analytics.
-5. `مكتمل جزئياً`: production readiness smoke tests الأساسية موجودة:
-   - health endpoint
-   - readiness endpoint
-   - `system:health` command
-   - production `APP_DEBUG`/`APP_KEY` safeguard
-   - security headers smoke
-   - trusted proxy/HSTS smoke
-6. `مكتمل جزئياً`: queue worker/scheduler runbook موجود، ويتبقى staging supervision smoke.
-7. `P1`: migration smoke في CI.
-8. `تشغيلي`: backup/restore runbook موجود، لكن restore drill ليس test آلياً بالضرورة ويجب تنفيذه قبل production.
+### 4.15 support
+
+الموجود:
+
+- support panel.
+- support tickets.
+- platform support role.
+
+الناقص:
+
+- messages.
+- attachments.
+- SLA.
+- macros.
+- customer/vendor conversation flow.
+
+### 4.16 audit logs
+
+الموجود جيد كأساس:
+
+- audit log domain.
+- policy تمنع mutation الحساسة.
+- events لعمليات متعددة.
+
+القاعدة المستقبلية: أي تغيير في billing, checkout, inventory, shipping, support assignment, staff permissions يجب أن يسجل audit log.
 
 ---
 
-## 16. Architecture Decision Records
+## 5. نتائج التحقق العملي بتاريخ 2026-05-08
 
-الحالة: مكتمل جزئياً
+تم تشغيل الأوامر التالية بنجاح في `backend/`:
 
-تم إنشاء `docs/adr/` في 2026-05-07 لتقليل التغييرات المعمارية غير الموثقة عند العمل عبر Codex/AI agents.
+| الأمر | النتيجة |
+|---|---|
+| `php artisan test` | `150 passed (610 assertions)` |
+| `composer validate --strict` | passed |
+| `php artisan system:health --scope=live --format=json` | ok |
+| `php artisan system:health --scope=ready --format=json` | ok |
+| `php artisan route:list` | `135 routes` |
+| `php artisan route:list --path=api/storefront` | `11 routes` |
+| `php artisan migrate:status` | migrations مطبقة، وآخرها `2026_05_07_000000_create_checkout_idempotency_records_table` |
+| `php artisan schedule:list` | `billing:process` و`checkout-idempotency:prune` |
+| `php artisan queue:failed` | لا توجد failed jobs |
+| `php artisan checkout-idempotency:prune --dry-run` | لا توجد سجلات منتهية للحذف في الفحص المحلي |
 
-ADRs المضافة:
+كما تم التحقق من أن Meilisearch متصل ضمن readiness health check.
 
-1. `Accepted`: Modular Monolith بدلاً من Microservices.
-2. `Accepted`: shared database tenancy.
-3. `Accepted`: Laravel + Filament للـ backend.
-4. `Accepted`: Next.js storefront منفصل.
-5. `Accepted`: backend هو مصدر الحقيقة للأسعار والخصومات والشحن.
-6. `Accepted`: عدم الوثوق بتوتال الواجهة.
-7. `Accepted`: 69 wilayas ليست مفعلة الآن.
-8. `Accepted`: marketplace مؤجل.
-9. `Accepted`: الدفع اليدوي أولاً ثم integrations لاحقاً.
-10. `Accepted`: strategy للشحن الجزائري.
-11. `Proposed`: storefront caching/revalidation strategy.
-12. `Proposed`: production deployment topology.
+### حدود التحقق
 
-المتبقي:
+تم إغلاق أولوية Phase 0 رقم 1 الخاصة بتوحيد بيئة `storefront` عبر Docker. المسار الموثق الآن:
 
-- تثبيت ADR caching/revalidation بعد تنفيذ الخطة واختبارها.
-- تثبيت ADR production topology بعد staging deployment فعلي.
-- إضافة ADRs جديدة عند أي تغيير جوهري في tenancy، billing، payment integrations، أو deployment.
+```bash
+./storefront/scripts/verify-docker.sh all
+```
 
----
+نتيجة التحقق:
 
-## 17. AI/Codex Development Rules
+- Docker image للـ install/typecheck/build: `node:24-bookworm`.
+- Docker image للـ e2e: `mcr.microsoft.com/playwright:v1.59.1-noble`.
+- Node داخل Docker: `v24.15.0`.
+- pnpm داخل Docker: `10.33.2`.
+- `pnpm install --frozen-lockfile`: نجح.
+- `pnpm typecheck`: نجح.
+- `pnpm build`: نجح.
+- `pnpm test:e2e`: نجح، `6 passed`.
+- لا يتم خلط Windows `node_modules` مع WSL `node_modules`.
+- pnpm store مضبوط داخل الحاوية تحت `/tmp/pnpm-store` حتى لا يولد `.pnpm-store` داخل المشروع.
 
-هذه قواعد إلزامية لأي AI agent يعمل على المشروع:
+ملاحظات التنفيذ:
 
-1. لا يضيف feature كبيرة دون تحديث tests مناسبة.
-2. لا يغير tenancy logic دون اختبارات tenant isolation.
-3. لا يضيف field مالي دون migration constraints واختبارات.
-4. لا يغير checkout دون اختبارات totals وidempotency أو تفسير واضح إن كانت المرحلة لا تمس idempotency.
-5. لا يضع business logic داخل Filament resources إذا كان يجب أن يكون في Actions/Support.
-6. لا يلمس `.env` بأسرار فعلية.
-7. لا يضيف package جديد دون سبب واضح وتوافق مثبت.
-8. لا يغير architecture decision دون ADR.
-9. كل sprint يجب أن ينتهي بتحديث roadmap.
-10. كل تغيير يجب أن يمر quality gates المتاحة.
-11. عند الشك، يصنف النقطة `غير مثبت / يحتاج تحقق` ولا يخمن.
-12. أي `withoutGlobalScope('current_tenant')` جديد يجب أن يبرر ويفلتر tenant أو يكون admin context واضحاً.
-13. لا تعتمد على client totals في أي flow.
-14. لا تنفذ marketplace الآن.
+- تم تعديل script `typecheck` إلى `tsc --noEmit --incremental false` حتى لا يفشل بسبب cache قديم داخل `.next/tsconfig.tsbuildinfo`.
+- تم ضبط Playwright ليستخدم `pnpm next dev` بدل `npx pnpm`، مع تثبيت `STOREFRONT_BASE_URL` على `http://127.0.0.1:3100` أثناء e2e.
+- تم تشغيل e2e داخل official Playwright image لتفادي مشاكل مكتبات Chromium الناقصة في WSL.
 
 ---
 
-## 18. Evaluation Scores
+## 6. نقاط القوة الحالية
 
-التقييم من 10 بناءً على حالة الكود والوثائق والتحقق بتاريخ 2026-05-06 والتحديثات التنفيذية بتاريخ 2026-05-07:
+### 6.1 tenancy قوي كأساس
 
-| المجال | الدرجة | سبب مختصر |
+المشروع لا يتعامل مع tenancy كفلتر سطحي فقط. توجد طبقات متعددة: resolver، current tenant، middleware، global scope، policies، وdatabase constraints. هذا صحيح لمنصة SaaS.
+
+### 6.2 policies وصلاحيات واضحة
+
+وجود policies وتسجيلها في `AppServiceProvider`، مع تقسيم platform roles وtenant roles، يجعل المشروع قابلاً للنمو بدون خلط صلاحيات خطير.
+
+### 6.3 database constraints مهمة
+
+وجود قيود مركبة لعلاقات tenant-owned يقلل احتمال cross-tenant references حتى لو أخطأ كود application. هذه نقطة قوية جداً في مشروع SaaS.
+
+### 6.4 checkout server-side
+
+الـ checkout لا يثق في totals من الواجهة. Laravel يتحقق من المنتجات والمخزون والشحن والكوبونات ويحسب المجموع. هذا يحمي المال والمخزون.
+
+### 6.5 idempotency
+
+دعم `Idempotency-Key` في checkout، مع conflict عند تغير payload، قرار صحيح مبكراً. كثير من المشاريع تضيفه بعد مشاكل production.
+
+### 6.6 Actions
+
+وضع منطق مثل إنشاء الطلب، تغيير حالة الطلب، تسوية المخزون، تسجيل الدفع، ومعالجة billing lifecycle في Actions يجعل المشروع أكثر قابلية للاختبار والتوسع.
+
+### 6.7 Filament panels
+
+تقسيم admin/vendor/support يعطي بنية مناسبة للمنصة. لا يجب اختزال كل شيء في لوحة واحدة.
+
+### 6.8 الاختبارات
+
+backend test suite قوي نسبياً لحالة pre-production: `150 passed (610 assertions)`. هذا مهم جداً قبل استخدام Codex بكثافة.
+
+### 6.9 health checks
+
+وجود live/ready endpoints و`system:health` command يعطي أساساً للتشغيل والمراقبة.
+
+### 6.10 runbooks والوثائق
+
+الوثائق الحالية صريحة في الفجوات. وجود `PRODUCTION_READINESS.md`, `SECURITY_BASELINE.md`, `TESTING_STRATEGY.md`, وrunbooks للتشغيل يقلل الفوضى.
+
+### 6.11 billing foundation
+
+الاشتراكات والخطط والفواتير والمدفوعات اليدوية موجودة كأساس. هذا يميز المشروع عن متجر عادي.
+
+### 6.12 domain/theme/storefront foundation
+
+وجود الدومينات والثيم وإعدادات المتجر وstorefront عام يضع أساس Shopify-like واضح.
+
+---
+
+## 7. المخاطر والفجوات الحالية
+
+### P0 - يجب إغلاقها قبل beta واسعة أو production
+
+| الخطر | التفسير | المطلوب |
+|---|---|---|
+| Production readiness غير مكتمل | توجد runbooks وأساس، لكن لا يوجد إثبات staging كامل. | staging deployment، TLS/proxy، queues/scheduler، health، monitoring، rollback. |
+| Frontend environment غير موحد | تم إغلاقه كمسار Docker موحد في 2026-05-08: install/typecheck/build/e2e نجحت. | يبقى ربط المسار بالـ CI required gates. |
+| CI required gates غير مثبتة | workflow موجود لكنه ليس مثبتاً كحاجز merge إلزامي. | تفعيل GitHub required checks. |
+| Clean deployment proof غير موجود | Dockerfiles موجودة لكن image build/push/promotion غير مثبت. | build images في CI أو pipeline واضح. |
+| Monitoring/alerting/backups/restore | docs موجودة لكن لا يوجد تشغيل فعلي مثبت. | uptime، failed jobs، queue/scheduler، restore drill، alerts. |
+| Security hardening | CSP واسع، لا 2FA، لا scans، لا session/device management. | 2FA، dependency scanning، CSP tightening، secrets rotation. |
+| Store tenant scoping review | `Store` لا يستخدم `BelongsToTenant` ويعيد query غير مفلتر عند tenant null. | مراجعة أمنية، توثيق exception أو تعديل لاحق، اختبارات. |
+| catalog pagination/sitemap 48-limit | sitemap يطلب `per_page=500` لكن backend products endpoint يحد إلى 48. | pagination metadata وsitemap pagination أو endpoint خاص. |
+| secrets hygiene | توجد أمثلة dummy محلية، ويجب التأكد من عدم تسريب env حقيقية. | clean clone/package rehearsal، secret inventory، rotation procedure. |
+
+### P1 - مهمة لبناء SaaS تجارية قابلة للبيع
+
+- caching/revalidation للـ storefront.
+- merchant onboarding wizard.
+- store readiness/publish gate.
+- product variants/options.
+- stock movement ledger.
+- product import/export.
+- bulk order operations.
+- order timeline غني.
+- shipping zones/templates.
+- COD reconciliation.
+- invoice PDF.
+- dunning.
+- support messages/attachments.
+- analytics dashboards.
+- notification workflows.
+
+### P2/P3 - نمو المنصة بعد الأساس التجاري
+
+- integrations مع shipping providers.
+- SMS/WhatsApp providers.
+- webhooks.
+- public API.
+- API tokens/scopes.
+- app installation model.
+- marketplace mode.
+- advanced theme/page sections.
+- multi-warehouse إن أثبت السوق الحاجة.
+
+---
+
+## 8. التقييم الحالي
+
+الأرقام تقريبية ومقصود بها توجيه القرار، لا إعطاء شهادة جاهزية.
+
+| المجال | التقييم | التفسير |
 |---|---:|---|
-| Architecture | 8.3 | modular monolith واضح وADRs أساسية موجودة، لكن caching/deployment topology ما زالت Proposed. |
-| Backend | 8.3 | domains واسعة واختبارات قوية. |
-| Tenancy | 8.5 | طبقات متعددة وDB constraints، مع خطر `withoutGlobalScope`. |
-| Database | 8.6 | schema قوي وقيود جيدة، وأضيفت idempotency records، لكن variants/stock movements ناقصة. |
-| Checkout | 8.6 | server-side totals وtransactions وidempotency وduplicate window وrate limits والتنظيف المجدول موجودة؛ ينقص tuning/metrics/phone confirmation. |
-| Storefront | 7.2 | أساس جيد ويرسل Idempotency-Key للcheckout، لكن caching/e2e reliability/image strategy ناقصة. |
-| Security | 7.1 | isolation وcheckout abuse وsecurity headers وproduction debug/key safeguards وtrusted proxy baseline موجودة، لكن 2FA/session/vulnerability scanning/CSP tightening ناقصة. |
-| Testing | 8.6 | backend قوي وcheckout idempotency/prune/system health/security headers/production safeguards/trusted proxy tests مضافة وCI workflow baseline موجود، لكن e2e غير مثبت وCI لم يعمل كـ gate فعلي بعد. |
-| DevOps | 6.2 | docker-compose محلي وDockerfiles/runbooks/Nginx proxy example/backup scripts/systemd timers/queue-scheduler systemd examples/monitoring docs/health readiness/security headers/scheduler maintenance/production safeguards/CI baseline موجودة، لكن لا monitoring integration ولا backup schedules منشورة ولا CI مثبت فعلياً. |
-| Documentation | 8.2 | docs هندسية جيدة وأضيفت runbooks للbackup/restore وreverse proxy وqueue/scheduler وmonitoring مع أمثلة backup automation وADRs، لكن drills/staging outcomes وبعض user/operator docs ما زالت ناقصة. |
-| Product Readiness | 5.8 | foundation جيد، onboarding وUX التجاري ناقصان. |
-| Production Readiness | 5.8 | Dockerfiles وenv production examples وrunbooks وbackup automation examples وreverse proxy baseline وqueue/scheduler supervision docs وmonitoring docs وhealth/readiness/security headers وproduction safeguards وCI baseline موجودة، لكن staging deployment/backup schedules/restore drill/monitoring integration غير مكتملة. |
-| AI-readiness | 7.3 | roadmap/workflow وADRs وCI baseline جيدة، وroot monorepo مثبت الآن، لكن clean-clone rehearsal وgates الفعلية غير مكتملة. |
+| Backend maturity | 7.5/10 | منظم، مختبر، وفيه domains كثيرة. يحتاج نضج revenue ops وstock/variants وبعض operational proof. |
+| Tenancy/security model | 7/10 | أساس قوي متعدد الطبقات. يحتاج مراجعة `Store`, أي `withoutGlobalScope`, 2FA, CSP, scans. |
+| Storefront maturity | 6/10 | جيد كبداية customer-facing، وتم تثبيت build/e2e عبر Docker. يحتاج pagination، caching، UX polish، وa11y. |
+| Production readiness | 4/10 | runbooks وhealth موجودة، لكن التشغيل الفعلي غير مثبت. |
+| Commercial SaaS readiness | 5/10 | foundation قوي، لكن onboarding/revenue dashboards/billing ops/support ops ناقصة. |
+| DevOps maturity | 4.5/10 | Docker/CI baseline موجود، لكن gates/deploy/monitoring/restore proof ناقصة. |
+| Documentation maturity | 7/10 | docs كثيرة وصريحة. تحتاج إبقاءها متزامنة مع الفحص الحالي. |
+| Testing maturity | 7/10 | backend جيد، وfrontend install/typecheck/build/e2e مثبتة عبر Docker. CI gating ما زال غير مثبت. |
+
+التقييم العام: foundation قوي، pre-production، وليس production-ready.
 
 ---
 
-## 19. Long-Term Roadmap بعد P0
+## 9. خارطة الطريق الكبرى
 
-### P0 قبل beta عام
+### Phase 0: Foundation Hardening
 
-1. Phase 0.5 Repository Hygiene.
-2. Production Readiness Foundation v1.
-3. CI Quality Gates activation.
-4. Checkout Idempotency tuning/metrics وليس foundation أو cleanup command.
-5. Security baseline: secrets, staging/prod verification لـ APP_DEBUG/APP_KEY safeguards، CSP tightening، super admin 2FA.
+الهدف: منع البناء فوق أرضية غير مثبتة.
 
-### P1 بعد P0
+- repository hygiene.
+- clean clone rehearsal.
+- `مكتمل 2026-05-08`: بيئة frontend موحدة عبر Docker.
+- `مكتمل 2026-05-08`: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm build`, و`pnpm test:e2e` موثوقة عبر `./storefront/scripts/verify-docker.sh all`.
+- CI required gates.
+- Playwright reliability أو smoke بديل.
+- staging deployment.
+- Docker image builds.
+- monitoring.
+- backup schedule.
+- restore drill.
+- alerting.
+- error tracking.
+- security baseline hardening.
 
-1. Merchant Onboarding Foundation.
-2. Storefront UX/Performance Polish.
-3. Billing Revenue Operations v2.
-4. Shipping Engine v2.
-5. Notifications and Communication.
-6. Product Variants and Catalog Maturity.
-7. Support Center v2.
+معيار الخروج: لا تقبل ميزات تجارية ضخمة قبل أن يصبح backend + storefront + CI + staging قابلين للتكرار.
 
-### P2
+### Phase 1: SaaS Usability
 
-1. Advanced analytics.
-2. Advanced SEO and structured data.
-3. API v2 and integrations.
-4. Performance/Octane/CDN readiness.
+الهدف: جعل التاجر يستطيع الوصول إلى متجر قابل للنشر بدون مطور.
 
-### P3 / لا ينفذ الآن
+- merchant onboarding wizard.
+- store readiness checklist.
+- publish gate.
+- vendor dashboard.
+- admin dashboard.
+- support workflow.
+- billing dashboard أولي.
+- إعدادات قانونية وتجارية واضحة.
 
-1. Marketplace mode.
-2. 69 wilayas activation بدون mapping رسمي.
-3. Multi-warehouse قبل stock movements وvariant inventory.
+معيار الخروج: تاجر جديد يستطيع إنشاء متجر، إعداد الشحن والدفع والمنتجات الأساسية، ومعرفة ما ينقص قبل النشر.
+
+### Phase 2: Commerce Core Expansion
+
+الهدف: دعم متاجر حقيقية بكتالوج ومخزون وطلبات أكثر تعقيداً.
+
+- product variants/options.
+- stock movements ledger.
+- product import/export.
+- bulk order operations.
+- order timeline.
+- checkout UX.
+- optional OTP أو phone confirmation عند الحاجة.
+
+معيار الخروج: المتاجر ذات المنتجات المتنوعة والمخزون المتغير يمكنها العمل بدون حلول يدوية خطيرة.
+
+### Phase 3: Algerian Shipping & COD
+
+الهدف: جعل المنصة مناسبة فعلاً للسوق الجزائري.
+
+- shipping zones.
+- shipping templates.
+- commune/wilaya rules.
+- desk/home delivery support إن كان مناسباً.
+- COD reconciliation.
+- shipment batches.
+- provider abstraction.
+
+معيار الخروج: التاجر يستطيع إدارة الشحن والتحصيل والفشل في التوصيل بطريقة قابلة للمراجعة.
+
+### Phase 4: Billing & Revenue Operations
+
+الهدف: تحويل billing من foundation إلى نظام إيرادات.
+
+- invoice PDF.
+- dunning.
+- payment proof.
+- manual payment review.
+- MRR/ARR.
+- trial conversion.
+- plan limits.
+- usage meters.
+- revenue dashboards.
+
+معيار الخروج: مالك المنصة يرى الإيرادات والمخاطر والتحصيل وحدود الخطط بوضوح.
+
+### Phase 5: Storefront Growth
+
+الهدف: storefront قابل للنمو والبحث والتحويل.
+
+- caching/revalidation.
+- SEO v2.
+- theme sections.
+- image optimization.
+- accessibility.
+- Arabic/RTL polish.
+- French support لاحقاً.
+- mobile-first checkout.
+- sitemap scale.
+- product filters/search.
+
+معيار الخروج: storefront سريع، قابل للفهرسة، ومناسب للهاتف والمتاجر الأكبر.
+
+### Phase 6: Analytics & Intelligence
+
+الهدف: قرارات مبنية على بيانات.
+
+- vendor analytics.
+- platform analytics.
+- delivery analytics.
+- product analytics.
+- customer analytics.
+- aggregation jobs.
+- daily metrics tables.
+- failed delivery insights.
+
+معيار الخروج: dashboards لا تعتمد على queries ثقيلة مباشرة على جداول transactional.
+
+### Phase 7: Integrations & Ecosystem
+
+الهدف: فتح المنصة للخدمات الخارجية بدون ربط عشوائي.
+
+- webhooks.
+- public API.
+- shipping providers.
+- SMS/WhatsApp providers.
+- app installation model لاحقاً.
+- API tokens/scopes.
+- integration logs.
+
+معيار الخروج: كل integration يمر عبر abstraction، signing، retry، idempotency، logging، وscopes.
+
+### Phase 8: Scale & Enterprise Hardening
+
+الهدف: جاهزية أعلى لعملاء أكبر وتشغيل أثقل.
+
+- performance profiling.
+- queue scaling.
+- caching layers.
+- CDN.
+- object storage hardening.
+- session/device management.
+- 2FA.
+- CSP tightening.
+- security audits.
+- incident response.
+- backup encryption.
+- observability maturity.
+
+معيار الخروج: المنصة قابلة لتحمل نمو حقيقي مع إجراءات أمان وتشغيل واضحة.
 
 ---
 
-## 20. Backlog تفصيلي حسب الدومين
+## 10. خطة زمنية مقترحة غير ملزمة
 
-### Tenancy
+الجدول التالي توجيهي. يتغير حسب نتائج الاختبارات، سرعة التطوير، وتعقيد السوق.
 
-- `P0 مستمر`: tests لكل مجال tenant-owned جديد.
-- `P1`: stale session tenant cleanup.
-- `P1`: audit report لـ `withoutGlobalScope`.
+| الفترة | التركيز | النتائج المتوقعة |
+|---|---|---|
+| الشهر 1 | Foundation/CI/Staging/Security baseline | بيئة frontend موحدة، CI required، staging أولي، monitoring/backup/security gaps محددة ومغلقة جزئياً. |
+| الشهر 2 | Onboarding/Dashboards/Readiness | merchant onboarding، readiness gate، vendor/admin dashboards أولية، support workflow أفضل. |
+| الشهر 3 | Variants/Inventory/Orders | variants، stock movements، bulk orders، order timeline، تحسين checkout. |
+| الشهر 4 | Shipping/COD/Billing | shipping zones/templates، COD reconciliation، invoice PDF، dunning/payment proof. |
+| الشهر 5 | Storefront/SEO/Theme/Analytics | caching، sitemap scale، SEO v2، theme sections، analytics aggregation. |
+| الشهر 6 | Integrations/Scale/Security hardening | webhooks، API tokens، integrations abstraction، 2FA، CSP tightening، observability maturity. |
 
-### Catalog
-
-- `P1`: variants/options.
-- `P1`: bulk import/export.
-- `P1`: product SEO fields.
-- `P1`: max images per product enforcement.
-
-### Inventory
-
-- `P1`: stock movements.
-- `P1`: variant inventory.
-- `P2`: low stock notifications.
-
-### Checkout
-
-- `مكتمل جزئياً قوي`: idempotency records وabuse protection foundation.
-- `مكتمل`: command مجدول لتنظيف expired idempotency records، ويتبقى metrics/tuning.
-- `P1`: rate-limit tuning وabuse dashboard.
-- `P1`: phone confirmation workflow.
-- `P2`: abandoned cart.
-
-### Orders
-
-- `P1`: customer-visible timeline.
-- `P1`: batch printable slips.
-- `P1`: export controls.
-
-### Payments
-
-- `P1`: payment proof upload/review.
-- `P2`: payment integrations.
-- `P2`: signed callbacks.
-
-### Shipping
-
-- `P1`: zones/free shipping/templates.
-- `P1`: COD reconciliation.
-- `P2`: provider integrations.
-
-### Billing
-
-- `P1`: invoice PDF.
-- `P1`: revenue dashboard.
-- `P1`: dunning.
-- `P2`: ledger/accounting.
-
-### Support
-
-- `P1`: ticket messages/replies.
-- `P1`: attachments.
-- `P1`: SLA.
-
-### Storefront
-
-- `P1`: caching/revalidation.
-- `P1`: empty/error/loading states.
-- `P1`: mobile checkout polish.
-- `P1`: accessibility pass.
-- `P2`: image optimization strategy.
-
-### Infrastructure
-
-- `P0`: CI.
-- `P0`: Dockerfiles build validation في CI.
-- `P0`: health/readiness.
-- `P0`: backup/restore.
-- `P1`: monitoring/error tracking integration وalert routing.
+لا يجب اعتبار هذا الجدول وعد إطلاق. المشروع غير مستعجل؛ الهدف بناء صحيح ومتدرج.
 
 ---
 
-## 21. Definition of Done لأي Milestone
+## 11. Backlog مفصل حسب الدومين
 
-لا تعتبر أي مرحلة مكتملة إلا إذا تحقق التالي:
+### 11.1 Platform Owner
 
-1. business logic في Action/Support مناسب.
-2. input العام له validation/FormRequest.
-3. tenant-owned models scoped أو لها استثناء موثق.
-4. cross-tenant relations محمية بقيود DB عند الإمكان.
-5. Filament resources محمية بسياسات.
-6. status transitions لها tests.
-7. money/inventory/order operations لا تثق بالواجهة.
-8. الاختبارات المناسبة تمر.
-9. route list لا يكشف routes غير مقصودة.
-10. لا توجد secrets hardcoded.
-11. الوثائق والroadmap محدثة.
-12. أي أثر أمني أو تشغيلي أو ربحي مسجل.
+- الحالة الحالية: admin panel موجود، plans/subscriptions/invoices/support/audit foundation موجودة.
+- المطلوب: dashboards للإيراد، الصحة التشغيلية، tenants المعرضين للخطر، failed jobs، billing alerts.
+- الأولوية: P1 بعد Phase 0.
+- معايير القبول: dashboard لا يكسر tenant isolation، محمي بسياسات، لا يستخدم queries ثقيلة بدون pagination/aggregation، موثق.
+
+### 11.2 Merchant
+
+- الحالة الحالية: vendor panel موجود مع catalog/orders/shipping/billing/settings/theme.
+- المطلوب: onboarding wizard، readiness checklist، store publish gate، dashboard يومي.
+- الأولوية: P1.
+- معايير القبول: تاجر جديد يستطيع إكمال الحد الأدنى للنشر، وكل خطوة لها validation server-side.
+
+### 11.3 Customer
+
+- الحالة الحالية: storefront وcart/checkout/track-order موجودة.
+- المطلوب: UX mobile أفضل، states أوضح، ثقة أعلى، سرعة أعلى.
+- الأولوية: P1/P2.
+- معايير القبول: checkout يعمل من الهاتف، لا توجد totals موثوقة في العميل، وe2e يغطي happy path.
+
+### 11.4 Checkout
+
+- الحالة الحالية: server-side totals، idempotency، abuse guard، inventory reservation.
+- المطلوب: metrics، tuning، stricter no-key duplicate handling، optional OTP/confirmation.
+- الأولوية: P0/P1.
+- معايير القبول: اختبارات idempotency/concurrency، عدم تكرار الطلبات الحساسة، audit/logging مناسب بدون PII خام.
+
+### 11.5 Catalog
+
+- الحالة الحالية: products/categories/images/search foundation.
+- المطلوب: variants/options، filters، product SEO fields، import/export.
+- الأولوية: P1.
+- معايير القبول: variants لا تكسر checkout/inventory، والـ API paginated، والاختبارات تغطي tenant isolation.
+
+### 11.6 Inventory
+
+- الحالة الحالية: inventory item لكل منتج، reservation/release/settle.
+- المطلوب: stock movement ledger، low stock alerts، variant inventory.
+- الأولوية: P1.
+- معايير القبول: كل حركة مخزون قابلة للتدقيق، checkout يستخدم locks، ولا يوجد تعديل مخزون غير مفسر.
+
+### 11.7 Orders
+
+- الحالة الحالية: order status transitions، payments، shipments، histories.
+- المطلوب: order timeline، bulk operations، filters، export، cancellation reasons أوضح.
+- الأولوية: P1.
+- معايير القبول: كل انتقال حالة مصرح ومختبر، bulk action يستخدم transactions/audit.
+
+### 11.8 Shipping
+
+- الحالة الحالية: wilayas/communes/rates/companies/shipments/returns.
+- المطلوب: zones، templates، shipment batches، COD reconciliation، provider abstraction.
+- الأولوية: P1.
+- معايير القبول: لا integration مباشر بدون abstraction، وكل حساب شحن يتم server-side.
+
+### 11.9 Billing
+
+- الحالة الحالية: plans/features/subscriptions/invoices/manual payments/lifecycle.
+- المطلوب: invoice PDF، payment proof، dunning، revenue analytics، usage meters.
+- الأولوية: P1.
+- معايير القبول: تغييرات مالية audited، server-side only، اختبارات لحالات التأخر والتجديد والتعليق.
+
+### 11.10 Storefront
+
+- الحالة الحالية: صفحات عامة وسلة وcheckout وSEO foundation.
+- المطلوب: caching/revalidation، pagination، image optimization، accessibility، better empty/error states.
+- الأولوية: P1.
+- معايير القبول: `pnpm typecheck/build` وe2e أو smoke موثوق، ولا تعتمد الواجهة على totals موثوقة.
+
+### 11.11 SEO
+
+- الحالة الحالية: sitemap/robots/canonical/OpenGraph/JSON-LD.
+- المطلوب: sitemap pagination، product SEO fields، image OG، structured data أوسع، custom domain smoke.
+- الأولوية: P1.
+- معايير القبول: sitemap يغطي أكثر من 48 منتج، ولا يفشل مع متاجر كبيرة.
+
+### 11.12 Theme System
+
+- الحالة الحالية: theme settings، hero، trust/contact sections.
+- المطلوب: configurable sections، presets، media strategy، preview.
+- الأولوية: P2.
+- معايير القبول: الثيم لا يسمح بكسر layout أو injection، ويحافظ على RTL/mobile.
+
+### 11.13 Search
+
+- الحالة الحالية: DB fallback وScout/Meilisearch foundation.
+- المطلوب: indexing jobs، synonyms، filters، monitoring.
+- الأولوية: P2.
+- معايير القبول: search tenant-scoped، قابل لإعادة الفهرسة، ومراقب في production.
+
+### 11.14 Notifications
+
+- الحالة الحالية: أساس دعوات/اشتراكات وبعض notifications.
+- المطلوب: order/vendor/customer/support notifications، templates، channels.
+- الأولوية: P1/P2.
+- معايير القبول: لا تسريب cross-tenant، retries مع idempotency عند الحاجة، logging واضح.
+
+### 11.15 Support
+
+- الحالة الحالية: support tickets وsupport panel.
+- المطلوب: messages، attachments، SLA، macros، assignment workflow.
+- الأولوية: P1.
+- معايير القبول: support لا يرى إلا المسموح، attachments آمنة، actions audited.
+
+### 11.16 Security
+
+- الحالة الحالية: policies، tenancy، headers، throttles، readiness safeguards.
+- المطلوب: 2FA، CSP tightening، dependency scanning، session/device management، secrets rotation.
+- الأولوية: P0.
+- معايير القبول: tests، docs، CI scans، وproduction/staging validation.
+
+### 11.17 DevOps
+
+- الحالة الحالية: Dockerfiles، docker-compose، CI baseline، runbooks.
+- المطلوب: required gates، staging deployment، image promotion، monitoring، restore drill.
+- الأولوية: P0.
+- معايير القبول: clean clone، CI green، staging proof، alerts tested، restore recorded.
+
+### 11.18 Analytics
+
+- الحالة الحالية: بعض أساس analytics/widgets.
+- المطلوب: daily metrics، vendor/platform dashboards، delivery/product/customer analytics.
+- الأولوية: P2.
+- معايير القبول: aggregation jobs، no heavy dashboard queries، tenant isolation.
+
+### 11.19 Integrations
+
+- الحالة الحالية: مؤجلة عموماً.
+- المطلوب: webhooks، API tokens/scopes، shipping/SMS/WhatsApp abstractions، integration logs.
+- الأولوية: P2/P3.
+- معايير القبول: signing، retries، idempotency، scopes، rate limits، audit.
+
+### 11.20 Documentation
+
+- الحالة الحالية: جيدة.
+- المطلوب: إبقاء docs متزامنة، إضافة docs للدومينات التجارية عند نضجها.
+- الأولوية: مستمرة.
+- معايير القبول: كل feature تغير architecture/testing/security/runbooks تحدث الوثائق المناسبة.
+
+### 11.21 Testing
+
+- الحالة الحالية: backend جيد، وfrontend Docker verification مثبتة: install/typecheck/build/e2e نجحت.
+- المطلوب: CI required، security scans، وإبقاء e2e مستقراً داخل CI.
+- الأولوية: P0.
+- معايير القبول: tests تعمل من clean clone/CI، والأرقام محدثة في docs.
 
 ---
 
-## 22. أوامر التحقق القياسية
+## 12. مهام Codex المقترحة
 
-Backend:
+### 12.1 قالب عام لأي مهمة Codex
 
-```bash
-cd backend
-php artisan test
-php artisan route:list
-php artisan migrate:status
+```text
+المهمة:
+<وصف صغير ومحدد>
+
+السياق:
+<الدومين والملفات/الوثائق ذات العلاقة>
+
+المطلوب:
+<قائمة تنفيذ واضحة>
+
+القيود:
+- لا تغييرات خارج النطاق.
+- احترم tenant isolation وPolicies وserver-side business rules.
+- لا تثق في totals من الواجهة.
+
+الاختبارات:
+<الأوامر أو ملفات الاختبار المطلوبة>
+
+التوثيق:
+<ملفات docs التي يجب تحديثها إن تغير السلوك>
+
+معيار القبول:
+<نتيجة قابلة للتحقق>
+
+ما لا يجب تغييره:
+<ملفات أو دومينات ممنوعة في هذه المهمة>
 ```
 
-Storefront بعد إصلاح pnpm:
+### 12.2 أمثلة prompts قصيرة
 
-```bash
-cd storefront
-corepack enable
-pnpm install
-pnpm typecheck
-pnpm build
-pnpm test:e2e
+#### تثبيت frontend environment
+
+```text
+المهمة: اجعل بيئة storefront قابلة للتشغيل داخل WSL أو Docker.
+المطلوب: وثق وثبت طريقة تشغيل pnpm install/typecheck/build/e2e من clean clone.
+القيود: لا تعدل منطق المنتج.
+الاختبارات: pnpm typecheck, pnpm build, pnpm test:e2e أو سبب موثق للفشل.
 ```
 
-بديل مؤقت إذا لم يتوفر pnpm:
+#### catalog pagination/sitemap
 
-```bash
-cd storefront
-npm run typecheck
-npm run build
-npx --yes pnpm@10.33.2 exec playwright test
+```text
+المهمة: أصلح pagination للكتالوج وsitemap scale.
+السياق: backend products endpoint يحد per_page إلى 48، وstorefront sitemap يطلب 500.
+المطلوب: حل paginated لا يخفي المنتجات بعد أول صفحة.
+الاختبارات: backend API tests وstorefront sitemap tests.
 ```
 
-ملاحظة: Playwright يحتاج system dependencies مثل `libnspr4.so` في البيئة الحالية.
+#### Store tenant scoping review
+
+```text
+المهمة: راجع tenant scoping لنموذج Store.
+المطلوب: حدد هل Store يجب أن يستخدم BelongsToTenant أو يبقى exception موثقاً ومختبراً.
+القيود: لا تكسر domain resolution أو admin/support flows.
+الاختبارات: tenant isolation وstore resolution tests.
+```
+
+#### CI hardening
+
+```text
+المهمة: قو CI واجعله قابلاً ليكون required gate.
+المطلوب: backend tests, storefront typecheck/build, Docker checks, optional e2e artifacts, dependency scans.
+القيود: لا تضف أسراراً.
+معيار القبول: workflow يمر على clean branch وموثق في TESTING_STRATEGY.
+```
+
+#### Merchant onboarding
+
+```text
+المهمة: ابن onboarding wizard للتاجر.
+المطلوب: خطوات store basics, legal info, shipping, payment, theme, first product.
+القيود: كل validation في backend، ولا publish قبل readiness.
+الاختبارات: feature tests وFilament workflow tests.
+```
+
+#### Store readiness
+
+```text
+المهمة: أضف store readiness checklist وpublish gate.
+المطلوب: تحقق من بيانات المتجر، الشحن، payment method، legal pages، منتج منشور.
+الاختبارات: policy + readiness action tests.
+```
+
+#### Product variants
+
+```text
+المهمة: صمم ونفذ product variants/options.
+القيود: لا تكسر checkout أو inventory.
+الاختبارات: variant selection، pricing server-side، inventory tenant isolation.
+```
+
+#### Stock movements
+
+```text
+المهمة: أضف stock movement ledger.
+المطلوب: سجل لكل reserve/release/settle/manual adjustment.
+الاختبارات: checkout inventory transitions وauditability.
+```
+
+#### COD reconciliation
+
+```text
+المهمة: أضف COD reconciliation foundation.
+المطلوب: shipment collected amount، reconciliation status، batch review.
+القيود: لا integration مباشر مع مزود خارجي.
+```
+
+#### invoice PDF
+
+```text
+المهمة: أضف توليد PDF للفواتير.
+المطلوب: template آمن، أرقام minor units، download permissions.
+الاختبارات: authorization، rendering smoke، invoice totals.
+```
+
+#### caching/revalidation
+
+```text
+المهمة: طبق استراتيجية caching/revalidation للstorefront.
+السياق: ADR 0011 موجود كاتجاه.
+القيود: لا تعرض بيانات متجر غير نشط، ولا تثق بالواجهة في المال.
+الاختبارات: cache invalidation وstore unavailable behavior.
+```
+
+#### 2FA
+
+```text
+المهمة: أضف 2FA للـ super admins والtenant owners.
+المطلوب: enrollment، recovery، enforcement policy.
+الاختبارات: auth flows وpanel access.
+```
+
+#### webhooks
+
+```text
+المهمة: صمم webhooks foundation.
+المطلوب: subscriptions، signed delivery، retries، logs، idempotency.
+القيود: لا تبن app marketplace كامل الآن.
+```
 
 ---
 
-## 23. سجل التحديثات
+## 13. Definition of Done
 
-### 2026-05-07
+أي ميزة تعتبر مكتملة فقط إذا تحقق الآتي حسب نطاقها:
 
-- بدء تنفيذ Phase 0.5 بدلاً من الاكتفاء بتوثيقها كخطة.
-- إضافة root `.gitignore` لحماية الحزمة/المساحة من ملفات البيئة والـ generated artifacts.
-- تحديث `backend/.gitignore` و`storefront/.gitignore` لتجاهل `.env.*` مع إبقاء ملفات examples.
-- تحديث `backend/.env.example` ليعكس خدمات Docker المحلية: PostgreSQL, Redis, Meilisearch, MinIO, Mailpit.
-- إضافة `backend/.env.testing.example` لبيئة الاختبار.
-- تحديث `storefront/.env.example` لتوثيق base URLs وfallback store identifiers.
-- إضافة `docs/LOCAL_DEVELOPMENT.md` كعقد تشغيل محلي من clone نظيف.
-- تحديث `docs/DEVELOPMENT_WORKFLOW.md` بقواعد pnpm وlocal setup وrepository hygiene.
-- تحديث `docs/TESTING_STRATEGY.md` لتصحيح حالة Playwright الحالية وتوثيق متطلبات pnpm/system deps.
-- تحديث `docs/SECURITY_BASELINE.md` بقواعد secrets والهندسة الحالية لملفات البيئة.
-- تحديث حالة Phase 0.5 إلى `مكتمل جزئياً` وتحديد ما بقي لإغلاقها.
-- تحديث Immediate Next Sprint ليغلق ما تبقى من Phase 0.5 قبل Production Readiness.
-- بدء تنفيذ Production Readiness Foundation v1 كمرحلة P0.
-- إضافة `backend/Dockerfile` كـ PHP-FPM production baseline.
-- إضافة `storefront/Dockerfile` كـ Next.js production baseline.
-- إضافة root/backend/storefront `.dockerignore`.
-- إضافة `backend/.env.production.example` و`storefront/.env.production.example`.
-- إضافة `backend/docker/php-production.ini`.
-- إضافة `docs/PRODUCTION_READINESS.md` كـ runbook إنتاجي أولي.
-- تحديث تقييم DevOps وProduction Readiness بعد إضافة Docker/runbook baseline.
-- إضافة `.github/workflows/quality.yml` كـ CI Quality Gates baseline للـ backend/storefront/Dockerfile checks وE2E اختياري.
-- تحديث حالة CI Quality Gates إلى `مكتمل جزئياً` لأن workflow موجود لكنه غير مثبت كـ merge gate فعلي داخل GitHub.
-- تحديث تقييم Testing وDevOps وProduction Readiness وAI-readiness بعد إضافة CI baseline.
-- تنفيذ Checkout Idempotency and Abuse Protection foundation.
-- إضافة جدول `checkout_idempotency_records` وموديل/خدمات idempotency وabuse guard.
-- تمرير `Idempotency-Key` من Storefront Next.js إلى Laravel checkout.
-- إضافة اختبارات عدم إنشاء طلبين لنفس key، conflict عند payload مختلف، tenant/store isolation، وduplicate window.
-- تسجيل تحقق وسيط بعد checkout idempotency قبل إضافات health/security اللاحقة.
-- تحديث تقييم Database وCheckout وStorefront وSecurity وTesting بعد تنفيذ checkout idempotency.
-- تنفيذ Health/Readiness Foundation للbackend.
-- إضافة `SystemHealthChecker` وendpoints للـ liveness/readiness.
-- إضافة أمر `system:health` بصيغة JSON/table.
-- إضافة readiness smoke إلى CI baseline وbackend Docker healthcheck.
-- تحديث تقييم DevOps وProduction Readiness بعد إضافة health/readiness foundation.
-- تنفيذ Security Headers baseline للbackend والstorefront.
-- إضافة middleware للـ Laravel يضبط headers الأساسية وHSTS عند HTTPS.
-- إضافة headers في `storefront/next.config.ts`.
-- إضافة اختبارات security headers smoke.
-- تسجيل تحقق backend بعد security headers baseline قبل إضافة prune command.
-- تحديث تقييم Security وTesting وDevOps وProduction Readiness بعد security headers baseline.
-- تنفيذ تنظيف سجلات checkout idempotency المنتهية عبر `checkout-idempotency:prune`.
-- جدولة أمر التنظيف يومياً عند 03:00.
-- إضافة اختبارات prune وdry-run.
-- تحديث تحقق backend بعد prune command.
-- تحديث تقييم Checkout وTesting وDevOps بعد إغلاق cleanup command.
-- إضافة production runtime safeguards إلى readiness: فشل عند `APP_DEBUG=true` أو غياب `APP_KEY` في production.
-- إضافة اختبارات لهذه الحالات داخل `SystemHealthTest`.
-- تسجيل تحقق backend بعد production safeguards قبل إضافة trusted proxy baseline.
-- تحديث تقييم Security وTesting وDevOps وProduction Readiness بعد production safeguards.
-- إضافة `docs/BACKUP_RESTORE_RUNBOOK.md`.
-- تحديث Production Readiness وSecurity Baseline والroadmap لتمييز documented backup/restore عن restore drill غير المنفذ.
-- تحديث تقييم DevOps وDocumentation وProduction Readiness بعد إضافة runbook.
-- إضافة `deploy/backup/` مع scripts examples للنسخ الاحتياطي وrestore drill.
-- إضافة systemd backup service/timer examples وقالب backup env بدون أسرار.
-- تحديث Production Readiness وSecurity Baseline وArchitecture وTesting Strategy والroadmap لتمييز backup automation examples عن backup schedules غير المنشورة.
-- تحديث تقييم DevOps وDocumentation وProduction Readiness بعد backup automation baseline.
-- تصحيح حالة المستودع: الجذر مثبت كـ Git root موحد، ولا يظهر `backend/.git` في الفحص الحالي.
-- تحديث Local Development وDevelopment Workflow وTesting Strategy وProduction Readiness والroadmap بناءً على root monorepo الفعلي.
-- إنشاء `docs/adr/` مع 12 ADRs للقرارات الأساسية: modular monolith، tenancy، Laravel/Filament، Next.js، source of truth، client totals، 69 wilayas، marketplace، payments، shipping، caching، وdeployment topology.
-- تحديث Architecture وDevelopment Workflow والroadmap لاشتراط ADR عند تغيير قرار معماري.
-- تحديث تقييم Architecture وDocumentation وAI-readiness بعد إضافة ADRs.
-- إضافة Reverse Proxy baseline: Nginx edge example وrunbook.
-- إضافة trusted proxy config و`TRUSTED_PROXIES` إلى env examples.
-- إضافة اختبار يثبت أن forwarded HTTPS/HSTS يعمل فقط من proxy موثوق.
-- التحقق من Nginx config عبر `nginx -t` داخل Docker مع host aliases.
-- تحديث آخر تحقق backend إلى `150 passed (610 assertions)`.
-- تحديث تقييم Security وTesting وDevOps وDocumentation وProduction Readiness بعد proxy baseline.
-- إضافة Queue/Scheduler supervision runbook.
-- إضافة systemd examples للـ queue worker والـ scheduler.
-- تحديث Production Readiness وSecurity Baseline وTesting Strategy والroadmap لتمييز runbook عن staging supervision غير المثبت.
-- تشغيل smoke للأوامر التشغيلية: `schedule:list`, `queue:failed`, `billing:process --sync`, و`checkout-idempotency:prune --dry-run`.
-- تحديث تقييم DevOps وDocumentation وProduction Readiness بعد supervision docs.
-- إضافة Monitoring/Alerting runbook يربط health/readiness وfailed jobs وscheduler/logging بإجراءات مراقبة قابلة للتنفيذ.
-- تحديث `backend/.env.production.example` لاستخدام `LOG_STACK=stderr` في production container logging.
-- تحديث Production Readiness وSecurity Baseline وArchitecture وTesting Strategy والroadmap لتمييز monitoring documentation عن integration/alert routing غير المثبت.
-- تحديث تقييم DevOps وDocumentation وProduction Readiness بعد monitoring docs.
-
-### 2026-05-06
-
-- تم تحديث الوثيقة بناءً على تحليل Codex العميق للمشروع والكود الفعلي.
-- تم تصحيح التناقضات في أرقام الاختبارات وحالة Playwright e2e.
-- تم تصحيح حالة Algerian Geography إلى `58 active wilayas` و`1541 active communes`.
-- تم إضافة Phase 0.5: Repository Hygiene, Secrets, and Local Dev Reliability.
-- تم إعادة ترتيب السبرنتات بحيث لا يبدأ Merchant Onboarding قبل hygiene/production/CI/idempotency.
-- تم إضافة Checkout Idempotency and Abuse Protection كمرحلة P0 قبل beta عام.
-- تم توسيع Production Readiness لتشمل Dockerfiles، reverse proxy، environments، health/readiness، queues، scheduler، backups، storage، Redis، Meilisearch، migration procedure.
-- تم إضافة CI Quality Gates مع backend/frontend/e2e jobs.
-- تم تحديث Security Roadmap إلى موجود/ناقص/قبل beta/قبل production.
-- تم تحديث Tenancy Roadmap وقاعدة `withoutGlobalScope('current_tenant')`.
-- تم تحديث Storefront Roadmap مع caching/revalidation وmocked vs real e2e.
-- تم تحديث Billing Roadmap وShipping Roadmap بناءً على الموجود فعلياً.
-- تم تحديث Testing Strategy بنتائج 2026-05-06.
-- تم إضافة قسم Architecture Decision Records المقترح.
-- تم تحديث قواعد العمل مع Codex/AI agents.
-- تم تحديث Evaluation Scores بناءً على حالة production/devops الحقيقية.
-
-### 2026-04-28
-
-- تحويل الوثيقة إلى Living Roadmap وExecution Contract.
-- تنفيذ baseline documentation: architecture, tenancy, workflow, testing, security.
-- تنفيذ Tenant Switcher v1.
-- تنفيذ Algerian Geography v1.
-- تنفيذ Storefront Cart + Checkout foundation.
-- تنفيذ Storefront SEO/Crawl foundation.
-- تنفيذ Theme Sections v1.
-- تثبيت نتائج تاريخية للbackend والواجهة في ذلك التاريخ.
+1. الاختبارات المناسبة موجودة وتمر.
+2. tenant isolation مثبت باختبارات عند لمس tenant-owned data.
+3. policies مضافة/محدثة ومسجلة.
+4. migrations آمنة، قابلة للمراجعة، ولا تكسر بيانات قائمة بدون خطة.
+5. المال والمخزون والشحن والخصومات محسوبة server-side فقط.
+6. لا توجد client-trusted totals.
+7. العمليات الحساسة داخل transactions عند الحاجة.
+8. idempotency أو حماية ضد التكرار موجودة للعمليات المعرضة لإعادة الإرسال.
+9. audit log موجود للعمليات المالية أو التشغيلية الحساسة.
+10. public payloads لا تكشف internal IDs غير ضرورية.
+11. الأداء مأخوذ في الاعتبار: pagination، indexes، caching، أو jobs عند الحاجة.
+12. الأمن مأخوذ في الاعتبار: validation، authorization، PII، secrets.
+13. docs المناسبة محدثة.
+14. CI green أو سبب عدم تشغيل جزء محدد موثق بوضوح.
+15. rollback/migration notes مذكورة عند تغيير بنية حساسة.
 
 ---
 
-## 24. الخلاصة النهائية
+## 14. قواعد منع الفوضى أثناء استخدام Codex
 
-المشروع يملك foundation هندسية جيدة جداً، خصوصاً في backend وtenancy والاختبارات الخلفية. أضيف أساس checkout idempotency/abuse protection، لكنه ليس جاهزاً للإنتاج ولا beta عام قبل إغلاق فجوات P0 المتبقية: repository hygiene، local dev reliability، CI الفعلي، production readiness، وsecurity hardening.
+1. لا تعط Codex مهمة ضخمة جداً. قسم العمل إلى مهام صغيرة قابلة للتحقق.
+2. لا تسمح بإعادة هيكلة شاملة بدون سبب معماري واضح.
+3. كل مهمة لها نطاق ملفات واضح.
+4. كل مهمة لها tests أو سبب موثق لعدم وجودها.
+5. كل مهمة تغير سلوكاً عاماً تحدث docs.
+6. أي تغيير في checkout/billing/inventory يتطلب مراجعة دقيقة.
+7. أي `withoutGlobalScope` يتطلب اختباراً وتبريراً.
+8. أي public payload يجب ألا يكشف internal IDs غير ضرورية.
+9. أي تعديل في tenant-owned models يجب أن يثبت isolation.
+10. لا تضف integrations مباشرة بدون abstraction.
+11. لا تبدأ microservices الآن.
+12. لا تبدأ marketplace كامل الآن.
+13. لا تبدأ mobile app قبل نضج API/storefront.
+14. لا تعدل migrations/models/controllers/frontend/tests في مهمة توثيق فقط.
+15. لا تقبل "نجح عندي" بدون أوامر تحقق مكتوبة.
 
-المسار الصحيح الآن هو تقوية خط الإنتاج والتشغيل قبل إضافة ميزات تجارية كبيرة. بعد ذلك يصبح Merchant Onboarding أعلى مرحلة منتجية قيمة لأنه يربط backend القوي بتجربة تاجر قابلة للبيع.
+---
+
+## 15. ما لا يجب فعله الآن
+
+- لا microservices الآن.
+- لا marketplace checkout الآن.
+- لا app marketplace الآن.
+- لا page builder حر ومعقد الآن.
+- لا mobile app الآن.
+- لا إطلاق production بدون staging/backup/monitoring.
+- لا إضافة features بدون CI/tests.
+- لا اعتماد `no-store` لكل شيء على المدى الطويل.
+- لا كشف `tenant_id` في public APIs إن لم يكن ضرورياً.
+- لا الاعتماد على duplicate checkout best-effort فقط في الحالات الحساسة.
+- لا integrations خارجية قبل abstraction وlogging وretry/idempotency.
+- لا بناء analytics dashboards ثقيلة مباشرة فوق transactional tables.
+- لا إضافة variants قبل تثبيت أثرها على checkout/inventory/order items.
+
+---
+
+## 16. الأولويات العشر القادمة
+
+1. `مكتمل 2026-05-08`: توحيد بيئة frontend عبر Docker وتشغيل `pnpm install --frozen-lockfile/typecheck/build/test:e2e`.
+2. جعل CI required gates قبل أي توسع كبير.
+3. إثبات staging deployment فعلي.
+4. تفعيل monitoring/alerting/error tracking.
+5. نشر backup schedule وتنفيذ restore drill مسجل.
+6. مراجعة tenant scoping لـ `Store`.
+7. إصلاح catalog pagination وsitemap حتى لا تختفي المنتجات بعد أول 48 منتج.
+8. security hardening: 2FA، CSP، dependency scans، secrets rotation.
+9. merchant onboarding + store readiness.
+10. product variants + stock movements.
+
+هذا الترتيب يبدأ بالبنية والموثوقية قبل الميزات؛ لأن المشروع سيكبر عبر Codex، وأي ضعف في CI أو العزل أو التشغيل سيصبح مكلفاً لاحقاً.
+
+---
+
+## 17. ربط الوثيقة بباقي ملفات docs
+
+### مراجع أساسية موجودة
+
+- `ARCHITECTURE.md`: البنية العامة والدومينات وقرارات التقنية.
+- `DEVELOPMENT_WORKFLOW.md`: قواعد التطوير والتحقق وCI workflow.
+- `LOCAL_DEVELOPMENT.md`: setup محلي وclean workspace.
+- `TESTING_STRATEGY.md`: استراتيجية الاختبار وأوامر التحقق.
+- `PRODUCTION_READINESS.md`: runbook الإنتاج والحد الأدنى قبل beta.
+- `SECURITY_BASELINE.md`: الوضع الأمني والفجوات.
+- `TENANCY_RULES.md`: عقد tenant isolation.
+- `BACKUP_RESTORE_RUNBOOK.md`: النسخ الاحتياطي والاسترجاع.
+- `MONITORING_ALERTING_RUNBOOK.md`: المراقبة والتنبيهات.
+- `QUEUE_SCHEDULER_RUNBOOK.md`: queue/scheduler supervision.
+- `REVERSE_PROXY_RUNBOOK.md`: reverse proxy وcustom domains.
+- `ALGERIA_GEOGRAPHY.md`: بيانات الولايات والبلديات وقواعدها.
+- `STOREFRONT_CART.md`: عقد السلة والcheckout في الواجهة.
+- `STOREFRONT_SEO.md`: SEO وsitemap وrobots.
+- `STOREFRONT_THEME.md`: الثيم وأقسام العرض.
+- `docs/adr/0001-modular-monolith.md`
+- `docs/adr/0002-shared-database-tenancy.md`
+- `docs/adr/0003-laravel-filament-backend.md`
+- `docs/adr/0004-nextjs-storefront.md`
+- `docs/adr/0005-backend-source-of-truth-for-commerce-money.md`
+- `docs/adr/0006-do-not-trust-client-totals.md`
+- `docs/adr/0007-69-wilayas-not-enabled-now.md`
+- `docs/adr/0008-marketplace-deferred.md`
+- `docs/adr/0009-manual-payments-first.md`
+- `docs/adr/0010-algerian-shipping-strategy.md`
+- `docs/adr/0011-storefront-caching-revalidation.md`
+- `docs/adr/0012-production-deployment-topology.md`
+
+### ملفات مقترح إضافتها لاحقاً عند نضج الدومينات
+
+- `docs/BILLING.md`: عند توسيع invoice PDF/dunning/revenue ops.
+- `docs/INVENTORY.md`: عند إضافة stock movements وvariants.
+- `docs/SHIPPING_COD.md`: عند إضافة COD reconciliation ومزودي الشحن.
+- `docs/WEBHOOKS_API.md`: عند بناء public API/webhooks.
+- `docs/ANALYTICS.md`: عند إضافة daily metrics وdashboards.
+
+---
+
+## 18. الفجوات والتناقضات التي تحتاج تحققاً أو معالجة لاحقة
+
+1. تم تصحيح حالة الواجهة: لم تعد تعتمد على `npm run typecheck/build` أو Windows Node. الحالة المثبتة بتاريخ 2026-05-08 هي Docker verification عبر `pnpm`، وقد نجحت install/typecheck/build/e2e.
+2. `Store` tenant scoping يحتاج مراجعة: لا يستخدم `BelongsToTenant`، و`scopeForTenant(null)` يعيد query غير مفلتر.
+3. `Storefront/StoreResource` يعرض `tenant_id` في public payload. يجب تأكيد هل تحتاجه الواجهة فعلاً، وإلا إزالته لاحقاً.
+4. `storefront/src/app/sitemap.ts` يطلب `per_page=500`، لكن backend products endpoint يحد products إلى 48. هذا يعني أن sitemap لا يثبت تغطية كل المنتجات في المتاجر الكبيرة.
+5. `storefront/src/lib/api.ts` يرجع collection فقط للمنتجات ولا يستفيد من pagination meta/links، ما يحد التوسع.
+6. docs الإنتاج والأمن صريحة في أن monitoring/backup/restore/proxy موجودة كrunbooks لا كدليل تشغيل production.
+7. لم يتم التحقق من image builds أو GitHub required checks في هذه المهمة.
+
+---
+
+## 19. قواعد القرار المستقبلية
+
+عند ظهور خيار بين ميزة جذابة وأساس تشغيلي، يقدم الأساس التشغيلي إذا كانت الميزة ستزيد المخاطر.
+
+عند ظهور خيار بين سرعة تنفيذ Codex ونظافة التصميم، تقسم المهمة وتضاف اختبارات بدلاً من قبول patch كبير.
+
+عند ظهور تعارض بين تجربة الواجهة ومصدر الحقيقة، ينتصر backend. يمكن تحسين UX، لكن لا يمكن نقل القرار المالي أو التشغيلي إلى العميل.
+
+عند ظهور حاجة integration، يبنى abstraction أولاً. لا يربط shipping/SMS/payment provider مباشرة داخل checkout أو controller.
+
+عند ظهور رغبة في marketplace أو mobile app، تؤجل حتى ينضج API، security، billing، storefront، وoperations.
+
+---
+
+## 20. خلاصة العمل القادم
+
+المشروع جيد بما يكفي ليستحق البناء الطويل، وليس جيداً بما يكفي للإطلاق المتسرع. تم إغلاق أول بند من Phase 0، وأفضل قرار الآن هو متابعة Phase 0 بصرامة: CI gates، staging، monitoring، backups، restore drill، security hardening، ومراجعة tenant scoping.
+
+بعد ذلك يمكن الانتقال بثقة إلى SaaS usability، ثم commerce expansion، ثم shipping/COD الجزائري، ثم billing/revenue ops، ثم growth/integrations/scale.
+
+الوثيقة يجب أن تبقى living document. أي نتيجة تحقق جديدة، أو قرار معماري، أو تغير في جاهزية الإنتاج يجب أن ينعكس هنا أو في الوثيقة المتخصصة المرتبطة بها.

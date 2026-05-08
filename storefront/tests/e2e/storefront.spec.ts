@@ -88,6 +88,9 @@ test("creates a quick COD order from a product page", async ({ page }) => {
 
 test("creates a cart COD order with item payloads", async ({ page }) => {
   await page.goto("/products");
+  await expect
+    .poll(() => page.evaluate(() => window.localStorage.getItem("dz-saas-commerce:cart:store_01")))
+    .toBe("[]");
 
   await page.getByRole("button", { name: "أضف للسلة" }).first().click();
   await page.getByRole("link", { name: "فتح سلة التسوق" }).click();

@@ -1,6 +1,6 @@
 # Local Development Setup
 
-Last updated: 2026-05-07
+Last updated: 2026-05-08
 
 This is the clean-clone local setup contract for `dz-saas-commerce`. It intentionally uses local-only dummy credentials from `docker-compose.yml`; rotate anything used outside local development.
 
@@ -105,6 +105,22 @@ php artisan schedule:run
 
 ## Storefront Setup
 
+Preferred clean-clone verification path when Node/pnpm are not installed in WSL:
+
+```bash
+./storefront/scripts/verify-docker.sh all
+```
+
+This uses Docker with:
+
+- `node:24-bookworm` for install, typecheck, and build
+- `mcr.microsoft.com/playwright:v1.59.1-noble` for e2e
+- `pnpm@10.33.2` through Corepack
+
+The script mounts only `storefront/`, keeps pnpm's store inside the container under `/tmp/pnpm-store`, and avoids mixing Windows `node_modules` with WSL `node_modules`. The first Playwright run may take several minutes while Docker pulls the browser image.
+
+Native WSL setup is still supported if Node and pnpm are installed inside WSL:
+
 ```bash
 cd storefront
 cp .env.example .env.local
@@ -113,6 +129,8 @@ pnpm dev --hostname 127.0.0.1 --port 3000
 ```
 
 Set `NEXT_PUBLIC_DEFAULT_STORE` or `DEFAULT_STORE_IDENTIFIER` in `storefront/.env.local` to a seeded store slug/subdomain/domain/id when developing on `127.0.0.1`.
+
+Use one runtime environment consistently for the storefront. If the workspace checkout lives inside WSL, install and run Node/pnpm inside WSL or use Docker. Do not run Windows Node against a WSL pnpm `node_modules` tree through `\\wsl.localhost`; pnpm symlinks can produce misleading module-resolution failures that are not reliable code errors.
 
 ## Verification Commands
 
@@ -140,7 +158,9 @@ cd storefront
 pnpm test:e2e
 ```
 
-If Chromium fails to launch with missing shared libraries, install Playwright system dependencies for the host OS. In the current WSL environment, `libnspr4.so` was missing during verification on 2026-05-06.
+If Chromium fails to launch with missing shared libraries in native WSL, install Playwright system dependencies for the host OS. The Docker verification path avoids this by using the official Playwright image.
+
+As of the 2026-05-08 Phase 0.1 verification pass, the Docker path successfully ran `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm build`, and `pnpm test:e2e`.
 
 ## Clean Workspace Rules
 

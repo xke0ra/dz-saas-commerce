@@ -164,7 +164,16 @@ For Next.js changes:
 Run after storefront changes:
 
 ```bash
+./storefront/scripts/verify-docker.sh all
+```
+
+This is the preferred clean-clone path when the checkout is inside WSL but Node/pnpm are not installed in WSL. It uses Docker, Node 24, pnpm 10.33.2, and the official Playwright image.
+
+Native WSL/Linux commands are also acceptable when Node and pnpm are installed in the same environment as the checkout:
+
+```bash
 cd storefront
+pnpm install --frozen-lockfile
 pnpm typecheck
 pnpm build
 pnpm test:e2e
@@ -172,7 +181,7 @@ pnpm test:e2e
 
 Do not run `pnpm typecheck` concurrently with `pnpm build`; `.next/types` can be regenerated during build.
 
-If Playwright fails before executing tests because the browser cannot launch, fix host system dependencies first. The current verified blocker on 2026-05-06 was a missing `libnspr4.so` for Chromium in WSL.
+If native Playwright fails before executing tests because the browser cannot launch, either fix host system dependencies or use `./storefront/scripts/verify-docker.sh e2e`. The Docker e2e path passed on 2026-05-08 with `6 passed`.
 
 ## Route Changes
 

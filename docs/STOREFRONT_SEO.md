@@ -1,6 +1,6 @@
 # Storefront SEO And Crawl Contract
 
-Last updated: 2026-04-28
+Last updated: 2026-05-08
 
 This document defines the current public storefront SEO contract.
 
@@ -30,6 +30,7 @@ Each tenant storefront must expose crawlable, store-specific metadata without tr
   - product detail pages
   - category pages
   - enabled legal pages with content
+- Current scale caveat: `storefront/src/app/sitemap.ts` requests products with `per_page=500`, but the backend products endpoint currently caps `per_page` at 48. Until sitemap pagination or a dedicated sitemap endpoint is implemented, the sitemap does not prove full product coverage for stores with more than 48 visible products.
 - Robots allows public storefront pages and disallows:
   - `/cart`
   - `/search`
@@ -81,4 +82,5 @@ pnpm test:e2e
 - Add product image OpenGraph coverage when real product media is consistently seeded.
 - Expand structured data JSON-LD for organization, legal pages, and richer product fields.
 - Add dynamic sitemap pagination if stores can exceed the safe sitemap URL limit.
+- Fix the current 48-product effective cap before relying on sitemap coverage for larger stores.
 - Add SEO smoke checks for custom domains once domain routing is exercised end to end.
