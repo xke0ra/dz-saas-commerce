@@ -11,6 +11,8 @@ Thumbs.db
 !.env.example
 !.env.testing.example
 !.env.production.example
+deploy/staging/*.env
+!deploy/staging/*.env.example
 
 # Dependency directories
 backend/vendor/

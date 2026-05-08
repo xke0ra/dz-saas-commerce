@@ -31,7 +31,7 @@ Latest recorded verification:
 - Storefront typecheck: passed.
 - Storefront build: passed.
 - Storefront Playwright e2e: `6 passed`.
-- CI baseline: `.github/workflows/quality.yml` exists, but has not yet been proven as an active required GitHub Actions merge gate.
+- CI baseline: `.github/workflows/quality.yml` now includes backend/frontend dependency audits, backend Pint, required storefront e2e, and Docker image build smoke checks, but has not yet been proven as an active required GitHub Actions merge gate.
 
 These numbers must be updated in the living roadmap when they change.
 
@@ -41,10 +41,10 @@ The current CI contract is defined in `.github/workflows/quality.yml`.
 
 Jobs:
 
-- backend: PostgreSQL service, `composer validate`, `composer install`, `.env.testing.example`, `migrate:fresh --seed`, `php artisan system:health --scope=ready --format=json`, `php artisan test`, `php artisan route:list`
-- storefront: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm build`
-- docker-check: `docker buildx build --check` for backend and storefront Dockerfiles
-- e2e: optional behind `RUN_E2E=true`, installs Playwright Chromium and uploads artifacts on failure
+- backend: PostgreSQL service, `composer validate`, `composer install`, `composer audit`, `php vendor/bin/pint --test`, `.env.testing.example`, `migrate:fresh --seed`, `php artisan system:health --scope=ready --format=json`, `php artisan test`, `php artisan route:list`
+- storefront: `pnpm install --frozen-lockfile`, `pnpm audit --audit-level moderate`, `pnpm typecheck`, `pnpm build`
+- docker-check: `docker buildx build --check` and no-push image build smoke checks for backend and storefront Dockerfiles
+- e2e: installs Playwright Chromium, runs `pnpm test:e2e`, and uploads artifacts on failure
 
 This workflow must become a required pull request gate before large Codex-driven feature work. Until then, local verification remains mandatory.
 

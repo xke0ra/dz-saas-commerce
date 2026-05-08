@@ -118,7 +118,7 @@
 - `docs/`: وثائق معمارية وتشغيلية وADRs.
 - `deploy/`: أمثلة تشغيل مثل backup وreverse proxy وsupervision.
 - `docker-compose.yml`: خدمات محلية: PostgreSQL، Redis، Meilisearch، MinIO، Mailpit.
-- `.github/workflows/quality.yml`: CI baseline للbackend والstorefront وDocker checks وe2e اختياري.
+- `.github/workflows/quality.yml`: CI baseline للbackend والstorefront وDocker checks وe2e إلزامي.
 
 هذا الشكل مناسب الآن لأنه يحافظ على توافق backend وstorefront والوثائق في مستودع واحد، ويجعل Codex يعمل على سياق واحد.
 
@@ -191,10 +191,10 @@
 
 يوجد workflow في `.github/workflows/quality.yml` يغطي:
 
-- backend composer/install/migrate/health/tests/routes.
-- storefront pnpm install/typecheck/build.
-- docker build plan checks.
-- e2e اختياري خلف متغير.
+- backend composer/install/audit/Pint/migrate/health/tests/routes.
+- storefront pnpm install/audit/typecheck/build.
+- docker build plan checks وno-push image build smoke.
+- e2e إلزامي مع رفع artifacts عند الفشل.
 
 الفجوة: لا يوجد دليل حالياً أنه مفعل كـ required merge gate في GitHub. قبل تكبير المشروع عبر Codex، يجب أن يصبح CI حاجزاً إلزامياً.
 
@@ -457,12 +457,12 @@ backend test suite قوي نسبياً لحالة pre-production: `150 passed (6
 
 | الخطر | التفسير | المطلوب |
 |---|---|---|
-| Production readiness غير مكتمل | توجد runbooks وأساس، لكن لا يوجد إثبات staging كامل. | staging deployment، TLS/proxy، queues/scheduler، health، monitoring، rollback. |
+| Production readiness غير مكتمل | توجد runbooks وأساس، وأضيف skeleton للـ staging في `deploy/staging/`، لكن لا يوجد إثبات staging كامل. | تشغيل staging deployment، TLS/proxy، queues/scheduler، health، monitoring، rollback. |
 | Frontend environment غير موحد | تم إغلاقه كمسار Docker موحد في 2026-05-08: install/typecheck/build/e2e نجحت. | يبقى ربط المسار بالـ CI required gates. |
-| CI required gates غير مثبتة | workflow موجود لكنه ليس مثبتاً كحاجز merge إلزامي. | تفعيل GitHub required checks. |
-| Clean deployment proof غير موجود | Dockerfiles موجودة لكن image build/push/promotion غير مثبت. | build images في CI أو pipeline واضح. |
+| CI required gates غير مثبتة | workflow تقوى بإضافة audits وPint وE2E required وDocker image build smoke، لكنه ليس مثبتاً بعد كحاجز merge إلزامي داخل GitHub. | تفعيل GitHub required checks ومراقبة أول run حقيقي. |
+| Clean deployment proof غير موجود | Dockerfiles موجودة وCI صار يبني الصور smoke بدون push، وأضيف workflow لنشر الصور إلى GHCR وstaging compose skeleton، لكنهما لم يثبتا بعد بتشغيل فعلي. | تشغيل GHCR publish، ثم جعل staging يستهلك tag/digest مثبتاً وتشغيل smoke فعلي. |
 | Monitoring/alerting/backups/restore | docs موجودة لكن لا يوجد تشغيل فعلي مثبت. | uptime، failed jobs، queue/scheduler، restore drill، alerts. |
-| Security hardening | CSP واسع، لا 2FA، لا scans، لا session/device management. | 2FA، dependency scanning، CSP tightening، secrets rotation. |
+| Security hardening | CSP واسع، لا 2FA، لا session/device management، وdependency audits أضيفت للـ CI لكنها لا تغني عن review workflow. | 2FA، CSP tightening، secrets rotation، vulnerability review workflow. |
 | Store tenant scoping review | `Store` لا يستخدم `BelongsToTenant` ويعيد query غير مفلتر عند tenant null. | مراجعة أمنية، توثيق exception أو تعديل لاحق، اختبارات. |
 | catalog pagination/sitemap 48-limit | sitemap يطلب `per_page=500` لكن backend products endpoint يحد إلى 48. | pagination metadata وsitemap pagination أو endpoint خاص. |
 | secrets hygiene | توجد أمثلة dummy محلية، ويجب التأكد من عدم تسريب env حقيقية. | clean clone/package rehearsal، secret inventory، rotation procedure. |
@@ -528,10 +528,10 @@ backend test suite قوي نسبياً لحالة pre-production: `150 passed (6
 - clean clone rehearsal.
 - `مكتمل 2026-05-08`: بيئة frontend موحدة عبر Docker.
 - `مكتمل 2026-05-08`: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm build`, و`pnpm test:e2e` موثوقة عبر `./storefront/scripts/verify-docker.sh all`.
-- CI required gates.
-- Playwright reliability أو smoke بديل.
-- staging deployment.
-- Docker image builds.
+- `مكتمل جزئياً`: تقوية workflow بإضافة Composer audit، Pint، pnpm audit، E2E required، وDocker image build smoke.
+- CI required gates داخل GitHub branch protection.
+- `مكتمل جزئياً`: staging deployment skeleton في `deploy/staging/`، والمتبقي تشغيله على بيئة staging حقيقية.
+- `مكتمل جزئياً`: Docker image push/promotion عبر GHCR workflow، والمتبقي تشغيله فعلياً وربطه بالـ staging.
 - monitoring.
 - backup schedule.
 - restore drill.
@@ -900,7 +900,7 @@ backend test suite قوي نسبياً لحالة pre-production: `150 passed (6
 
 ```text
 المهمة: قو CI واجعله قابلاً ليكون required gate.
-المطلوب: backend tests, storefront typecheck/build, Docker checks, optional e2e artifacts, dependency scans.
+المطلوب: backend tests/audit/Pint, storefront audit/typecheck/build, Docker checks/build smoke, required e2e مع artifacts عند الفشل.
 القيود: لا تضف أسراراً.
 معيار القبول: workflow يمر على clean branch وموثق في TESTING_STRATEGY.
 ```
@@ -1044,13 +1044,13 @@ backend test suite قوي نسبياً لحالة pre-production: `150 passed (6
 ## 16. الأولويات العشر القادمة
 
 1. `مكتمل 2026-05-08`: توحيد بيئة frontend عبر Docker وتشغيل `pnpm install --frozen-lockfile/typecheck/build/test:e2e`.
-2. جعل CI required gates قبل أي توسع كبير.
-3. إثبات staging deployment فعلي.
+2. `مكتمل جزئياً`: تقوية CI داخل المستودع بإضافة audits وPint وE2E required وDocker image build smoke؛ المتبقي تفعيل GitHub required checks.
+3. تشغيل `container-images` workflow فعلياً إلى GHCR وربط `deploy/staging/` بصورة immutable tag/digest وتشغيل smoke.
 4. تفعيل monitoring/alerting/error tracking.
 5. نشر backup schedule وتنفيذ restore drill مسجل.
 6. مراجعة tenant scoping لـ `Store`.
 7. إصلاح catalog pagination وsitemap حتى لا تختفي المنتجات بعد أول 48 منتج.
-8. security hardening: 2FA، CSP، dependency scans، secrets rotation.
+8. security hardening: 2FA، CSP، vulnerability review workflow، secrets rotation.
 9. merchant onboarding + store readiness.
 10. product variants + stock movements.
 

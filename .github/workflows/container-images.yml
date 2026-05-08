@@ -1,0 +1,122 @@
+name: Container Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Image channel to publish.
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+          - production
+      tag:
+        description: Optional additional Docker tag, for example staging-20260508 or v1.2.3.
+        required: false
+        type: string
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-push:
+    name: Build and Push ${{ matrix.component }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.channel || 'release' }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: backend
+            context: backend
+            dockerfile: backend/Dockerfile
+          - component: storefront
+            context: storefront
+            dockerfile: storefront/Dockerfile
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Guard Production Publish
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.channel == 'production' && github.ref_type != 'tag' }}
+        run: |
+          echo "Production image publishing must be dispatched from a Git tag."
+          exit 1
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve Image Metadata
+        id: meta
+        shell: bash
+        env:
+          COMPONENT: ${{ matrix.component }}
+          INPUT_CHANNEL: ${{ github.event.inputs.channel }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          repository="${GITHUB_REPOSITORY,,}"
+          image="${REGISTRY}/${repository}/${COMPONENT}"
+          short_sha="${GITHUB_SHA::12}"
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            channel="${INPUT_CHANNEL:-staging}"
+            requested_tag="${INPUT_TAG:-}"
+          else
+            channel="production"
+            requested_tag="${GITHUB_REF_NAME}"
+          fi
+
+          if [[ "${channel}" == "production" && -z "${requested_tag}" && "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            requested_tag="${GITHUB_REF_NAME}"
+          fi
+
+          if [[ -n "${requested_tag}" && ! "${requested_tag}" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
+            echo "Invalid Docker tag: ${requested_tag}"
+            exit 1
+          fi
+
+          {
+            echo "tags<<EOF"
+            echo "${image}:sha-${short_sha}"
+            if [[ -n "${requested_tag}" ]]; then
+              echo "${image}:${requested_tag}"
+            fi
+            echo "${image}:${channel}"
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+
+          {
+            echo "labels<<EOF"
+            echo "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}"
+            echo "org.opencontainers.image.revision=${GITHUB_SHA}"
+            echo "org.opencontainers.image.title=dz-saas-commerce-${COMPONENT}"
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Build and Push Image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.component }}

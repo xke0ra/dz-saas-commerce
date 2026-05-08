@@ -59,6 +59,8 @@ docker build -f backend/Dockerfile -t dz-saas-commerce-backend:local backend
 docker build -f storefront/Dockerfile -t dz-saas-commerce-storefront:local storefront
 ```
 
+The first staging compose skeleton is in `deploy/staging/`. It expects immutable GHCR image tags or digests and staging-only env files copied from the committed examples.
+
 Do not add real production secrets to image builds. Runtime configuration must come from environment variables or a secret manager.
 
 ## CI Quality Gates
@@ -66,10 +68,14 @@ Do not add real production secrets to image builds. Runtime configuration must c
 The baseline workflow is:
 
 - `.github/workflows/quality.yml`
+- `.github/workflows/container-images.yml`
 
 Current status:
 
-- The workflow defines backend, storefront, Dockerfile check, and optional storefront e2e jobs.
+- The workflow defines backend, storefront, Docker image check/build, and storefront e2e jobs.
+- Backend CI includes Composer audit and Pint.
+- Storefront CI includes pnpm audit at `moderate` or higher.
+- Container image publishing builds and pushes backend/storefront images to GHCR on manual dispatch or version tags.
 - The workspace root is a Git repository, but this workflow is not yet proven as an active required merge gate.
 - Treat it as the target CI contract until it runs inside GitHub Actions and is configured as a required check.
 
@@ -79,7 +85,7 @@ Required CI gates before broad AI/Codex development:
 - backend tests pass
 - storefront typecheck/build pass
 - Dockerfile checks pass
-- e2e artifacts upload on failure when e2e is enabled
+- required e2e passes, with artifacts uploaded on failure
 
 Do not mark CI as complete until a real GitHub Actions run proves these jobs on the repository that receives pull requests.
 

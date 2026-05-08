@@ -3,6 +3,13 @@
 FROM composer:2 AS vendor
 WORKDIR /app
 
+RUN apk add --no-cache icu-libs \
+    && apk add --no-cache --virtual .composer-build-deps \
+        $PHPIZE_DEPS \
+        icu-dev \
+    && docker-php-ext-install intl \
+    && apk del .composer-build-deps
+
 COPY composer.json composer.lock ./
 RUN composer install \
     --no-dev \
@@ -17,6 +24,11 @@ COPY config config
 COPY database database
 COPY routes routes
 COPY artisan artisan
+RUN mkdir -p \
+        storage/framework/cache/data \
+        storage/framework/sessions \
+        storage/framework/views \
+        bootstrap/cache
 RUN composer dump-autoload --no-dev --optimize
 
 FROM node:24-alpine AS assets

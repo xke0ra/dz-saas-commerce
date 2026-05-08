@@ -1,6 +1,6 @@
 # Production Readiness Runbook
 
-Last updated: 2026-05-07
+Last updated: 2026-05-08
 
 This runbook records the production foundation for `dz-saas-commerce`. It is not a deployment guarantee yet; it defines the required operating contract before beta or production.
 
@@ -17,6 +17,7 @@ Implemented in this foundation pass:
 - `storefront/.env.production.example`
 - root `.dockerignore`
 - `.github/workflows/quality.yml` CI baseline
+- `.github/workflows/container-images.yml` GHCR image publish baseline
 - backend liveness/readiness endpoints
 - `php artisan system:health`
 - backend Docker `HEALTHCHECK` using liveness scope
@@ -31,11 +32,14 @@ Implemented in this foundation pass:
 - documented queue/scheduler supervision runbook and systemd examples
 - documented monitoring/alerting runbook
 - production logging example routes Laravel logs to `stderr` for container collection
+- staging deployment skeleton in `deploy/staging/`
 
 Still required:
 
 - Prove CI inside GitHub Actions on the real repository root
-- CI build jobs for both images when registry/promotion strategy is selected
+- Prove the container image publish workflow against GHCR
+- Make staging consume pinned image tags or digests from the registry
+- Execute the staging compose skeleton against real staging services
 - image vulnerability scanning
 - reverse proxy deployment in staging and TLS/custom-domain validation
 - deploy automated backup schedules and execute restore drill
@@ -58,6 +62,29 @@ Storefront Next.js image:
 docker build -f storefront/Dockerfile -t dz-saas-commerce-storefront:local storefront
 ```
 
+## Container Image Publishing
+
+The publish workflow is `.github/workflows/container-images.yml`.
+
+It builds and pushes both images to GHCR:
+
+- `ghcr.io/<owner>/<repo>/backend`
+- `ghcr.io/<owner>/<repo>/storefront`
+
+Supported publishing paths:
+
+- manual `workflow_dispatch` to the `staging` channel
+- manual `workflow_dispatch` to the `production` channel, guarded so it must be dispatched from a Git tag
+- automatic publish on tags matching `v*.*.*`
+
+Each image receives:
+
+- immutable `sha-<12-char-sha>` tag
+- the requested manual tag, when provided
+- channel tag: `staging`, `production`, or `release`
+
+Do not treat mutable channel tags as rollback anchors. Staging and production deployment records should capture the exact immutable SHA tag or image digest used.
+
 ## Runtime Topology
 
 Recommended production topology:
@@ -72,6 +99,28 @@ Recommended production topology:
 - Managed S3-compatible object storage.
 - Managed or separately operated Meilisearch.
 - Centralized logs and error tracking.
+
+## Staging Skeleton
+
+The first staging smoke target is in `deploy/staging/`.
+
+It includes:
+
+- `docker-compose.staging.example.yml`
+- `images.env.example`
+- `backend.env.example`
+- `storefront.env.example`
+- `README.md`
+
+The compose file expects immutable backend and storefront images, then starts:
+
+- backend PHP-FPM
+- backend queue worker
+- backend scheduler
+- storefront Next.js server
+- Nginx edge proxy
+
+It does not create production-like managed backing services. Staging operators must provide PostgreSQL, Redis, Meilisearch, object storage, mail, and real secrets through copied local env files that are ignored by Git.
 
 ## Environment Separation
 
@@ -95,17 +144,18 @@ The baseline workflow is `.github/workflows/quality.yml`.
 
 It currently checks:
 
-- backend dependency install, migration smoke, readiness smoke, tests, and route listing
-- storefront dependency install, typecheck, and production build
+- backend dependency install, Composer audit, Pint format check, migration smoke, readiness smoke, tests, and route listing
+- storefront dependency install, pnpm audit at `moderate` or higher, typecheck, and production build
 - Dockerfile syntax/build-plan checks via `docker buildx build --check`
-- optional Playwright e2e with artifact upload on failure
+- backend and storefront Docker image build smoke checks without pushing images
+- required Playwright e2e with artifact upload on failure
 
 Limitations:
 
 - The workspace root is a Git repository, but this workflow is not yet proven as an active required pull request gate in GitHub Actions.
-- It does not yet build/push production images.
-- It does not yet run dependency vulnerability scanning.
-- E2E remains optional until Playwright dependencies and integration strategy are stable.
+- Image publish automation exists, but it still needs a real GHCR run and downstream staging consumption proof.
+- It does not yet run container image vulnerability scanning.
+- GitHub branch protection still has to mark the workflow jobs as required checks.
 
 ## Backend Runtime Processes
 

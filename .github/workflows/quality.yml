@@ -55,6 +55,12 @@ jobs:
       - name: Install Composer Dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
+      - name: Audit Composer Dependencies
+        run: composer audit --no-interaction
+
+      - name: Format Check
+        run: php vendor/bin/pint --test
+
       - name: Prepare Environment
         run: |
           cp .env.testing.example .env
@@ -107,6 +113,9 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Audit Dependencies
+        run: pnpm audit --audit-level moderate
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -127,13 +136,18 @@ jobs:
       - name: Check Backend Dockerfile
         run: docker buildx build --check -f backend/Dockerfile backend
 
+      - name: Build Backend Image
+        run: docker buildx build --load -f backend/Dockerfile -t dz-saas-commerce-backend:ci backend
+
       - name: Check Storefront Dockerfile
         run: docker buildx build --check -f storefront/Dockerfile storefront
+
+      - name: Build Storefront Image
+        run: docker buildx build --load -f storefront/Dockerfile -t dz-saas-commerce-storefront:ci storefront
 
   e2e:
     name: Storefront E2E
     runs-on: ubuntu-latest
-    if: ${{ vars.RUN_E2E == 'true' }}
 
     defaults:
       run:

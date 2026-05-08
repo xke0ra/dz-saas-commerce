@@ -42,8 +42,7 @@ Current important gaps:
 - CSP baseline is intentionally broad for Filament/Livewire/storefront compatibility and still needs production tightening after browser/e2e validation
 - backup/restore runbook and automation examples exist, but no deployed backup schedule or executed staging restore drill is recorded yet
 - no completed secrets rotation procedure
-- no formal vulnerability review workflow
-- no CI dependency vulnerability scanning
+- no formal vulnerability review workflow beyond the current CI dependency audit baseline
 - no production monitoring/error tracking integration or alert routing
 - production `.env.production.example` files exist, but real secret management and rotation are not implemented yet
 
