@@ -158,7 +158,14 @@ class CreateQuickOrder
 
         foreach ($items as $item) {
             $productId = $item['product_id'];
-            $normalized[$productId] = ($normalized[$productId] ?? 0) + $item['quantity'];
+
+            if (array_key_exists($productId, $normalized)) {
+                throw ValidationException::withMessages([
+                    'items' => 'Duplicate products are not allowed in the same checkout.',
+                ]);
+            }
+
+            $normalized[$productId] = $item['quantity'];
         }
 
         return $normalized;

@@ -81,6 +81,28 @@ it('exposes only active storefront products for the requested store tenant', fun
         ->assertJsonCount(1, 'data');
 });
 
+it('paginates storefront products beyond the public per-page cap', function (): void {
+    $tenant = Tenant::factory()->create();
+    $store = Store::factory()->for($tenant)->create(['subdomain' => 'large-catalog']);
+
+    Product::factory()
+        ->count(60)
+        ->create([
+            'tenant_id' => $tenant->id,
+            'status' => ProductStatus::Active,
+        ]);
+
+    $response = $this->getJson("/api/storefront/{$store->subdomain}/products?per_page=500&page=2");
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('meta.current_page', 2)
+        ->assertJsonPath('meta.per_page', 48)
+        ->assertJsonPath('meta.last_page', 2)
+        ->assertJsonPath('meta.total', 60)
+        ->assertJsonCount(12, 'data');
+});
+
 it('exposes active categories for the requested store tenant', function (): void {
     $tenant = Tenant::factory()->create();
     $otherTenant = Tenant::factory()->create();

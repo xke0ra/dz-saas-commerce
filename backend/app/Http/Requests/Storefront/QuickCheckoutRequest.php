@@ -43,7 +43,7 @@ class QuickCheckoutRequest extends FormRequest
             'product_id' => ['required_without:items', 'string', 'exists:products,id'],
             'quantity' => ['required_with:product_id', 'integer', 'min:1', 'max:99'],
             'items' => ['required_without:product_id', 'array', 'min:1', 'max:50'],
-            'items.*.product_id' => ['required_with:items', 'string', 'exists:products,id'],
+            'items.*.product_id' => ['required_with:items', 'string', 'distinct', 'exists:products,id'],
             'items.*.quantity' => ['required_with:items', 'integer', 'min:1', 'max:99'],
         ];
     }

@@ -19,6 +19,7 @@ it('resolves active public stores for active tenants', function (): void {
 
     $response
         ->assertOk()
+        ->assertJsonMissingPath('data.tenant_id')
         ->assertJsonPath('data.subdomain', 'public-active')
         ->assertJsonPath('data.status', StoreStatus::Active->value);
 });
@@ -97,6 +98,7 @@ it('exposes storefront legal and theme settings for active stores', function ():
 
     $this->getJson("/api/storefront/{$store->slug}/home")
         ->assertOk()
+        ->assertJsonMissingPath('store.tenant_id')
         ->assertJsonPath('store.store_setting.seo_title', 'Custom SEO title')
         ->assertJsonPath('store.store_setting.announcement_text', 'Free delivery this week.')
         ->assertJsonPath('store.store_setting.legal_pages.terms', true)

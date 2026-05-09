@@ -25,6 +25,7 @@ test("exposes storefront SEO metadata and crawl routes", async ({ page, request 
   expect(sitemapResponse.ok()).toBeTruthy();
   expect(sitemap).toContain("<loc>http://127.0.0.1:3100/</loc>");
   expect(sitemap).toContain("<loc>http://127.0.0.1:3100/products/demo-shirt</loc>");
+  expect(sitemap).toContain("<loc>http://127.0.0.1:3100/products/demo-shoes</loc>");
   expect(sitemap).toContain("<loc>http://127.0.0.1:3100/categories/fashion</loc>");
   expect(sitemap).toContain("<loc>http://127.0.0.1:3100/legal/terms</loc>");
   expect(robotsResponse.ok()).toBeTruthy();

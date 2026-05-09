@@ -1,6 +1,8 @@
 <?php
 
 use App\Actions\Billing\StartTenantSubscription;
+use App\Actions\Checkout\CreateQuickOrder;
+use App\Data\Checkout\QuickOrderData;
 use App\Enums\CouponType;
 use App\Enums\DeliveryType;
 use App\Enums\OrderStatus;
@@ -24,6 +26,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Models\Wilaya;
 use Database\Seeders\AlgeriaGeographySeeder;
+use Illuminate\Validation\ValidationException;
 
 beforeEach(function (): void {
     $this->seed(AlgeriaGeographySeeder::class);
@@ -178,6 +181,41 @@ it('keeps checkout idempotency keys isolated by tenant and store', function (): 
         ->where('idempotency_key', $key)
         ->pluck('tenant_id')
         ->all())->toContain($firstTenant->id, $secondTenant->id);
+});
+
+it('rejects duplicate cart product ids at storefront validation', function (): void {
+    [, $store, $product] = checkoutScenario($this->wilaya, $this->commune, 'duplicate-cart-product');
+    $payload = checkoutPayload($product, $this->wilaya, $this->commune);
+    unset($payload['product_id'], $payload['quantity']);
+    $payload['items'] = [
+        ['product_id' => $product->id, 'quantity' => 60],
+        ['product_id' => $product->id, 'quantity' => 50],
+    ];
+
+    $response = $this->postJson("/api/storefront/{$store->subdomain}/checkout", $payload);
+
+    $response
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('items.1.product_id');
+
+    $this->assertDatabaseCount('orders', 0);
+    expect($product->inventoryItem()->first()->reserved_quantity)->toBe(0);
+});
+
+it('rejects duplicate cart product ids inside quick order creation', function (): void {
+    [, $store, $product] = checkoutScenario($this->wilaya, $this->commune, 'duplicate-cart-action');
+    $payload = checkoutPayload($product, $this->wilaya, $this->commune);
+    unset($payload['product_id'], $payload['quantity']);
+    $payload['items'] = [
+        ['product_id' => $product->id, 'quantity' => 60],
+        ['product_id' => $product->id, 'quantity' => 50],
+    ];
+
+    expect(fn (): mixed => app(CreateQuickOrder::class)->handle($store, QuickOrderData::fromArray($payload)))
+        ->toThrow(ValidationException::class);
+
+    $this->assertDatabaseCount('orders', 0);
+    expect($product->inventoryItem()->first()->reserved_quantity)->toBe(0);
 });
 
 it('returns the existing order for a duplicate checkout submitted inside the duplicate window', function (): void {

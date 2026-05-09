@@ -60,6 +60,17 @@ it('prevents a vendor from viewing another tenant store', function (): void {
     expect($vendor->can('view', $otherStore))->toBeFalse();
 });
 
+it('filters stores by explicit tenant scope and fails closed without tenant context', function (): void {
+    $tenant = Tenant::factory()->create();
+    $otherTenant = Tenant::factory()->create();
+    $store = Store::factory()->for($tenant)->create();
+    Store::factory()->for($otherTenant)->create();
+
+    expect(Store::query()->forTenant($tenant)->pluck('id')->all())->toBe([$store->id])
+        ->and(Store::query()->forTenant($tenant->id)->pluck('id')->all())->toBe([$store->id])
+        ->and(Store::query()->forTenant(null)->pluck('id')->all())->toBe([]);
+});
+
 it('allows a super admin to see tenants', function (): void {
     $admin = User::factory()->create([
         'platform_role' => PlatformRole::SuperAdmin,

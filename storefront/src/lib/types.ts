@@ -1,6 +1,5 @@
 export type Store = {
   id: string;
-  tenant_id: string;
   name: string;
   slug: string;
   domain: string | null;

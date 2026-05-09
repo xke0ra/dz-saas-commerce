@@ -21,9 +21,9 @@
 
 `dz-saas-commerce` مشروع monorepo متقدم لبناء منصة SaaS متعددة المستأجرين للتجارة الإلكترونية في الجزائر. النواة التجارية موجودة بدرجة جيدة: tenancy، كتالوج، مخزون، طلبات، دفع COD، شحن، اشتراكات، كوبونات، دومينات، إعدادات متجر، ثيمات، تدقيق، دعم، ولوحات Filament متعددة.
 
-الخلفية `backend/` هي أقوى جزء في المشروع حالياً. هي مبنية بـ Laravel وFilament، وتستخدم Actions وسياسات وصلاحيات وقيود قاعدة بيانات واختبارات جيدة. الفحص العملي أثبت أن backend test suite يمر بنجاح: `150 passed (610 assertions)`.
+الخلفية `backend/` هي أقوى جزء في المشروع حالياً. هي مبنية بـ Laravel وFilament، وتستخدم Actions وسياسات وصلاحيات وقيود قاعدة بيانات واختبارات جيدة. الفحص العملي أثبت أن backend test suite يمر بنجاح: `154 passed (629 assertions)`.
 
-الواجهة `storefront/` جيدة كبداية فعلية: صفحات متجر، منتجات، تصنيفات، بحث، سلة، checkout، تتبع طلب، SEO، robots، sitemap، وJSON-LD. تم تثبيت مسار Docker موحد لتشغيل install/typecheck/build/e2e، لكنها ما زالت تحتاج نضجاً واضحاً في pagination، sitemap scale، caching/revalidation، accessibility، وصقل تجربة checkout على الهاتف.
+الواجهة `storefront/` جيدة كبداية فعلية: صفحات متجر، منتجات، تصنيفات، بحث، سلة، checkout، تتبع طلب، SEO، robots، sitemap، وJSON-LD. تم تثبيت مسار Docker موحد لتشغيل install/typecheck/build/e2e، وتم إصلاح تغطية sitemap عبر pagination، لكنها ما زالت تحتاج نضجاً في pagination UI، caching/revalidation، accessibility، وصقل تجربة checkout على الهاتف.
 
 الجاهزية للإنتاج غير مكتملة. توجد Dockerfiles، health/readiness، runbooks، CI baseline، backup/proxy/monitoring docs، وأساس أمني، لكن لا يوجد بعد دليل كاف على staging deployment، required CI gates، image promotion، restore drill منفذ، monitoring/alerting فعلي، error tracking، أو security hardening كامل.
 
@@ -158,7 +158,7 @@
 - metadata وOpenGraph وJSON-LD.
 - API proxy routes لبعض عمليات checkout/geography/track.
 
-الفجوة الرئيسية: الواجهة صالحة كبداية، لكنها ليست بعد storefront تجاري ناضج لمتاجر كبيرة. أهم فجواتها هي catalog pagination، sitemap scale، caching/revalidation، states، accessibility، وصقل checkout mobile.
+الفجوة الرئيسية: الواجهة صالحة كبداية، لكنها ليست بعد storefront تجاري ناضج لمتاجر كبيرة. أهم فجواتها هي catalog pagination UI، sitemap index لاحقاً للمتاجر الضخمة، caching/revalidation، states، accessibility، وصقل checkout mobile.
 
 ### 4.4 docs
 
@@ -233,7 +233,7 @@
 - database constraints
 - قواعد موثقة في `TENANCY_RULES.md`
 
-ملاحظة تحقق مهمة: أغلب tenant-owned models تستخدم `BelongsToTenant`. لكن `Store` لا يستخدمها حالياً ويملك `scopeForTenant` يدوي يعيد query غير مفلتر عند `tenant=null`. هذا قد يكون مقصوداً لتدفقات platform/store resolution، لكنه يحتاج مراجعة أمنية وتوثيقاً واختبارات واضحة، لأنه نموذج محوري في SaaS.
+ملاحظة تحقق مهمة: أغلب tenant-owned models تستخدم `BelongsToTenant`. لكن `Store` يبقى exception مقصوداً لأنه مطلوب في حلّ الدومين والـ platform flows. تم في 2026-05-09 جعل `Store::forTenant(null)` fail-closed بدلاً من إرجاع كل المتاجر، وإزالة `tenant_id` من `Storefront/StoreResource` العام حتى لا يكشف الـ public API معرف tenant داخلياً بلا حاجة.
 
 ### 4.10 checkout
 
@@ -360,7 +360,7 @@
 | `composer validate --strict` | passed |
 | `composer audit --no-interaction` | no advisories |
 | `php vendor/bin/pint --test` | passed |
-| `php artisan test` | `150 passed (610 assertions)` |
+| `php artisan test` | `154 passed (629 assertions)` |
 | `php artisan system:health --scope=live --format=json` | ok |
 | `php artisan system:health --scope=ready --format=json` | ok، ويتضمن اتصال PostgreSQL وMeilisearch في البيئة المحلية |
 | `php artisan route:list` | `135 routes` |
@@ -429,7 +429,7 @@
 
 ### 6.8 الاختبارات
 
-backend test suite قوي نسبياً لحالة pre-production: `150 passed (610 assertions)`. هذا مهم جداً قبل استخدام Codex بكثافة.
+backend test suite قوي نسبياً لحالة pre-production: `154 passed (629 assertions)`. هذا مهم جداً قبل استخدام Codex بكثافة.
 
 ### 6.9 health checks
 
@@ -461,9 +461,9 @@ backend test suite قوي نسبياً لحالة pre-production: `150 passed (6
 | Clean deployment proof غير موجود | Dockerfiles موجودة وCI صار يبني الصور smoke بدون push، وأضيف workflow لنشر الصور إلى GHCR وstaging compose skeleton، لكنهما لم يثبتا بعد بتشغيل فعلي. | تشغيل GHCR publish، ثم جعل staging يستهلك tag/digest مثبتاً وتشغيل smoke فعلي. |
 | Monitoring/alerting/backups/restore | docs موجودة لكن لا يوجد تشغيل فعلي مثبت. | uptime، failed jobs، queue/scheduler، restore drill، alerts. |
 | Security hardening | CSP واسع، لا 2FA، لا session/device management، وdependency audits أضيفت للـ CI لكنها لا تغني عن review workflow. | 2FA، CSP tightening، secrets rotation، vulnerability review workflow. |
-| Store tenant scoping review | `Store` لا يستخدم `BelongsToTenant` ويعيد query غير مفلتر عند tenant null. | مراجعة أمنية، توثيق exception أو تعديل لاحق، اختبارات. |
-| catalog pagination/sitemap 48-limit | sitemap يطلب `per_page=500` لكن backend products endpoint يحد إلى 48. | pagination metadata وsitemap pagination أو endpoint خاص. |
-| cart duplicate item quantity normalization | validation يحد كل line إلى 99، لكن `CreateQuickOrder` يجمع نفس `product_id` بعد التحقق. | رفض product IDs المكررة أو التحقق من الكمية المجمعة قبل إنشاء الطلب. |
+| Store tenant scoping review | تم في 2026-05-09 توثيق `Store` كاستثناء من `BelongsToTenant`، وجعل `forTenant(null)` fail-closed، وإزالة `tenant_id` من `Storefront/StoreResource` العام. | يبقى audit لاحق لأي query جديد على `Store` وتوسيع platform/admin tests عند إضافة flows جديدة. |
+| catalog pagination/sitemap 48-limit | تم إصلاحه في 2026-05-09: sitemap صار يجمع المنتجات عبر pagination ويثبت ذلك E2E، والـ backend test يؤكد cap الصفحة الثانية. | يبقى sitemap index لاحقاً للمتاجر التي تتجاوز حد URL الآمن لكل sitemap. |
+| cart duplicate item quantity normalization | تم إصلاحه في 2026-05-09: request validation و`CreateQuickOrder` يرفضان تكرار `product_id` في نفس checkout. | يبقى تحسين metrics للـ abuse/idempotency لاحقاً. |
 | secrets hygiene | توجد أمثلة dummy محلية، ويجب التأكد من عدم تسريب env حقيقية. | clean clone/package rehearsal، secret inventory، rotation procedure. |
 
 ### P1 - مهمة لبناء SaaS تجارية قابلة للبيع
@@ -506,7 +506,7 @@ backend test suite قوي نسبياً لحالة pre-production: `150 passed (6
 |---|---:|---|
 | Backend maturity | 7.5/10 | منظم، مختبر، وفيه domains كثيرة. يحتاج نضج revenue ops وstock/variants وبعض operational proof. |
 | Tenancy/security model | 7/10 | أساس قوي متعدد الطبقات. يحتاج مراجعة `Store`, أي `withoutGlobalScope`, 2FA, CSP, scans. |
-| Storefront maturity | 6/10 | جيد كبداية customer-facing، وتم تثبيت build/e2e عبر Docker. يحتاج pagination، caching، UX polish، وa11y. |
+| Storefront maturity | 6.5/10 | جيد كبداية customer-facing، وتم تثبيت build/e2e عبر Docker وإصلاح sitemap pagination. يحتاج pagination UI، caching، UX polish، وa11y. |
 | Production readiness | 4/10 | runbooks وhealth موجودة، لكن التشغيل الفعلي غير مثبت. |
 | Commercial SaaS readiness | 5/10 | foundation قوي، لكن onboarding/revenue dashboards/billing ops/support ops ناقصة. |
 | DevOps maturity | 4.5/10 | Docker/CI baseline موجود، لكن gates/deploy/monitoring/restore proof ناقصة. |
@@ -751,16 +751,16 @@ backend test suite قوي نسبياً لحالة pre-production: `150 passed (6
 ### 11.10 Storefront
 
 - الحالة الحالية: صفحات عامة وسلة وcheckout وSEO foundation.
-- المطلوب: caching/revalidation، pagination، image optimization، accessibility، better empty/error states.
+- المطلوب: caching/revalidation، pagination UI، image optimization، accessibility، better empty/error states.
 - الأولوية: P1.
 - معايير القبول: `pnpm typecheck/build` وe2e أو smoke موثوق، ولا تعتمد الواجهة على totals موثوقة.
 
 ### 11.11 SEO
 
-- الحالة الحالية: sitemap/robots/canonical/OpenGraph/JSON-LD.
-- المطلوب: sitemap pagination، product SEO fields، image OG، structured data أوسع، custom domain smoke.
+- الحالة الحالية: sitemap/robots/canonical/OpenGraph/JSON-LD، وsitemap product pagination مثبت.
+- المطلوب: sitemap index للمتاجر الضخمة، product SEO fields، image OG، structured data أوسع، custom domain smoke.
 - الأولوية: P1.
-- معايير القبول: sitemap يغطي أكثر من 48 منتج، ولا يفشل مع متاجر كبيرة.
+- معايير القبول: sitemap يغطي أكثر من 48 منتج، ومع المتاجر الضخمة ينتقل إلى sitemap index بدل sitemap واحد كبير.
 
 ### 11.12 Theme System
 
@@ -880,17 +880,17 @@ backend test suite قوي نسبياً لحالة pre-production: `150 passed (6
 #### catalog pagination/sitemap
 
 ```text
-المهمة: أصلح pagination للكتالوج وsitemap scale.
-السياق: backend products endpoint يحد per_page إلى 48، وstorefront sitemap يطلب 500.
-المطلوب: حل paginated لا يخفي المنتجات بعد أول صفحة.
-الاختبارات: backend API tests وstorefront sitemap tests.
+الحالة: مكتمل 2026-05-09 للـ 48-limit.
+ما تم: storefront sitemap يستخدم pagination، والاختبارات تغطي الصفحة الثانية.
+المتبقي لاحقاً: sitemap index للمتاجر الضخمة جداً إذا اقتربت من حد URL الآمن.
 ```
 
 #### Store tenant scoping review
 
 ```text
 المهمة: راجع tenant scoping لنموذج Store.
-المطلوب: حدد هل Store يجب أن يستخدم BelongsToTenant أو يبقى exception موثقاً ومختبراً.
+الحالة: مكتمل مبدئياً في 2026-05-09. بقي `Store` بدون BelongsToTenant كاستثناء موثق، لكن `forTenant(null)` صار fail-closed وتم إغلاق تسريب tenant_id من public StoreResource.
+المطلوب لاحقاً: audit لأي query جديد على Store، وتوسيع platform/admin tests عند بناء flows جديدة.
 القيود: لا تكسر domain resolution أو admin/support flows.
 الاختبارات: tenant isolation وstore resolution tests.
 ```
@@ -1047,8 +1047,8 @@ backend test suite قوي نسبياً لحالة pre-production: `150 passed (6
 3. تشغيل `container-images` workflow فعلياً إلى GHCR وربط `deploy/staging/` بصورة immutable tag/digest وتشغيل smoke.
 4. تفعيل monitoring/alerting/error tracking.
 5. نشر backup schedule وتنفيذ restore drill مسجل.
-6. مراجعة tenant scoping لـ `Store`.
-7. إصلاح catalog pagination وsitemap حتى لا تختفي المنتجات بعد أول 48 منتج.
+6. `مكتمل 2026-05-09`: مراجعة tenant scoping الأساسية لـ `Store`، مع إبقائه exception موثقاً وfail-closed عند `forTenant(null)`.
+7. `مكتمل 2026-05-09`: إصلاح catalog pagination وsitemap حتى لا تختفي المنتجات بعد أول 48 منتج.
 8. security hardening: 2FA، CSP، vulnerability review workflow، secrets rotation.
 9. merchant onboarding + store readiness.
 10. product variants + stock movements.
@@ -1102,13 +1102,12 @@ backend test suite قوي نسبياً لحالة pre-production: `150 passed (6
 ## 18. الفجوات والتناقضات التي تحتاج تحققاً أو معالجة لاحقة
 
 1. تم تصحيح حالة الواجهة: لم تعد تعتمد على `npm run typecheck/build` أو Windows Node. الحالة المثبتة والمتحققة مجدداً بتاريخ 2026-05-09 هي Docker verification عبر `pnpm`، وقد نجحت install/typecheck/build/e2e.
-2. `Store` tenant scoping يحتاج مراجعة: لا يستخدم `BelongsToTenant`، و`scopeForTenant(null)` يعيد query غير مفلتر.
-3. `Storefront/StoreResource` يعرض `tenant_id` في public payload. يجب تأكيد هل تحتاجه الواجهة فعلاً، وإلا إزالته لاحقاً.
-4. `storefront/src/app/sitemap.ts` يطلب `per_page=500`، لكن backend products endpoint يحد products إلى 48. هذا يعني أن sitemap لا يثبت تغطية كل المنتجات في المتاجر الكبيرة.
-5. `storefront/src/lib/api.ts` يرجع collection فقط للمنتجات ولا يستفيد من pagination meta/links، ما يحد التوسع.
-6. checkout cart payload يسمح بتكرار `product_id` في أكثر من line، ثم يجمعها `CreateQuickOrder`. يجب رفض التكرار أو التحقق من الكمية المجمعة حتى لا يتجاوز العميل السقف المقصود لكل منتج.
-7. docs الإنتاج والأمن صريحة في أن monitoring/backup/restore/proxy موجودة كrunbooks لا كدليل تشغيل production.
-8. لم يتم التحقق من image builds أو GitHub required checks في هذه المهمة.
+2. تم إغلاق مراجعة `Store` الأساسية: يبقى exception من `BelongsToTenant` لحلّ المتجر/الدومين، لكن `scopeForTenant(null)` صار fail-closed، وتم توثيق ذلك.
+3. تم إزالة `tenant_id` من `Storefront/StoreResource` العام، مع اختبار يمنع رجوعه في `resolve` و`home`.
+4. تم إصلاح sitemap 48-limit: `storefront/src/lib/api.ts` صار يقرأ pagination meta، و`storefront/src/app/sitemap.ts` يجمع كل صفحات المنتجات المتاحة.
+5. تم إصلاح تكرار `product_id` في cart checkout عبر validation وداخل `CreateQuickOrder`.
+6. docs الإنتاج والأمن صريحة في أن monitoring/backup/restore/proxy موجودة كrunbooks لا كدليل تشغيل production.
+7. لم يتم التحقق من image builds أو GitHub required checks في هذه المهمة.
 
 ---
 

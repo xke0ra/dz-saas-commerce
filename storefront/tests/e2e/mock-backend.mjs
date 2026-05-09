@@ -36,6 +36,16 @@ const product = {
   },
 };
 
+const secondProduct = {
+  ...product,
+  id: "prod_02",
+  name: "حذاء تجريبي",
+  slug: "demo-shoes",
+  sku: "SHOES-DEMO",
+  is_featured: false,
+  published_at: "2026-04-28T09:00:00.000000Z",
+};
+
 const order = {
   id: "order_01",
   order_number: "ORD-1001",
@@ -68,7 +78,6 @@ const order = {
 function store(locale = "ar") {
   return {
     id: "store_01",
-    tenant_id: "tenant_01",
     name: locale === "fr" ? "Boutique Demo DZ" : "متجر تجريبي DZ",
     slug: "demo-store",
     domain: null,
@@ -162,7 +171,18 @@ const server = http.createServer(async (request, response) => {
   }
 
   if (path === "/api/storefront/demo-store/products") {
-    return json(response, { data: [product] });
+    const page = Number(url.searchParams.get("page") ?? 1);
+    const data = page > 1 ? [secondProduct] : [product];
+
+    return json(response, {
+      data,
+      meta: {
+        current_page: page,
+        last_page: 2,
+        per_page: 1,
+        total: 2,
+      },
+    });
   }
 
   if (path === "/api/storefront/demo-store/products/demo-shirt") {
@@ -218,4 +238,3 @@ function readBody(request) {
     request.on("error", reject);
   });
 }
-

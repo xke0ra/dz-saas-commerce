@@ -116,14 +116,36 @@ export async function getHome(store: string): Promise<HomePayload> {
 
 export async function getProducts(
   store: string,
-  query: { category?: string; q?: string; per_page?: number } = {},
+  query: { category?: string; q?: string; page?: number; per_page?: number } = {},
 ): Promise<Product[]> {
-  const payload = await storefrontFetch<ApiCollection<Product>>(
-    `/api/storefront/${encodeURIComponent(store)}/products`,
-    { query },
-  );
+  const payload = await getProductsPage(store, query);
 
   return unwrapCollection(payload);
+}
+
+export async function getProductsPage(
+  store: string,
+  query: { category?: string; q?: string; page?: number; per_page?: number } = {},
+): Promise<ApiCollection<Product>> {
+  return storefrontFetch<ApiCollection<Product>>(`/api/storefront/${encodeURIComponent(store)}/products`, { query });
+}
+
+export async function getAllProducts(
+  store: string,
+  query: { category?: string; q?: string; per_page?: number } = {},
+): Promise<Product[]> {
+  const perPage = query.per_page ?? 48;
+  const firstPage = await getProductsPage(store, { ...query, page: 1, per_page: perPage });
+  const products = [...unwrapCollection(firstPage)];
+  const currentPage = paginationMetaNumber(firstPage.meta, "current_page") ?? 1;
+  const lastPage = paginationMetaNumber(firstPage.meta, "last_page") ?? currentPage;
+
+  for (let page = currentPage + 1; page <= lastPage; page += 1) {
+    const nextPage = await getProductsPage(store, { ...query, page, per_page: perPage });
+    products.push(...unwrapCollection(nextPage));
+  }
+
+  return products;
 }
 
 export async function getProduct(store: string, slug: string): Promise<Product> {
@@ -243,6 +265,13 @@ function extractErrorMessage(payload: unknown): string {
   }
 
   return "تعذر تنفيذ الطلب. حاول مرة أخرى.";
+}
+
+function paginationMetaNumber(meta: Record<string, unknown> | undefined, key: string): number | null {
+  const value = meta?.[key];
+  const numberValue = typeof value === "number" ? value : Number(value);
+
+  return Number.isSafeInteger(numberValue) && numberValue > 0 ? numberValue : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

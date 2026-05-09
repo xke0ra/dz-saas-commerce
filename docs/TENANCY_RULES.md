@@ -73,7 +73,7 @@ Known tenant-owned areas include:
 - staff memberships
 - audit logs where relevant
 
-Known exception to review: `App\Models\Store` is tenant-owned but does not currently use `BelongsToTenant`. Existing code relies on explicit `scopeForTenant()` calls, policies, and relationship constraints. Treat this as a deliberate exception only after review; new store queries must be checked for explicit tenant filtering or platform-admin authorization.
+Known exception: `App\Models\Store` is tenant-owned but does not use `BelongsToTenant` because storefront host/domain resolution and platform-level workflows need controlled cross-tenant lookup. Existing code relies on explicit `scopeForTenant()` calls, policies, and relationship constraints. `Store::forTenant(null)` fails closed and returns no rows. New store queries must be checked for explicit tenant filtering, public storefront availability checks, or platform-admin authorization.
 
 ## Queries
 
@@ -178,7 +178,7 @@ The storefront resolves store context by host first and by configured fallback s
 
 Backend public storefront endpoints resolve a store by id, subdomain, domain, or slug and then scope public data by that store's `tenant_id`.
 
-Public storefront resources should avoid exposing internal tenant identifiers. If a public payload includes `tenant_id`, keep a documented consumer or remove the field.
+Public storefront resources must avoid exposing internal tenant identifiers unless a concrete public consumer is documented. The current public `StoreResource` omits `tenant_id`.
 
 Storefront endpoints must hide unavailable stores by returning 404 when:
 

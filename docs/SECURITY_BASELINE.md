@@ -26,7 +26,10 @@ Currently present:
 - checkout abuse guard by IP, phone, and store
 - checkout idempotency records by tenant/store/key/request hash
 - checkout duplicate-window replay for repeated submissions without an idempotency key
+- duplicate cart product IDs rejected at request validation and quick order creation
 - public storefront throttling
+- public storefront `StoreResource` omits internal `tenant_id`
+- `Store::forTenant(null)` fails closed instead of returning every store
 - backend security headers middleware
 - storefront security headers through Next.js `headers()`
 - readiness fails in production when `APP_DEBUG=true` or `APP_KEY` is missing
@@ -45,8 +48,7 @@ Current important gaps:
 - no formal vulnerability review workflow beyond the current CI dependency audit baseline
 - no production monitoring/error tracking integration or alert routing
 - production `.env.production.example` files exist, but real secret management and rotation are not implemented yet
-- public storefront `StoreResource` currently exposes `tenant_id`; remove it unless a concrete public use case is proven
-- checkout validates each cart line quantity, then normalizes duplicate product IDs; add aggregate per-product quantity validation before broad beta
+- `Store` remains a documented exception to the global tenant scope; new store queries still need explicit review
 
 ## Authentication
 
@@ -139,7 +141,6 @@ Before broad beta, add:
 
 - operational metrics for rate-limited checkout attempts
 - real integration e2e for idempotent storefront checkout replay
-- validation or rejection for cart payloads that repeat the same `product_id` enough times to exceed the intended per-product quantity ceiling after normalization
 
 ## Data Protection
 

@@ -186,8 +186,9 @@ The checkout endpoint supports both single-product quick order payloads and cart
 
 Current public API hardening notes:
 
-- `StoreResource` currently exposes `tenant_id` to the public storefront. Remove it unless a concrete public consumer is documented.
-- Cart checkout validation currently limits each submitted line quantity, then the backend normalizes duplicate product IDs. Aggregate per-product quantity should be validated or duplicate product IDs should be rejected before broad beta.
+- Public `StoreResource` does not expose `tenant_id`; storefront store resolution should avoid unnecessary internal tenant identifiers.
+- Cart checkout rejects duplicate product IDs at request validation and inside quick order creation before inventory reservation.
+- `Store` is a documented tenancy exception without a global current-tenant scope; explicit `forTenant(null)` fails closed, while public store resolution must still enforce active store and active/trial tenant checks.
 
 ## Storefront SEO
 
@@ -196,9 +197,9 @@ The storefront generates dynamic metadata per resolved store. Public crawl route
 - `GET /sitemap.xml`
 - `GET /robots.txt`
 
-Sitemaps include home, product listing, product detail pages, category pages, and enabled legal pages. Robots disallows customer-action pages such as cart, search results, and track-order.
+Sitemaps include home, product listing, paginated product detail pages, category pages, and enabled legal pages. Robots disallows customer-action pages such as cart, search results, and track-order.
 
-Current scale caveat: storefront product listing and sitemap generation do not yet consume full pagination metadata. The backend products endpoint caps `per_page` at 48, so the current sitemap does not prove complete coverage for stores with more than 48 visible products.
+Current scale caveat: sitemap generation consumes product pagination, but very large stores still need sitemap index support before approaching per-sitemap URL limits.
 
 Canonical and OpenGraph metadata are built from the active request host unless `NEXT_PUBLIC_STOREFRONT_BASE_URL` or `STOREFRONT_BASE_URL` is configured. This keeps local development, subdomains, and future custom domains compatible.
 

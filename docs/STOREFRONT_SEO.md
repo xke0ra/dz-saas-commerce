@@ -30,7 +30,7 @@ Each tenant storefront must expose crawlable, store-specific metadata without tr
   - product detail pages
   - category pages
   - enabled legal pages with content
-- Current scale caveat: `storefront/src/app/sitemap.ts` requests products with `per_page=500`, but the backend products endpoint currently caps `per_page` at 48. Until sitemap pagination or a dedicated sitemap endpoint is implemented, the sitemap does not prove full product coverage for stores with more than 48 visible products.
+- Product URLs are collected through the paginated products API instead of assuming one oversized page. This removes the previous effective 48-product sitemap cap.
 - Robots allows public storefront pages and disallows:
   - `/cart`
   - `/search`
@@ -63,6 +63,7 @@ This keeps local development, subdomains, and future custom domains compatible.
 Current Playwright coverage verifies:
 
 - `sitemap.xml` contains home, product, category, and legal URLs.
+- `sitemap.xml` follows product pagination and includes product URLs beyond the first backend page.
 - `robots.txt` points to the sitemap and disallows private/customer-action pages.
 - Product detail pages expose title, canonical link, OpenGraph title, and OpenGraph type.
 - Product detail pages expose Product and BreadcrumbList JSON-LD.
@@ -83,6 +84,5 @@ pnpm test:e2e
 - Add product-specific SEO fields in the backend when catalog maturity requires them.
 - Add product image OpenGraph coverage when real product media is consistently seeded.
 - Expand structured data JSON-LD for organization, legal pages, and richer product fields.
-- Add dynamic sitemap pagination if stores can exceed the safe sitemap URL limit.
-- Fix the current 48-product effective cap before relying on sitemap coverage for larger stores.
+- Add sitemap index support if stores can exceed the safe per-sitemap URL limit.
 - Add SEO smoke checks for custom domains once domain routing is exercised end to end.

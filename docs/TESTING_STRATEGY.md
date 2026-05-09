@@ -25,7 +25,7 @@ Frontend:
 
 Latest recorded verification: 2026-05-09.
 
-- Backend: `150 passed (610 assertions)`.
+- Backend: `154 passed (629 assertions)`.
 - Backend smoke checks passed: `composer validate --strict`, `composer audit --no-interaction`, `php vendor/bin/pint --test`, `php artisan route:list`, `php artisan system:health --scope=live --format=json`, `php artisan system:health --scope=ready --format=json`, and `php artisan schedule:list`.
 - Storefront Docker verification: `./storefront/scripts/verify-docker.sh all` passed on 2026-05-09.
 - Storefront install: `pnpm install --frozen-lockfile` passed in Docker with Node `v24.15.0` and pnpm `10.33.2`.
@@ -274,7 +274,7 @@ Current Playwright tests are storefront-focused. As the storefront grows, e2e co
 - product details
 - quick order happy path
 - cart checkout happy path with item payloads
-- sitemap, robots, canonical, and OpenGraph smoke coverage
+- sitemap, robots, canonical, and OpenGraph smoke coverage, including multi-page product sitemap coverage
 - structured data JSON-LD smoke coverage
 - mobile navigation smoke coverage
 - storefront trust and contact section smoke coverage

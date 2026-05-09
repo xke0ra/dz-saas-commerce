@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getCategories, getHome, getProducts } from "@/lib/api";
+import { getAllProducts, getCategories, getHome } from "@/lib/api";
 import { storefrontBaseUrl, storefrontUrl } from "@/lib/seo";
 import { getActiveStoreContext } from "@/lib/store-context";
 import { storeSetting } from "@/lib/theme";
@@ -19,7 +19,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = await storefrontBaseUrl();
   const [home, products, categories] = await Promise.all([
     getHome(context.identifier).catch(() => null),
-    getProducts(context.identifier, { per_page: 500 }).catch(() => []),
+    getAllProducts(context.identifier, { per_page: 48 }).catch(() => []),
     getCategories(context.identifier).catch(() => []),
   ]);
   const store = home?.store ?? context.store;

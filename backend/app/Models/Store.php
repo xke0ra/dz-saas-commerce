@@ -91,10 +91,10 @@ class Store extends Model
     {
         $tenantId = $tenant instanceof Tenant ? $tenant->getKey() : $tenant;
 
-        if ($tenantId === null) {
-            return $query;
+        if ($tenantId === null || $tenantId === '') {
+            return $query->whereRaw('1 = 0');
         }
 
-        return $query->where('tenant_id', $tenantId);
+        return $query->where($query->getModel()->qualifyColumn('tenant_id'), $tenantId);
     }
 }

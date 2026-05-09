@@ -57,7 +57,7 @@ The stored item shape is intentionally limited to display data and quantity:
 
 The displayed price is only a storefront hint. The checkout request sends only product IDs and quantities as trusted input candidates.
 
-Known backend hardening item: Laravel currently validates each cart line quantity, then normalizes duplicate `product_id` rows into one product quantity during order creation. Before broad beta, duplicate product IDs should either be rejected in validation or the aggregate normalized quantity should be validated against the same per-product ceiling.
+Laravel rejects duplicate `product_id` rows in cart checkout payloads at request validation and inside quick order creation. This keeps the per-product quantity ceiling enforceable even if a client bypasses the normal cart UI.
 
 ## Checkout Payload
 
