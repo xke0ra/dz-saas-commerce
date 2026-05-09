@@ -52,6 +52,7 @@ Still required:
 Latest local smoke verification: 2026-05-09.
 
 - Backend smoke passed locally: `composer validate --strict`, `composer audit --no-interaction`, `php vendor/bin/pint --test`, `php artisan route:list`, `php artisan system:health --scope=live --format=json`, `php artisan system:health --scope=ready --format=json`, `php artisan schedule:list`, and `php artisan test`.
+- Repository hygiene and clean export checks passed: `scripts/security/secret-hygiene.sh` and `scripts/release/clean-export-check.sh`.
 - Storefront Docker verification passed locally: `./storefront/scripts/verify-docker.sh all`, including typecheck, production build, and `6` Playwright e2e tests.
 - Dockerfile checks and local image build smoke passed for backend and storefront: `docker buildx build --check`, then `docker buildx build --load`.
 - This local verification does not prove GitHub branch protection, GHCR publishing, image vulnerability scanning, staging deployment, TLS/custom-domain routing, or restore drills.
@@ -152,7 +153,7 @@ The baseline workflow is `.github/workflows/quality.yml`.
 
 It currently checks:
 
-- repository hygiene for tracked env files, private keys, generated artifacts, and high-confidence secret patterns
+- repository hygiene and clean export rehearsal for tracked env files, private keys, generated artifacts, and high-confidence secret patterns
 - backend dependency install, Composer audit, Pint format check, migration smoke, readiness smoke, tests, and route listing
 - storefront dependency install, pnpm audit at `moderate` or higher, typecheck, and production build
 - Dockerfile syntax/build-plan checks via `docker buildx build --check`

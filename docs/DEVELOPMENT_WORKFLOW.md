@@ -90,10 +90,11 @@ Required CI gates before broad AI/Codex development:
 
 Do not mark CI as complete until a real GitHub Actions run proves these jobs on the repository that receives pull requests.
 
-Run repository hygiene locally when env, deployment, CI, or ignore rules change:
+Run repository hygiene locally when env, deployment, CI, ignore rules, or release packaging changes:
 
 ```bash
 scripts/security/secret-hygiene.sh
+scripts/release/clean-export-check.sh
 ```
 
 ## Health And Readiness
@@ -321,6 +322,7 @@ Run the automated hygiene check before packaging or when touching env, deploymen
 
 ```bash
 scripts/security/secret-hygiene.sh
+scripts/release/clean-export-check.sh
 ```
 
 Do not commit or package local/generated files:

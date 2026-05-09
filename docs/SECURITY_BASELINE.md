@@ -188,7 +188,8 @@ Before launch, document:
 2026-05-09 hygiene baseline:
 
 - `scripts/security/secret-hygiene.sh` checks tracked files for forbidden local env files, private key material, generated dependency/build artifacts, and high-confidence token patterns.
-- `.github/workflows/quality.yml` runs the secret hygiene check as `Repository Hygiene`.
+- `scripts/release/clean-export-check.sh` builds a temporary clean export archive and verifies it does not include forbidden local/generated files or high-confidence secret patterns.
+- `.github/workflows/quality.yml` runs both checks as `Repository Hygiene`.
 - `docs/PRODUCTION_READINESS.md` documents the first production runbook baseline.
 - A scan excluding local `.env` files found local dummy credentials in `docker-compose.yml` and `.env.example`; these are acceptable only for local development and must be rotated outside local use.
 

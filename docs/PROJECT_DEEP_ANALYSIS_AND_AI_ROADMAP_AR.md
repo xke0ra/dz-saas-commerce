@@ -459,14 +459,14 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 |---|---|---|
 | Production readiness غير مكتمل | توجد runbooks وأساس، وأضيف skeleton للـ staging في `deploy/staging/`، لكن لا يوجد إثبات staging كامل. | تشغيل staging deployment، TLS/proxy، queues/scheduler، health، monitoring، rollback. |
 | Frontend verification path | تم إغلاقه كمسار Docker موحد وتحقق مجدداً في 2026-05-09: install/typecheck/build/e2e نجحت. | يبقى ربط المسار بالـ CI required gates ومراقبة استقراره. |
-| CI required gates غير مثبتة | workflow تقوى بإضافة repository hygiene، audits، Pint، E2E required، وDocker image build smoke، وأسماء required checks موثقة، لكنه ليس مثبتاً بعد كحاجز merge إلزامي داخل GitHub. | تفعيل GitHub required checks: `Repository Hygiene`, `Backend`, `Storefront`, `Dockerfile Checks`, `Storefront E2E` ومراقبة أول run حقيقي. |
+| CI required gates غير مثبتة | workflow تقوى بإضافة repository hygiene وclean export rehearsal وaudits وPint وE2E required وDocker image build smoke، وأسماء required checks موثقة، لكنه ليس مثبتاً بعد كحاجز merge إلزامي داخل GitHub. | تفعيل GitHub required checks: `Repository Hygiene`, `Backend`, `Storefront`, `Dockerfile Checks`, `Storefront E2E` ومراقبة أول run حقيقي. |
 | Clean deployment proof غير موجود | Dockerfiles موجودة وتم إثبات build smoke محلياً للـ backend/storefront، وأضيف workflow لنشر الصور إلى GHCR وstaging compose skeleton، لكن GHCR/staging لم يثبتا بعد بتشغيل فعلي. | تشغيل GHCR publish، ثم جعل staging يستهلك tag/digest مثبتاً وتشغيل smoke فعلي. |
 | Monitoring/alerting/backups/restore | docs موجودة لكن لا يوجد تشغيل فعلي مثبت. | uptime، failed jobs، queue/scheduler، restore drill، alerts. |
 | Security hardening | CSP واسع، لا 2FA، لا session/device management، وdependency audits أضيفت للـ CI لكنها لا تغني عن review workflow. | 2FA، CSP tightening، secrets rotation، vulnerability review workflow. |
 | Store tenant scoping review | تم في 2026-05-09 توثيق `Store` كاستثناء من `BelongsToTenant`، وجعل `forTenant(null)` fail-closed، وإزالة `tenant_id` من `Storefront/StoreResource` العام. | يبقى audit لاحق لأي query جديد على `Store` وتوسيع platform/admin tests عند إضافة flows جديدة. |
 | catalog pagination/sitemap 48-limit | تم إصلاحه في 2026-05-09: sitemap صار يجمع المنتجات عبر pagination ويثبت ذلك E2E، والـ backend test يؤكد cap الصفحة الثانية. | يبقى sitemap index لاحقاً للمتاجر التي تتجاوز حد URL الآمن لكل sitemap. |
 | cart duplicate item quantity normalization | تم إصلاحه في 2026-05-09: request validation و`CreateQuickOrder` يرفضان تكرار `product_id` في نفس checkout. | يبقى تحسين metrics للـ abuse/idempotency لاحقاً. |
-| secrets hygiene | تم في 2026-05-09 إضافة فحص `scripts/security/secret-hygiene.sh` وربطه بالـ CI لمنع tracked env/private keys وبعض أنماط التسريب عالية الثقة. | clean clone/package rehearsal، secret inventory، rotation procedure، وربط secret manager لاحقاً. |
+| secrets hygiene | تم في 2026-05-09 إضافة `scripts/security/secret-hygiene.sh` و`scripts/release/clean-export-check.sh` وربطهما بالـ CI لمنع tracked env/private keys والتحقق من clean export package. | secret inventory، rotation procedure، وربط secret manager لاحقاً. |
 
 ### P1 - مهمة لبناء SaaS تجارية قابلة للبيع
 
@@ -525,8 +525,8 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 الهدف: منع البناء فوق أرضية غير مثبتة.
 
-- repository hygiene.
-- clean clone rehearsal.
+- `مكتمل محلياً 2026-05-09`: repository hygiene.
+- `مكتمل محلياً 2026-05-09`: clean clone/export rehearsal.
 - `مكتمل ومتحقق مجدداً 2026-05-09`: بيئة frontend موحدة عبر Docker.
 - `مكتمل ومتحقق مجدداً 2026-05-09`: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm build`, و`pnpm test:e2e` موثوقة عبر `./storefront/scripts/verify-docker.sh all`.
 - `مكتمل جزئياً`: تقوية workflow بإضافة Composer audit، Pint، pnpm audit، E2E required، وDocker image build smoke.
@@ -1045,13 +1045,13 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 ## 16. الأولويات العشر القادمة
 
 1. `مكتمل ومتحقق مجدداً 2026-05-09`: توحيد بيئة frontend عبر Docker وتشغيل `pnpm install --frozen-lockfile/typecheck/build/test:e2e`.
-2. `مكتمل جزئياً`: تقوية CI داخل المستودع بإضافة repository hygiene وaudits وPint وE2E required وDocker image build smoke وتوثيق أسماء required checks؛ المتبقي تفعيلها في GitHub branch protection.
+2. `مكتمل جزئياً`: تقوية CI داخل المستودع بإضافة repository hygiene وclean export rehearsal وaudits وPint وE2E required وDocker image build smoke وتوثيق أسماء required checks؛ المتبقي تفعيلها في GitHub branch protection.
 3. تشغيل `container-images` workflow فعلياً إلى GHCR وربط `deploy/staging/` بصورة immutable tag/digest وتشغيل smoke.
 4. تفعيل monitoring/alerting/error tracking.
 5. نشر backup schedule وتنفيذ restore drill مسجل.
 6. `مكتمل 2026-05-09`: مراجعة tenant scoping الأساسية لـ `Store`، مع إبقائه exception موثقاً وfail-closed عند `forTenant(null)`.
 7. `مكتمل 2026-05-09`: إصلاح catalog pagination وsitemap حتى لا تختفي المنتجات بعد أول 48 منتج.
-8. security hardening: 2FA، CSP، vulnerability review workflow، secrets rotation. تم إضافة secret hygiene baseline في 2026-05-09.
+8. security hardening: 2FA، CSP، vulnerability review workflow، secrets rotation. تم إضافة secret hygiene وclean export baseline في 2026-05-09.
 9. merchant onboarding + store readiness.
 10. product variants + stock movements.
 

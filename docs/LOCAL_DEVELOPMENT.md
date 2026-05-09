@@ -162,6 +162,13 @@ If Chromium fails to launch with missing shared libraries in native WSL, install
 
 As of the 2026-05-09 verification pass, the Docker path successfully ran `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm build`, and `pnpm test:e2e`. The run used Node `v24.15.0`, pnpm `10.33.2`, and Playwright reported `6 passed`.
 
+Repository hygiene and clean export checks:
+
+```bash
+scripts/security/secret-hygiene.sh
+scripts/release/clean-export-check.sh
+```
+
 ## Clean Workspace Rules
 
 Do not commit or package:

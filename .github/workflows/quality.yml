@@ -19,6 +19,9 @@ jobs:
       - name: Secret Hygiene
         run: bash scripts/security/secret-hygiene.sh
 
+      - name: Clean Export
+        run: bash scripts/release/clean-export-check.sh
+
   backend:
     name: Backend
     runs-on: ubuntu-latest
