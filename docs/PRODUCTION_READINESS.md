@@ -18,6 +18,7 @@ Implemented in this foundation pass:
 - root `.dockerignore`
 - `.github/workflows/quality.yml` CI baseline
 - `.github/workflows/container-images.yml` GHCR image publish baseline
+- repository secret hygiene check through `scripts/security/secret-hygiene.sh`
 - backend liveness/readiness endpoints
 - `php artisan system:health`
 - backend Docker `HEALTHCHECK` using liveness scope
@@ -52,6 +53,7 @@ Latest local smoke verification: 2026-05-09.
 
 - Backend smoke passed locally: `composer validate --strict`, `composer audit --no-interaction`, `php vendor/bin/pint --test`, `php artisan route:list`, `php artisan system:health --scope=live --format=json`, `php artisan system:health --scope=ready --format=json`, `php artisan schedule:list`, and `php artisan test`.
 - Storefront Docker verification passed locally: `./storefront/scripts/verify-docker.sh all`, including typecheck, production build, and `6` Playwright e2e tests.
+- Dockerfile checks and local image build smoke passed for backend and storefront: `docker buildx build --check`, then `docker buildx build --load`.
 - This local verification does not prove GitHub branch protection, GHCR publishing, image vulnerability scanning, staging deployment, TLS/custom-domain routing, or restore drills.
 
 ## Image Build Commands
@@ -150,6 +152,7 @@ The baseline workflow is `.github/workflows/quality.yml`.
 
 It currently checks:
 
+- repository hygiene for tracked env files, private keys, generated artifacts, and high-confidence secret patterns
 - backend dependency install, Composer audit, Pint format check, migration smoke, readiness smoke, tests, and route listing
 - storefront dependency install, pnpm audit at `moderate` or higher, typecheck, and production build
 - Dockerfile syntax/build-plan checks via `docker buildx build --check`
@@ -162,6 +165,14 @@ Limitations:
 - Image publish automation exists, but it still needs a real GHCR run and downstream staging consumption proof.
 - It does not yet run container image vulnerability scanning.
 - GitHub branch protection still has to mark the workflow jobs as required checks.
+
+Required branch protection checks for `.github/workflows/quality.yml`:
+
+- `Repository Hygiene`
+- `Backend`
+- `Storefront`
+- `Dockerfile Checks`
+- `Storefront E2E`
 
 ## Backend Runtime Processes
 

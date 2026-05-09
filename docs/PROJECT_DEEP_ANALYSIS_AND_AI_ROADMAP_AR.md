@@ -365,6 +365,8 @@
 | `php artisan system:health --scope=ready --format=json` | ok، ويتضمن اتصال PostgreSQL وMeilisearch في البيئة المحلية |
 | `php artisan route:list` | `135 routes` |
 | `php artisan schedule:list` | `billing:process` و`checkout-idempotency:prune` |
+| `docker buildx build --check` للـ backend/storefront | passed |
+| `docker buildx build --load` للـ backend/storefront | passed |
 
 حدود هذا التحقق: لم يتم في هذه الجولة تشغيل `migrate:status` أو `queue:failed` أو `checkout-idempotency:prune --dry-run`، ولم يتم إثبات GitHub required checks أو GHCR image publishing أو staging deployment أو restore drill. أمر `php artisan route:list --compact` غير مدعوم في إصدار Laravel الحالي، لذلك يستخدم الفحص `php artisan route:list` مباشرة.
 
@@ -457,14 +459,14 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 |---|---|---|
 | Production readiness غير مكتمل | توجد runbooks وأساس، وأضيف skeleton للـ staging في `deploy/staging/`، لكن لا يوجد إثبات staging كامل. | تشغيل staging deployment، TLS/proxy، queues/scheduler، health، monitoring، rollback. |
 | Frontend verification path | تم إغلاقه كمسار Docker موحد وتحقق مجدداً في 2026-05-09: install/typecheck/build/e2e نجحت. | يبقى ربط المسار بالـ CI required gates ومراقبة استقراره. |
-| CI required gates غير مثبتة | workflow تقوى بإضافة audits وPint وE2E required وDocker image build smoke، لكنه ليس مثبتاً بعد كحاجز merge إلزامي داخل GitHub. | تفعيل GitHub required checks ومراقبة أول run حقيقي. |
-| Clean deployment proof غير موجود | Dockerfiles موجودة وCI صار يبني الصور smoke بدون push، وأضيف workflow لنشر الصور إلى GHCR وstaging compose skeleton، لكنهما لم يثبتا بعد بتشغيل فعلي. | تشغيل GHCR publish، ثم جعل staging يستهلك tag/digest مثبتاً وتشغيل smoke فعلي. |
+| CI required gates غير مثبتة | workflow تقوى بإضافة repository hygiene، audits، Pint، E2E required، وDocker image build smoke، وأسماء required checks موثقة، لكنه ليس مثبتاً بعد كحاجز merge إلزامي داخل GitHub. | تفعيل GitHub required checks: `Repository Hygiene`, `Backend`, `Storefront`, `Dockerfile Checks`, `Storefront E2E` ومراقبة أول run حقيقي. |
+| Clean deployment proof غير موجود | Dockerfiles موجودة وتم إثبات build smoke محلياً للـ backend/storefront، وأضيف workflow لنشر الصور إلى GHCR وstaging compose skeleton، لكن GHCR/staging لم يثبتا بعد بتشغيل فعلي. | تشغيل GHCR publish، ثم جعل staging يستهلك tag/digest مثبتاً وتشغيل smoke فعلي. |
 | Monitoring/alerting/backups/restore | docs موجودة لكن لا يوجد تشغيل فعلي مثبت. | uptime، failed jobs، queue/scheduler، restore drill، alerts. |
 | Security hardening | CSP واسع، لا 2FA، لا session/device management، وdependency audits أضيفت للـ CI لكنها لا تغني عن review workflow. | 2FA، CSP tightening، secrets rotation، vulnerability review workflow. |
 | Store tenant scoping review | تم في 2026-05-09 توثيق `Store` كاستثناء من `BelongsToTenant`، وجعل `forTenant(null)` fail-closed، وإزالة `tenant_id` من `Storefront/StoreResource` العام. | يبقى audit لاحق لأي query جديد على `Store` وتوسيع platform/admin tests عند إضافة flows جديدة. |
 | catalog pagination/sitemap 48-limit | تم إصلاحه في 2026-05-09: sitemap صار يجمع المنتجات عبر pagination ويثبت ذلك E2E، والـ backend test يؤكد cap الصفحة الثانية. | يبقى sitemap index لاحقاً للمتاجر التي تتجاوز حد URL الآمن لكل sitemap. |
 | cart duplicate item quantity normalization | تم إصلاحه في 2026-05-09: request validation و`CreateQuickOrder` يرفضان تكرار `product_id` في نفس checkout. | يبقى تحسين metrics للـ abuse/idempotency لاحقاً. |
-| secrets hygiene | توجد أمثلة dummy محلية، ويجب التأكد من عدم تسريب env حقيقية. | clean clone/package rehearsal، secret inventory، rotation procedure. |
+| secrets hygiene | تم في 2026-05-09 إضافة فحص `scripts/security/secret-hygiene.sh` وربطه بالـ CI لمنع tracked env/private keys وبعض أنماط التسريب عالية الثقة. | clean clone/package rehearsal، secret inventory، rotation procedure، وربط secret manager لاحقاً. |
 
 ### P1 - مهمة لبناء SaaS تجارية قابلة للبيع
 
@@ -792,8 +794,8 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 ### 11.16 Security
 
-- الحالة الحالية: policies، tenancy، headers، throttles، readiness safeguards.
-- المطلوب: 2FA، CSP tightening، dependency scanning، session/device management، secrets rotation.
+- الحالة الحالية: policies، tenancy، headers، throttles، readiness safeguards، dependency audits، وsecret hygiene check.
+- المطلوب: 2FA، CSP tightening، image/dependency vulnerability review workflow، session/device management، secrets rotation.
 - الأولوية: P0.
 - معايير القبول: tests، docs، CI scans، وproduction/staging validation.
 
@@ -1043,13 +1045,13 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 ## 16. الأولويات العشر القادمة
 
 1. `مكتمل ومتحقق مجدداً 2026-05-09`: توحيد بيئة frontend عبر Docker وتشغيل `pnpm install --frozen-lockfile/typecheck/build/test:e2e`.
-2. `مكتمل جزئياً`: تقوية CI داخل المستودع بإضافة audits وPint وE2E required وDocker image build smoke؛ المتبقي تفعيل GitHub required checks.
+2. `مكتمل جزئياً`: تقوية CI داخل المستودع بإضافة repository hygiene وaudits وPint وE2E required وDocker image build smoke وتوثيق أسماء required checks؛ المتبقي تفعيلها في GitHub branch protection.
 3. تشغيل `container-images` workflow فعلياً إلى GHCR وربط `deploy/staging/` بصورة immutable tag/digest وتشغيل smoke.
 4. تفعيل monitoring/alerting/error tracking.
 5. نشر backup schedule وتنفيذ restore drill مسجل.
 6. `مكتمل 2026-05-09`: مراجعة tenant scoping الأساسية لـ `Store`، مع إبقائه exception موثقاً وfail-closed عند `forTenant(null)`.
 7. `مكتمل 2026-05-09`: إصلاح catalog pagination وsitemap حتى لا تختفي المنتجات بعد أول 48 منتج.
-8. security hardening: 2FA، CSP، vulnerability review workflow، secrets rotation.
+8. security hardening: 2FA، CSP، vulnerability review workflow، secrets rotation. تم إضافة secret hygiene baseline في 2026-05-09.
 9. merchant onboarding + store readiness.
 10. product variants + stock movements.
 
@@ -1107,7 +1109,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 4. تم إصلاح sitemap 48-limit: `storefront/src/lib/api.ts` صار يقرأ pagination meta، و`storefront/src/app/sitemap.ts` يجمع كل صفحات المنتجات المتاحة.
 5. تم إصلاح تكرار `product_id` في cart checkout عبر validation وداخل `CreateQuickOrder`.
 6. docs الإنتاج والأمن صريحة في أن monitoring/backup/restore/proxy موجودة كrunbooks لا كدليل تشغيل production.
-7. لم يتم التحقق من image builds أو GitHub required checks في هذه المهمة.
+7. تم التحقق محلياً من Dockerfile checks وimage build smoke للـ backend/storefront، لكن لم يتم إثبات GitHub required checks أو GHCR publish.
 
 ---
 

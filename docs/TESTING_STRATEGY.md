@@ -26,13 +26,15 @@ Frontend:
 Latest recorded verification: 2026-05-09.
 
 - Backend: `154 passed (629 assertions)`.
+- Repository hygiene: `scripts/security/secret-hygiene.sh` passed.
 - Backend smoke checks passed: `composer validate --strict`, `composer audit --no-interaction`, `php vendor/bin/pint --test`, `php artisan route:list`, `php artisan system:health --scope=live --format=json`, `php artisan system:health --scope=ready --format=json`, and `php artisan schedule:list`.
 - Storefront Docker verification: `./storefront/scripts/verify-docker.sh all` passed on 2026-05-09.
 - Storefront install: `pnpm install --frozen-lockfile` passed in Docker with Node `v24.15.0` and pnpm `10.33.2`.
 - Storefront typecheck: passed.
 - Storefront build: passed.
 - Storefront Playwright e2e: `6 passed`.
-- CI baseline: `.github/workflows/quality.yml` now includes backend/frontend dependency audits, backend Pint, required storefront e2e, and Docker image build smoke checks, but has not yet been proven as an active required GitHub Actions merge gate.
+- Dockerfile checks and local image build smoke: backend and storefront passed through `docker buildx build --check` and `docker buildx build --load`.
+- CI baseline: `.github/workflows/quality.yml` now includes repository hygiene, backend/frontend dependency audits, backend Pint, required storefront e2e, and Docker image build smoke checks, but has not yet been proven as an active required GitHub Actions merge gate.
 
 These numbers must be updated in the living roadmap when they change.
 
@@ -42,6 +44,7 @@ The current CI contract is defined in `.github/workflows/quality.yml`.
 
 Jobs:
 
+- repository-hygiene: runs `scripts/security/secret-hygiene.sh` to block tracked local env files, private keys, generated dependency/build artifacts, and high-confidence leaked secret patterns
 - backend: PostgreSQL service, `composer validate`, `composer install`, `composer audit`, `php vendor/bin/pint --test`, `.env.testing.example`, `migrate:fresh --seed`, `php artisan system:health --scope=ready --format=json`, `php artisan test`, `php artisan route:list`
 - storefront: `pnpm install --frozen-lockfile`, `pnpm audit --audit-level moderate`, `pnpm typecheck`, `pnpm build`
 - docker-check: `docker buildx build --check` and no-push image build smoke checks for backend and storefront Dockerfiles
@@ -178,6 +181,7 @@ P0 areas:
 - security headers and CSP/HSTS smoke behavior when changed
 - trusted proxy behavior for `X-Forwarded-Proto` / HSTS behind reverse proxies
 - scheduler registration and failed-jobs smoke checks when operating commands change
+- repository secret hygiene when env, deployment, CI, or ignore rules change
 
 P1 areas:
 

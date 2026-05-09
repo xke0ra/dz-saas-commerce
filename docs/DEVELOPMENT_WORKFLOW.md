@@ -72,7 +72,8 @@ The baseline workflow is:
 
 Current status:
 
-- The workflow defines backend, storefront, Docker image check/build, and storefront e2e jobs.
+- The workflow defines repository hygiene, backend, storefront, Docker image check/build, and storefront e2e jobs.
+- Repository hygiene blocks tracked local env files, private keys, generated artifacts, and high-confidence secret patterns.
 - Backend CI includes Composer audit and Pint.
 - Storefront CI includes pnpm audit at `moderate` or higher.
 - Container image publishing builds and pushes backend/storefront images to GHCR on manual dispatch or version tags.
@@ -81,13 +82,19 @@ Current status:
 
 Required CI gates before broad AI/Codex development:
 
-- backend readiness smoke passes
-- backend tests pass
-- storefront typecheck/build pass
-- Dockerfile checks pass
-- required e2e passes, with artifacts uploaded on failure
+- `Repository Hygiene`
+- `Backend`
+- `Storefront`
+- `Dockerfile Checks`
+- `Storefront E2E`
 
 Do not mark CI as complete until a real GitHub Actions run proves these jobs on the repository that receives pull requests.
+
+Run repository hygiene locally when env, deployment, CI, or ignore rules change:
+
+```bash
+scripts/security/secret-hygiene.sh
+```
 
 ## Health And Readiness
 
@@ -309,6 +316,12 @@ Update the relevant domain doc too:
 - production setup: `docs/PRODUCTION_READINESS.md`
 
 ## Repository Hygiene Rule
+
+Run the automated hygiene check before packaging or when touching env, deployment, CI, or ignore rules:
+
+```bash
+scripts/security/secret-hygiene.sh
+```
 
 Do not commit or package local/generated files:
 

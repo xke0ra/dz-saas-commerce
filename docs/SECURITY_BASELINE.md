@@ -30,6 +30,7 @@ Currently present:
 - public storefront throttling
 - public storefront `StoreResource` omits internal `tenant_id`
 - `Store::forTenant(null)` fails closed instead of returning every store
+- repository secret hygiene check in CI through `scripts/security/secret-hygiene.sh`
 - backend security headers middleware
 - storefront security headers through Next.js `headers()`
 - readiness fails in production when `APP_DEBUG=true` or `APP_KEY` is missing
@@ -45,7 +46,7 @@ Current important gaps:
 - CSP baseline is intentionally broad for Filament/Livewire/storefront compatibility and still needs production tightening after browser/e2e validation
 - backup/restore runbook and automation examples exist, but no deployed backup schedule or executed staging restore drill is recorded yet
 - no completed secrets rotation procedure
-- no formal vulnerability review workflow beyond the current CI dependency audit baseline
+- no formal vulnerability review workflow beyond the current CI dependency audit and secret hygiene baseline
 - no production monitoring/error tracking integration or alert routing
 - production `.env.production.example` files exist, but real secret management and rotation are not implemented yet
 - `Store` remains a documented exception to the global tenant scope; new store queries still need explicit review
@@ -183,6 +184,11 @@ Before launch, document:
 - `backend/.env.testing.example` exists for testing setup.
 - `backend/.env.production.example` and `storefront/.env.production.example` exist with placeholders only.
 - `docs/LOCAL_DEVELOPMENT.md` documents local-only dummy credentials and clean workspace rules.
+
+2026-05-09 hygiene baseline:
+
+- `scripts/security/secret-hygiene.sh` checks tracked files for forbidden local env files, private key material, generated dependency/build artifacts, and high-confidence token patterns.
+- `.github/workflows/quality.yml` runs the secret hygiene check as `Repository Hygiene`.
 - `docs/PRODUCTION_READINESS.md` documents the first production runbook baseline.
 - A scan excluding local `.env` files found local dummy credentials in `docker-compose.yml` and `.env.example`; these are acceptable only for local development and must be rotated outside local use.
 

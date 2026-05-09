@@ -8,6 +8,17 @@ on:
       - master
 
 jobs:
+  repository-hygiene:
+    name: Repository Hygiene
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Secret Hygiene
+        run: bash scripts/security/secret-hygiene.sh
+
   backend:
     name: Backend
     runs-on: ubuntu-latest
