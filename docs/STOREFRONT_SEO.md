@@ -1,6 +1,6 @@
 # Storefront SEO And Crawl Contract
 
-Last updated: 2026-05-08
+Last updated: 2026-05-09
 
 This document defines the current public storefront SEO contract.
 
@@ -66,6 +66,8 @@ Current Playwright coverage verifies:
 - `robots.txt` points to the sitemap and disallows private/customer-action pages.
 - Product detail pages expose title, canonical link, OpenGraph title, and OpenGraph type.
 - Product detail pages expose Product and BreadcrumbList JSON-LD.
+
+Latest local verification: `./storefront/scripts/verify-docker.sh all` passed on 2026-05-09, including `pnpm typecheck`, `pnpm build`, and `6` Playwright e2e tests.
 
 Verification commands:
 

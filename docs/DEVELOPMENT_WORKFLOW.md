@@ -1,6 +1,6 @@
 # Development Workflow
 
-Last updated: 2026-05-07
+Last updated: 2026-05-09
 
 This document defines the working process for this project. It is optimized for careful, incremental development by a human or AI agent.
 
@@ -187,7 +187,7 @@ pnpm test:e2e
 
 Do not run `pnpm typecheck` concurrently with `pnpm build`; `.next/types` can be regenerated during build.
 
-If native Playwright fails before executing tests because the browser cannot launch, either fix host system dependencies or use `./storefront/scripts/verify-docker.sh e2e`. The Docker e2e path passed on 2026-05-08 with `6 passed`.
+If native Playwright fails before executing tests because the browser cannot launch, either fix host system dependencies or use `./storefront/scripts/verify-docker.sh e2e`. The Docker e2e path passed on 2026-05-09 with `6 passed`.
 
 ## Route Changes
 

@@ -1,6 +1,6 @@
 # Security Baseline
 
-Last updated: 2026-05-07
+Last updated: 2026-05-09
 
 This document defines the minimum security posture expected as the platform moves toward commercial launch.
 
@@ -45,6 +45,8 @@ Current important gaps:
 - no formal vulnerability review workflow beyond the current CI dependency audit baseline
 - no production monitoring/error tracking integration or alert routing
 - production `.env.production.example` files exist, but real secret management and rotation are not implemented yet
+- public storefront `StoreResource` currently exposes `tenant_id`; remove it unless a concrete public use case is proven
+- checkout validates each cart line quantity, then normalizes duplicate product IDs; add aggregate per-product quantity validation before broad beta
 
 ## Authentication
 
@@ -137,6 +139,7 @@ Before broad beta, add:
 
 - operational metrics for rate-limited checkout attempts
 - real integration e2e for idempotent storefront checkout replay
+- validation or rejection for cart payloads that repeat the same `product_id` enough times to exceed the intended per-product quantity ceiling after normalization
 
 ## Data Protection
 

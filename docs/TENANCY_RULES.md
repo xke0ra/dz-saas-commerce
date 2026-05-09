@@ -1,6 +1,6 @@
 # Tenancy Rules
 
-Last updated: 2026-04-28
+Last updated: 2026-05-09
 
 This document is the operating contract for tenant isolation.
 
@@ -32,7 +32,10 @@ Host-based store resolution supports:
 - `stores.domain`
 - `stores.subdomain`
 
-Current limitation: localhost and raw IP hosts do not produce a subdomain tenant context. Local development can use fallback identifiers in the storefront or explicit tenant context for authenticated vendor requests.
+Current limitations:
+
+- localhost and raw IP hosts do not produce a subdomain tenant context. Local development can use fallback identifiers in the storefront or explicit tenant context for authenticated vendor requests.
+- `stores.domain` remains a legacy fallback while the domains table is adopted. Production custom-domain routing should prefer active, verified rows from `domains.hostname`.
 
 ## Current Tenant Lifecycle
 
@@ -69,6 +72,8 @@ Known tenant-owned areas include:
 - theme settings
 - staff memberships
 - audit logs where relevant
+
+Known exception to review: `App\Models\Store` is tenant-owned but does not currently use `BelongsToTenant`. Existing code relies on explicit `scopeForTenant()` calls, policies, and relationship constraints. Treat this as a deliberate exception only after review; new store queries must be checked for explicit tenant filtering or platform-admin authorization.
 
 ## Queries
 
@@ -172,6 +177,8 @@ Rules:
 The storefront resolves store context by host first and by configured fallback store identifier second.
 
 Backend public storefront endpoints resolve a store by id, subdomain, domain, or slug and then scope public data by that store's `tenant_id`.
+
+Public storefront resources should avoid exposing internal tenant identifiers. If a public payload includes `tenant_id`, keep a documented consumer or remove the field.
 
 Storefront endpoints must hide unavailable stores by returning 404 when:
 

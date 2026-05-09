@@ -1,6 +1,6 @@
 # Testing Strategy
 
-Last updated: 2026-05-08
+Last updated: 2026-05-09
 
 This document defines how the project should be tested as it grows into a commercial SaaS platform.
 
@@ -23,10 +23,11 @@ Frontend:
 
 ## Current Baseline
 
-Latest recorded verification:
+Latest recorded verification: 2026-05-09.
 
-- Backend: `150 passed (610 assertions)`
-- Storefront Docker verification: `./storefront/scripts/verify-docker.sh all` passed on 2026-05-08.
+- Backend: `150 passed (610 assertions)`.
+- Backend smoke checks passed: `composer validate --strict`, `composer audit --no-interaction`, `php vendor/bin/pint --test`, `php artisan route:list`, `php artisan system:health --scope=live --format=json`, `php artisan system:health --scope=ready --format=json`, and `php artisan schedule:list`.
+- Storefront Docker verification: `./storefront/scripts/verify-docker.sh all` passed on 2026-05-09.
 - Storefront install: `pnpm install --frozen-lockfile` passed in Docker with Node `v24.15.0` and pnpm `10.33.2`.
 - Storefront typecheck: passed.
 - Storefront build: passed.
@@ -287,9 +288,9 @@ Later dashboard e2e tests may be added for high-value merchant workflows.
 
 Current distinction:
 
-- Mocked storefront e2e specs exist in `storefront/tests/e2e`.
+- Mocked storefront e2e specs exist in `storefront/tests/e2e` and pass through `./storefront/scripts/verify-docker.sh e2e`.
 - Real integration e2e against a live Laravel backend is not yet established.
-- Playwright browser system dependencies must be part of local setup and CI before e2e can be treated as a required quality gate.
+- Native Playwright browser system dependencies are still a local setup concern. The Docker path and CI job use the official Playwright/browser installation path and are the preferred quality-gate path.
 
 ## Test Data
 

@@ -1,6 +1,6 @@
 # التحليل العميق وخارطة الطريق الاستراتيجية لمنصة dz-saas-commerce
 
-آخر تحديث: 2026-05-08
+آخر تحديث: 2026-05-09
 
 نوع الوثيقة: مرجع استراتيجي أعلى + تحليل معماري + خارطة طريق تنفيذية طويلة المدى لعمل الإنسان وCodex على المشروع.
 
@@ -9,7 +9,7 @@
 مصادر هذه النسخة:
 
 - قراءة بنية المستودع وملفات `backend/`, `storefront/`, `docs/`, `docker-compose.yml`, و`.github/workflows/quality.yml`.
-- نتائج فحص عملي محلية بتاريخ 2026-05-08.
+- نتائج فحص عملي محلية بتاريخ 2026-05-09، مع الاحتفاظ بسياق التحقق السابق بتاريخ 2026-05-08.
 - الوثائق الموجودة فعلياً داخل `docs/`.
 - مبدأ المنتج المعلن: بناء منصة SaaS تجارة إلكترونية ضخمة شبيهة بـ Shopify، لكنها مخصصة للسوق الجزائري، بدون استعجال إطلاق غير ناضج.
 
@@ -351,26 +351,24 @@
 
 ---
 
-## 5. نتائج التحقق العملي بتاريخ 2026-05-08
+## 5. نتائج التحقق العملي بتاريخ 2026-05-09
 
-تم تشغيل الأوامر التالية بنجاح في `backend/`:
+تم تشغيل الأوامر التالية بنجاح محلياً في `backend/`:
 
 | الأمر | النتيجة |
 |---|---|
-| `php artisan test` | `150 passed (610 assertions)` |
 | `composer validate --strict` | passed |
+| `composer audit --no-interaction` | no advisories |
+| `php vendor/bin/pint --test` | passed |
+| `php artisan test` | `150 passed (610 assertions)` |
 | `php artisan system:health --scope=live --format=json` | ok |
-| `php artisan system:health --scope=ready --format=json` | ok |
+| `php artisan system:health --scope=ready --format=json` | ok، ويتضمن اتصال PostgreSQL وMeilisearch في البيئة المحلية |
 | `php artisan route:list` | `135 routes` |
-| `php artisan route:list --path=api/storefront` | `11 routes` |
-| `php artisan migrate:status` | migrations مطبقة، وآخرها `2026_05_07_000000_create_checkout_idempotency_records_table` |
 | `php artisan schedule:list` | `billing:process` و`checkout-idempotency:prune` |
-| `php artisan queue:failed` | لا توجد failed jobs |
-| `php artisan checkout-idempotency:prune --dry-run` | لا توجد سجلات منتهية للحذف في الفحص المحلي |
 
-كما تم التحقق من أن Meilisearch متصل ضمن readiness health check.
+حدود هذا التحقق: لم يتم في هذه الجولة تشغيل `migrate:status` أو `queue:failed` أو `checkout-idempotency:prune --dry-run`، ولم يتم إثبات GitHub required checks أو GHCR image publishing أو staging deployment أو restore drill. أمر `php artisan route:list --compact` غير مدعوم في إصدار Laravel الحالي، لذلك يستخدم الفحص `php artisan route:list` مباشرة.
 
-### حدود التحقق
+### تحقق الواجهة
 
 تم إغلاق أولوية Phase 0 رقم 1 الخاصة بتوحيد بيئة `storefront` عبر Docker. المسار الموثق الآن:
 
@@ -378,7 +376,7 @@
 ./storefront/scripts/verify-docker.sh all
 ```
 
-نتيجة التحقق:
+نتيجة التحقق بتاريخ 2026-05-09:
 
 - Docker image للـ install/typecheck/build: `node:24-bookworm`.
 - Docker image للـ e2e: `mcr.microsoft.com/playwright:v1.59.1-noble`.
@@ -391,7 +389,7 @@
 - لا يتم خلط Windows `node_modules` مع WSL `node_modules`.
 - pnpm store مضبوط داخل الحاوية تحت `/tmp/pnpm-store` حتى لا يولد `.pnpm-store` داخل المشروع.
 
-ملاحظات التنفيذ:
+ملاحظات التنفيذ من تثبيت مسار Docker:
 
 - تم تعديل script `typecheck` إلى `tsc --noEmit --incremental false` حتى لا يفشل بسبب cache قديم داخل `.next/tsconfig.tsbuildinfo`.
 - تم ضبط Playwright ليستخدم `pnpm next dev` بدل `npx pnpm`، مع تثبيت `STOREFRONT_BASE_URL` على `http://127.0.0.1:3100` أثناء e2e.
@@ -458,13 +456,14 @@ backend test suite قوي نسبياً لحالة pre-production: `150 passed (6
 | الخطر | التفسير | المطلوب |
 |---|---|---|
 | Production readiness غير مكتمل | توجد runbooks وأساس، وأضيف skeleton للـ staging في `deploy/staging/`، لكن لا يوجد إثبات staging كامل. | تشغيل staging deployment، TLS/proxy، queues/scheduler، health، monitoring، rollback. |
-| Frontend environment غير موحد | تم إغلاقه كمسار Docker موحد في 2026-05-08: install/typecheck/build/e2e نجحت. | يبقى ربط المسار بالـ CI required gates. |
+| Frontend verification path | تم إغلاقه كمسار Docker موحد وتحقق مجدداً في 2026-05-09: install/typecheck/build/e2e نجحت. | يبقى ربط المسار بالـ CI required gates ومراقبة استقراره. |
 | CI required gates غير مثبتة | workflow تقوى بإضافة audits وPint وE2E required وDocker image build smoke، لكنه ليس مثبتاً بعد كحاجز merge إلزامي داخل GitHub. | تفعيل GitHub required checks ومراقبة أول run حقيقي. |
 | Clean deployment proof غير موجود | Dockerfiles موجودة وCI صار يبني الصور smoke بدون push، وأضيف workflow لنشر الصور إلى GHCR وstaging compose skeleton، لكنهما لم يثبتا بعد بتشغيل فعلي. | تشغيل GHCR publish، ثم جعل staging يستهلك tag/digest مثبتاً وتشغيل smoke فعلي. |
 | Monitoring/alerting/backups/restore | docs موجودة لكن لا يوجد تشغيل فعلي مثبت. | uptime، failed jobs، queue/scheduler، restore drill، alerts. |
 | Security hardening | CSP واسع، لا 2FA، لا session/device management، وdependency audits أضيفت للـ CI لكنها لا تغني عن review workflow. | 2FA، CSP tightening، secrets rotation، vulnerability review workflow. |
 | Store tenant scoping review | `Store` لا يستخدم `BelongsToTenant` ويعيد query غير مفلتر عند tenant null. | مراجعة أمنية، توثيق exception أو تعديل لاحق، اختبارات. |
 | catalog pagination/sitemap 48-limit | sitemap يطلب `per_page=500` لكن backend products endpoint يحد إلى 48. | pagination metadata وsitemap pagination أو endpoint خاص. |
+| cart duplicate item quantity normalization | validation يحد كل line إلى 99، لكن `CreateQuickOrder` يجمع نفس `product_id` بعد التحقق. | رفض product IDs المكررة أو التحقق من الكمية المجمعة قبل إنشاء الطلب. |
 | secrets hygiene | توجد أمثلة dummy محلية، ويجب التأكد من عدم تسريب env حقيقية. | clean clone/package rehearsal، secret inventory، rotation procedure. |
 
 ### P1 - مهمة لبناء SaaS تجارية قابلة للبيع
@@ -526,8 +525,8 @@ backend test suite قوي نسبياً لحالة pre-production: `150 passed (6
 
 - repository hygiene.
 - clean clone rehearsal.
-- `مكتمل 2026-05-08`: بيئة frontend موحدة عبر Docker.
-- `مكتمل 2026-05-08`: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm build`, و`pnpm test:e2e` موثوقة عبر `./storefront/scripts/verify-docker.sh all`.
+- `مكتمل ومتحقق مجدداً 2026-05-09`: بيئة frontend موحدة عبر Docker.
+- `مكتمل ومتحقق مجدداً 2026-05-09`: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm build`, و`pnpm test:e2e` موثوقة عبر `./storefront/scripts/verify-docker.sh all`.
 - `مكتمل جزئياً`: تقوية workflow بإضافة Composer audit، Pint، pnpm audit، E2E required، وDocker image build smoke.
 - CI required gates داخل GitHub branch protection.
 - `مكتمل جزئياً`: staging deployment skeleton في `deploy/staging/`، والمتبقي تشغيله على بيئة staging حقيقية.
@@ -1043,7 +1042,7 @@ backend test suite قوي نسبياً لحالة pre-production: `150 passed (6
 
 ## 16. الأولويات العشر القادمة
 
-1. `مكتمل 2026-05-08`: توحيد بيئة frontend عبر Docker وتشغيل `pnpm install --frozen-lockfile/typecheck/build/test:e2e`.
+1. `مكتمل ومتحقق مجدداً 2026-05-09`: توحيد بيئة frontend عبر Docker وتشغيل `pnpm install --frozen-lockfile/typecheck/build/test:e2e`.
 2. `مكتمل جزئياً`: تقوية CI داخل المستودع بإضافة audits وPint وE2E required وDocker image build smoke؛ المتبقي تفعيل GitHub required checks.
 3. تشغيل `container-images` workflow فعلياً إلى GHCR وربط `deploy/staging/` بصورة immutable tag/digest وتشغيل smoke.
 4. تفعيل monitoring/alerting/error tracking.
@@ -1102,13 +1101,14 @@ backend test suite قوي نسبياً لحالة pre-production: `150 passed (6
 
 ## 18. الفجوات والتناقضات التي تحتاج تحققاً أو معالجة لاحقة
 
-1. تم تصحيح حالة الواجهة: لم تعد تعتمد على `npm run typecheck/build` أو Windows Node. الحالة المثبتة بتاريخ 2026-05-08 هي Docker verification عبر `pnpm`، وقد نجحت install/typecheck/build/e2e.
+1. تم تصحيح حالة الواجهة: لم تعد تعتمد على `npm run typecheck/build` أو Windows Node. الحالة المثبتة والمتحققة مجدداً بتاريخ 2026-05-09 هي Docker verification عبر `pnpm`، وقد نجحت install/typecheck/build/e2e.
 2. `Store` tenant scoping يحتاج مراجعة: لا يستخدم `BelongsToTenant`، و`scopeForTenant(null)` يعيد query غير مفلتر.
 3. `Storefront/StoreResource` يعرض `tenant_id` في public payload. يجب تأكيد هل تحتاجه الواجهة فعلاً، وإلا إزالته لاحقاً.
 4. `storefront/src/app/sitemap.ts` يطلب `per_page=500`، لكن backend products endpoint يحد products إلى 48. هذا يعني أن sitemap لا يثبت تغطية كل المنتجات في المتاجر الكبيرة.
 5. `storefront/src/lib/api.ts` يرجع collection فقط للمنتجات ولا يستفيد من pagination meta/links، ما يحد التوسع.
-6. docs الإنتاج والأمن صريحة في أن monitoring/backup/restore/proxy موجودة كrunbooks لا كدليل تشغيل production.
-7. لم يتم التحقق من image builds أو GitHub required checks في هذه المهمة.
+6. checkout cart payload يسمح بتكرار `product_id` في أكثر من line، ثم يجمعها `CreateQuickOrder`. يجب رفض التكرار أو التحقق من الكمية المجمعة حتى لا يتجاوز العميل السقف المقصود لكل منتج.
+7. docs الإنتاج والأمن صريحة في أن monitoring/backup/restore/proxy موجودة كrunbooks لا كدليل تشغيل production.
+8. لم يتم التحقق من image builds أو GitHub required checks في هذه المهمة.
 
 ---
 

@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: 2026-05-07
+Last updated: 2026-05-09
 
 This document describes the current architecture of `dz-saas-commerce` based on the repository state. It is an execution reference, not a marketing overview.
 
@@ -184,6 +184,11 @@ The storefront must never calculate trusted totals, discounts, shipping fees, in
 
 The checkout endpoint supports both single-product quick order payloads and cart payloads with `items: [{ product_id, quantity }]`. Cart display data is client-side only and must not be trusted by Laravel.
 
+Current public API hardening notes:
+
+- `StoreResource` currently exposes `tenant_id` to the public storefront. Remove it unless a concrete public consumer is documented.
+- Cart checkout validation currently limits each submitted line quantity, then the backend normalizes duplicate product IDs. Aggregate per-product quantity should be validated or duplicate product IDs should be rejected before broad beta.
+
 ## Storefront SEO
 
 The storefront generates dynamic metadata per resolved store. Public crawl routes are:
@@ -192,6 +197,8 @@ The storefront generates dynamic metadata per resolved store. Public crawl route
 - `GET /robots.txt`
 
 Sitemaps include home, product listing, product detail pages, category pages, and enabled legal pages. Robots disallows customer-action pages such as cart, search results, and track-order.
+
+Current scale caveat: storefront product listing and sitemap generation do not yet consume full pagination metadata. The backend products endpoint caps `per_page` at 48, so the current sitemap does not prove complete coverage for stores with more than 48 visible products.
 
 Canonical and OpenGraph metadata are built from the active request host unless `NEXT_PUBLIC_STOREFRONT_BASE_URL` or `STOREFRONT_BASE_URL` is configured. This keeps local development, subdomains, and future custom domains compatible.
 
@@ -246,6 +253,8 @@ The architecture should move toward:
 - Octane readiness
 - CDN-ready public assets
 - measured query optimization instead of speculative changes
+
+The storefront currently favors correctness with `force-dynamic` pages and `cache: "no-store"` API fetches. Production scaling should introduce explicit cache/revalidation rules by route and data type.
 
 ## Security Direction
 

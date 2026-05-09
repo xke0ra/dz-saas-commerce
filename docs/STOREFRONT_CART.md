@@ -1,6 +1,6 @@
 # Storefront Cart And Checkout
 
-Last updated: 2026-04-28
+Last updated: 2026-05-09
 
 This document defines the current storefront cart contract.
 
@@ -57,6 +57,8 @@ The stored item shape is intentionally limited to display data and quantity:
 
 The displayed price is only a storefront hint. The checkout request sends only product IDs and quantities as trusted input candidates.
 
+Known backend hardening item: Laravel currently validates each cart line quantity, then normalizes duplicate `product_id` rows into one product quantity during order creation. Before broad beta, duplicate product IDs should either be rejected in validation or the aggregate normalized quantity should be validated against the same per-product ceiling.
+
 ## Checkout Payload
 
 Single-product quick order:
@@ -110,6 +112,8 @@ Cart order:
 Current storefront e2e coverage includes:
 
 - storefront home and product listing
+- storefront SEO/crawl route smoke checks
+- mobile navigation
 - product quick COD order
 - cart COD order with `items` payload
 - order tracking
