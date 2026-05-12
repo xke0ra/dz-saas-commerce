@@ -37,7 +37,6 @@ Implemented in this foundation pass:
 
 Still required:
 
-- Prove the container image publish workflow against GHCR
 - Make staging consume pinned image tags or digests from the registry
 - Execute the staging compose skeleton against real staging services
 - image vulnerability scanning
@@ -58,7 +57,10 @@ Latest local smoke verification: 2026-05-12.
 - Dockerfile checks and local image build smoke passed on 2026-05-12 for backend and storefront through `docker buildx build --check` and `docker buildx build --load`.
 - GitHub Actions Quality Gates passed on PR #1 / run `25743248405`: `Repository Hygiene`, `Backend`, `Storefront`, `Dockerfile Checks`, and `Storefront E2E`.
 - Main branch protection now requires those five checks with strict status checks enabled and admin enforcement enabled.
-- This verification does not prove GHCR publishing, image vulnerability scanning, staging deployment, TLS/custom-domain routing, or restore drills.
+- GitHub Actions Quality Gates also passed after merge on `main` / run `25744282999`.
+- Container image publishing to GHCR passed on `main` / run `25744615858` for both backend and storefront, using the `staging` channel and `staging-20260512-b8ef243` tag.
+- Staging compose config validation passed locally with the published GHCR tags.
+- This verification does not prove a real staging deployment against live PostgreSQL/Redis/Meilisearch/S3/SMTP services, image vulnerability scanning, TLS/custom-domain routing, or restore drills.
 
 ## Image Build Commands
 
@@ -88,6 +90,12 @@ Supported publishing paths:
 - manual `workflow_dispatch` to the `staging` channel
 - manual `workflow_dispatch` to the `production` channel, guarded so it must be dispatched from a Git tag
 - automatic publish on tags matching `v*.*.*`
+
+Latest proven staging publish on 2026-05-12:
+
+- `ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-b8ef243`
+- `ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-b8ef243`
+- also tagged by workflow as `sha-b8ef2437f12b` and `staging`
 
 Each image receives:
 
@@ -165,7 +173,7 @@ It currently checks:
 
 Limitations:
 
-- The Quality Gates workflow is proven and required, but image publish automation still needs a real GHCR run and downstream staging consumption proof.
+- The Quality Gates workflow is proven and required, and GHCR image publishing is proven for the staging channel. Downstream staging consumption still needs a real environment smoke.
 - It does not yet run container image vulnerability scanning.
 - The latest GitHub Actions run emitted Node.js 20 action runtime deprecation annotations for `actions/checkout@v4`, `actions/cache@v4`, and `actions/setup-node@v4`; this is not a current failure, but it should be watched before GitHub's Node 24 runner enforcement dates.
 
