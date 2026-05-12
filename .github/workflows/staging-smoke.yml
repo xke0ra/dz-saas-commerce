@@ -1,0 +1,278 @@
+name: Staging Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      backend_image:
+        description: Immutable backend image tag or digest to smoke.
+        required: true
+        default: ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-b8ef243
+        type: string
+      storefront_image:
+        description: Immutable storefront image tag or digest to smoke.
+        required: true
+        default: ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-b8ef243
+        type: string
+      mode:
+        description: Smoke runner action.
+        required: true
+        default: validate
+        type: choice
+        options:
+          - validate
+          - pull
+          - up
+          - verify
+          - all
+          - down
+      runner:
+        description: Runner label with network access to staging backing services.
+        required: true
+        default: ubuntu-latest
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: staging-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: Staging Smoke
+    runs-on: ${{ inputs.runner }}
+    environment: staging
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Require Staging Contract
+        shell: bash
+        env:
+          STAGING_APP_KEY: ${{ secrets.STAGING_APP_KEY }}
+          STAGING_DB_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
+          STAGING_MEILISEARCH_KEY: ${{ secrets.STAGING_MEILISEARCH_KEY }}
+          STAGING_REDIS_PASSWORD: ${{ secrets.STAGING_REDIS_PASSWORD }}
+          STAGING_MAIL_PASSWORD: ${{ secrets.STAGING_MAIL_PASSWORD }}
+          STAGING_AWS_ACCESS_KEY_ID: ${{ secrets.STAGING_AWS_ACCESS_KEY_ID }}
+          STAGING_AWS_SECRET_ACCESS_KEY: ${{ secrets.STAGING_AWS_SECRET_ACCESS_KEY }}
+          STAGING_APP_URL: ${{ vars.STAGING_APP_URL }}
+          STAGING_DB_HOST: ${{ vars.STAGING_DB_HOST }}
+          STAGING_DB_DATABASE: ${{ vars.STAGING_DB_DATABASE }}
+          STAGING_DB_USERNAME: ${{ vars.STAGING_DB_USERNAME }}
+          STAGING_MEILISEARCH_HOST: ${{ vars.STAGING_MEILISEARCH_HOST }}
+          STAGING_REDIS_HOST: ${{ vars.STAGING_REDIS_HOST }}
+          STAGING_MAIL_HOST: ${{ vars.STAGING_MAIL_HOST }}
+          STAGING_MAIL_USERNAME: ${{ vars.STAGING_MAIL_USERNAME }}
+          STAGING_MAIL_FROM_ADDRESS: ${{ vars.STAGING_MAIL_FROM_ADDRESS }}
+          STAGING_AWS_DEFAULT_REGION: ${{ vars.STAGING_AWS_DEFAULT_REGION }}
+          STAGING_AWS_BUCKET: ${{ vars.STAGING_AWS_BUCKET }}
+          STAGING_NEXT_PUBLIC_API_BASE_URL: ${{ vars.STAGING_NEXT_PUBLIC_API_BASE_URL }}
+          STAGING_NEXT_PUBLIC_ASSET_BASE_URL: ${{ vars.STAGING_NEXT_PUBLIC_ASSET_BASE_URL }}
+          STAGING_NEXT_PUBLIC_STOREFRONT_BASE_URL: ${{ vars.STAGING_NEXT_PUBLIC_STOREFRONT_BASE_URL }}
+          STAGING_STOREFRONT_BASE_URL: ${{ vars.STAGING_STOREFRONT_BASE_URL }}
+          STAGING_BACKEND_HOST: ${{ vars.STAGING_BACKEND_HOST }}
+          STAGING_STOREFRONT_HOST: ${{ vars.STAGING_STOREFRONT_HOST }}
+        run: |
+          missing=0
+          require_value() {
+            local name="$1"
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Missing staging environment value: ${name}"
+              missing=1
+            fi
+          }
+
+          required_values=(
+            STAGING_APP_KEY
+            STAGING_DB_PASSWORD
+            STAGING_MEILISEARCH_KEY
+            STAGING_REDIS_PASSWORD
+            STAGING_MAIL_PASSWORD
+            STAGING_AWS_ACCESS_KEY_ID
+            STAGING_AWS_SECRET_ACCESS_KEY
+            STAGING_APP_URL
+            STAGING_DB_HOST
+            STAGING_DB_DATABASE
+            STAGING_DB_USERNAME
+            STAGING_MEILISEARCH_HOST
+            STAGING_REDIS_HOST
+            STAGING_MAIL_HOST
+            STAGING_MAIL_USERNAME
+            STAGING_MAIL_FROM_ADDRESS
+            STAGING_AWS_DEFAULT_REGION
+            STAGING_AWS_BUCKET
+            STAGING_NEXT_PUBLIC_API_BASE_URL
+            STAGING_NEXT_PUBLIC_ASSET_BASE_URL
+            STAGING_NEXT_PUBLIC_STOREFRONT_BASE_URL
+            STAGING_STOREFRONT_BASE_URL
+            STAGING_BACKEND_HOST
+            STAGING_STOREFRONT_HOST
+          )
+
+          for name in "${required_values[@]}"; do
+            require_value "${name}"
+          done
+
+          exit "${missing}"
+
+      - name: Render Staging Env Files
+        shell: bash
+        env:
+          BACKEND_IMAGE: ${{ inputs.backend_image }}
+          STOREFRONT_IMAGE: ${{ inputs.storefront_image }}
+          STAGING_EDGE_PORT: ${{ vars.STAGING_EDGE_PORT }}
+          STAGING_EDGE_URL: ${{ vars.STAGING_EDGE_URL }}
+          STAGING_BACKEND_HOST: ${{ vars.STAGING_BACKEND_HOST }}
+          STAGING_STOREFRONT_HOST: ${{ vars.STAGING_STOREFRONT_HOST }}
+          STAGING_APP_KEY: ${{ secrets.STAGING_APP_KEY }}
+          STAGING_DB_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
+          STAGING_MEILISEARCH_KEY: ${{ secrets.STAGING_MEILISEARCH_KEY }}
+          STAGING_REDIS_PASSWORD: ${{ secrets.STAGING_REDIS_PASSWORD }}
+          STAGING_MAIL_PASSWORD: ${{ secrets.STAGING_MAIL_PASSWORD }}
+          STAGING_AWS_ACCESS_KEY_ID: ${{ secrets.STAGING_AWS_ACCESS_KEY_ID }}
+          STAGING_AWS_SECRET_ACCESS_KEY: ${{ secrets.STAGING_AWS_SECRET_ACCESS_KEY }}
+          STAGING_APP_URL: ${{ vars.STAGING_APP_URL }}
+          STAGING_TRUSTED_PROXIES: ${{ vars.STAGING_TRUSTED_PROXIES }}
+          STAGING_DB_HOST: ${{ vars.STAGING_DB_HOST }}
+          STAGING_DB_PORT: ${{ vars.STAGING_DB_PORT }}
+          STAGING_DB_DATABASE: ${{ vars.STAGING_DB_DATABASE }}
+          STAGING_DB_USERNAME: ${{ vars.STAGING_DB_USERNAME }}
+          STAGING_DB_SSLMODE: ${{ vars.STAGING_DB_SSLMODE }}
+          STAGING_MEILISEARCH_HOST: ${{ vars.STAGING_MEILISEARCH_HOST }}
+          STAGING_REDIS_HOST: ${{ vars.STAGING_REDIS_HOST }}
+          STAGING_REDIS_PORT: ${{ vars.STAGING_REDIS_PORT }}
+          STAGING_MAIL_SCHEME: ${{ vars.STAGING_MAIL_SCHEME }}
+          STAGING_MAIL_HOST: ${{ vars.STAGING_MAIL_HOST }}
+          STAGING_MAIL_PORT: ${{ vars.STAGING_MAIL_PORT }}
+          STAGING_MAIL_USERNAME: ${{ vars.STAGING_MAIL_USERNAME }}
+          STAGING_MAIL_FROM_ADDRESS: ${{ vars.STAGING_MAIL_FROM_ADDRESS }}
+          STAGING_AWS_DEFAULT_REGION: ${{ vars.STAGING_AWS_DEFAULT_REGION }}
+          STAGING_AWS_BUCKET: ${{ vars.STAGING_AWS_BUCKET }}
+          STAGING_AWS_URL: ${{ vars.STAGING_AWS_URL }}
+          STAGING_AWS_ENDPOINT: ${{ vars.STAGING_AWS_ENDPOINT }}
+          STAGING_AWS_USE_PATH_STYLE_ENDPOINT: ${{ vars.STAGING_AWS_USE_PATH_STYLE_ENDPOINT }}
+          STAGING_SCOUT_PREFIX: ${{ vars.STAGING_SCOUT_PREFIX }}
+          STAGING_NEXT_PUBLIC_API_BASE_URL: ${{ vars.STAGING_NEXT_PUBLIC_API_BASE_URL }}
+          STAGING_NEXT_PUBLIC_ASSET_BASE_URL: ${{ vars.STAGING_NEXT_PUBLIC_ASSET_BASE_URL }}
+          STAGING_NEXT_PUBLIC_STOREFRONT_BASE_URL: ${{ vars.STAGING_NEXT_PUBLIC_STOREFRONT_BASE_URL }}
+          STAGING_STOREFRONT_BASE_URL: ${{ vars.STAGING_STOREFRONT_BASE_URL }}
+          STAGING_DEFAULT_STORE_IDENTIFIER: ${{ vars.STAGING_DEFAULT_STORE_IDENTIFIER }}
+        run: |
+          : "${STAGING_EDGE_PORT:=8080}"
+          : "${STAGING_TRUSTED_PROXIES:=172.16.0.0/12}"
+          : "${STAGING_DB_PORT:=5432}"
+          : "${STAGING_DB_SSLMODE:=require}"
+          : "${STAGING_REDIS_PORT:=6379}"
+          : "${STAGING_MAIL_SCHEME:=tls}"
+          : "${STAGING_MAIL_PORT:=587}"
+          : "${STAGING_AWS_USE_PATH_STYLE_ENDPOINT:=false}"
+          : "${STAGING_SCOUT_PREFIX:=staging_}"
+          : "${STAGING_DEFAULT_STORE_IDENTIFIER:=}"
+
+          cat > deploy/staging/images.env <<EOF
+          BACKEND_IMAGE=${BACKEND_IMAGE}
+          STOREFRONT_IMAGE=${STOREFRONT_IMAGE}
+          BACKEND_ENV_FILE=./backend.env
+          STOREFRONT_ENV_FILE=./storefront.env
+          EDGE_PORT=${STAGING_EDGE_PORT}
+          STAGING_EDGE_URL=${STAGING_EDGE_URL}
+          STAGING_BACKEND_HOST=${STAGING_BACKEND_HOST}
+          STAGING_STOREFRONT_HOST=${STAGING_STOREFRONT_HOST}
+          EOF
+
+          cat > deploy/staging/backend.env <<EOF
+          APP_NAME="DZ SaaS Commerce"
+          APP_ENV=staging
+          APP_KEY=${STAGING_APP_KEY}
+          APP_DEBUG=false
+          APP_URL=${STAGING_APP_URL}
+          TRUSTED_PROXIES=${STAGING_TRUSTED_PROXIES}
+
+          APP_LOCALE=ar
+          APP_FALLBACK_LOCALE=fr
+          APP_FAKER_LOCALE=en_US
+
+          APP_MAINTENANCE_DRIVER=cache
+          APP_MAINTENANCE_STORE=redis
+          BCRYPT_ROUNDS=12
+
+          LOG_CHANNEL=stack
+          LOG_STACK=stderr
+          LOG_LEVEL=info
+
+          DB_CONNECTION=pgsql
+          DB_HOST=${STAGING_DB_HOST}
+          DB_PORT=${STAGING_DB_PORT}
+          DB_DATABASE=${STAGING_DB_DATABASE}
+          DB_USERNAME=${STAGING_DB_USERNAME}
+          DB_PASSWORD=${STAGING_DB_PASSWORD}
+          DB_SSLMODE=${STAGING_DB_SSLMODE}
+
+          BROADCAST_CONNECTION=log
+          CACHE_STORE=redis
+          QUEUE_CONNECTION=redis
+          SESSION_DRIVER=redis
+          SESSION_LIFETIME=120
+          SESSION_ENCRYPT=true
+          SESSION_SECURE_COOKIE=true
+          SESSION_SAME_SITE=lax
+
+          FILESYSTEM_DISK=s3
+          PRODUCT_IMAGES_DISK=s3
+
+          SCOUT_DRIVER=meilisearch
+          SCOUT_QUEUE=true
+          SCOUT_PREFIX=${STAGING_SCOUT_PREFIX}
+          MEILISEARCH_HOST=${STAGING_MEILISEARCH_HOST}
+          MEILISEARCH_KEY=${STAGING_MEILISEARCH_KEY}
+
+          REDIS_CLIENT=phpredis
+          REDIS_HOST=${STAGING_REDIS_HOST}
+          REDIS_PASSWORD=${STAGING_REDIS_PASSWORD}
+          REDIS_PORT=${STAGING_REDIS_PORT}
+
+          MAIL_MAILER=smtp
+          MAIL_SCHEME=${STAGING_MAIL_SCHEME}
+          MAIL_HOST=${STAGING_MAIL_HOST}
+          MAIL_PORT=${STAGING_MAIL_PORT}
+          MAIL_USERNAME=${STAGING_MAIL_USERNAME}
+          MAIL_PASSWORD=${STAGING_MAIL_PASSWORD}
+          MAIL_FROM_ADDRESS=${STAGING_MAIL_FROM_ADDRESS}
+          MAIL_FROM_NAME="DZ SaaS Commerce"
+
+          AWS_ACCESS_KEY_ID=${STAGING_AWS_ACCESS_KEY_ID}
+          AWS_SECRET_ACCESS_KEY=${STAGING_AWS_SECRET_ACCESS_KEY}
+          AWS_DEFAULT_REGION=${STAGING_AWS_DEFAULT_REGION}
+          AWS_BUCKET=${STAGING_AWS_BUCKET}
+          AWS_URL=${STAGING_AWS_URL}
+          AWS_ENDPOINT=${STAGING_AWS_ENDPOINT}
+          AWS_USE_PATH_STYLE_ENDPOINT=${STAGING_AWS_USE_PATH_STYLE_ENDPOINT}
+
+          VITE_APP_NAME="DZ SaaS Commerce"
+          EOF
+
+          cat > deploy/staging/storefront.env <<EOF
+          NODE_ENV=production
+          NEXT_PUBLIC_API_BASE_URL=${STAGING_NEXT_PUBLIC_API_BASE_URL}
+          NEXT_PUBLIC_ASSET_BASE_URL=${STAGING_NEXT_PUBLIC_ASSET_BASE_URL}
+          NEXT_PUBLIC_STOREFRONT_BASE_URL=${STAGING_NEXT_PUBLIC_STOREFRONT_BASE_URL}
+          STOREFRONT_BASE_URL=${STAGING_STOREFRONT_BASE_URL}
+
+          NEXT_PUBLIC_DEFAULT_STORE=${STAGING_DEFAULT_STORE_IDENTIFIER}
+          DEFAULT_STORE_IDENTIFIER=${STAGING_DEFAULT_STORE_IDENTIFIER}
+          EOF
+
+      - name: Run Staging Smoke
+        shell: bash
+        run: deploy/staging/staging-smoke.sh "${{ inputs.mode }}"

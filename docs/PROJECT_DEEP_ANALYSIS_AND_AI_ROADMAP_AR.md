@@ -521,7 +521,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 | Storefront maturity | 6.5/10 | جيد كبداية customer-facing، وaudit/build/typecheck/e2e تمر محلياً، وتم إصلاح sitemap pagination. يحتاج pagination UI، caching، UX polish، وa11y، وإثبات نفس العقد داخل CI. |
 | Production readiness | 4/10 | runbooks وhealth موجودة، لكن التشغيل الفعلي غير مثبت. |
 | Commercial SaaS readiness | 5/10 | foundation قوي، لكن onboarding/revenue dashboards/billing ops/support ops ناقصة. |
-| DevOps maturity | 5/10 | Docker/CI baseline موجود، GitHub required gates مثبتة، ومسار الواجهة الأخضر ثبت محلياً وداخل CI. ما زالت deploy/monitoring/restore proof ناقصة. |
+| DevOps maturity | 5.5/10 | Docker/CI baseline موجود، GitHub required gates مثبتة، ومسار الواجهة الأخضر ثبت محلياً وداخل CI، وأضيف workflow يدوي للـ staging smoke. ما زالت أسرار staging وmonitoring/restore proof ناقصة. |
 | Documentation maturity | 7/10 | docs كثيرة وصريحة. تحتاج إبقاءها متزامنة مع الفحص الحالي. |
 | Testing maturity | 7.5/10 | backend جيد، وfrontend audit/build/typecheck/e2e يمر عند التشغيل المتسلسل، كما مر Docker storefront verification وGitHub Actions Quality Gates. المتبقي توسيع الاختبارات عند إضافة flows تجارية أكبر. |
 
@@ -545,7 +545,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 - `مكتمل جزئياً`: تقوية workflow بإضافة Composer audit، Pint، pnpm audit، E2E required، وDocker image build smoke.
 - `مكتمل 2026-05-12`: إثبات `.github/workflows/quality.yml` داخل GitHub Actions على PR #1 / run `25743248405`.
 - `مكتمل 2026-05-12`: تفعيل required checks على `main`: `Repository Hygiene`, `Backend`, `Storefront`, `Dockerfile Checks`, `Storefront E2E`.
-- `مكتمل جزئياً`: staging deployment skeleton في `deploy/staging/`، ونجح `docker compose config` مع tags المنشورة، وأضيف smoke runner fail-closed؛ المتبقي تشغيله على بيئة staging حقيقية.
+- `مكتمل جزئياً`: staging deployment skeleton في `deploy/staging/`، ونجح `docker compose config` مع tags المنشورة، وأضيف smoke runner fail-closed وworkflow يدوي `.github/workflows/staging-smoke.yml`؛ المتبقي تعبئة GitHub environment `staging` وتشغيله على بيئة staging حقيقية.
 - `مكتمل 2026-05-12`: Docker image push/promotion عبر GHCR workflow للـ staging channel في run `25744615858`.
 - monitoring.
 - backup schedule.
@@ -1062,7 +1062,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 2. `مكتمل 2026-05-12`: إعادة تشغيل التحقق الكامل للواجهة: `pnpm build`, `pnpm typecheck`, `pnpm test:e2e`، ثم `./storefront/scripts/verify-docker.sh all`.
 3. `مكتمل 2026-05-12`: تمرير `.github/workflows/quality.yml` داخل GitHub Actions وتفعيلها في branch protection كـ required checks.
 4. `مكتمل 2026-05-12`: تشغيل `container-images` workflow فعلياً إلى GHCR للـ staging channel.
-5. `الخطوة التالية الدقيقة`: توفير قيم `deploy/staging/backend.env` و`deploy/staging/storefront.env` الحقيقية، ثم تشغيل `deploy/staging/staging-smoke.sh all` باستخدام `staging-20260512-b8ef243` أو `sha-b8ef2437f12b`.
+5. `قيد التنفيذ`: أضيف مسار GitHub Actions يدوي لتوليد ملفات staging المهملة من GitHub environment وتشغيل `deploy/staging/staging-smoke.sh`. المتبقي الآن تعبئة أسرار/متغيرات `staging` حسب `deploy/staging/GITHUB_ENVIRONMENT.md` ثم تشغيل workflow **Staging Smoke** أولاً بـ `mode=validate` ثم `mode=all`.
 6. تفعيل monitoring/alerting/error tracking.
 7. `مكتمل 2026-05-09`: مراجعة tenant scoping الأساسية لـ `Store`، مع إبقائه exception موثقاً وfail-closed عند `forTenant(null)`.
 8. `مكتمل 2026-05-09`: إصلاح catalog pagination وsitemap حتى لا تختفي المنتجات بعد أول 48 منتج.
@@ -1125,7 +1125,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 6. تم إصلاح sitemap 48-limit: `storefront/src/lib/api.ts` صار يقرأ pagination meta، و`storefront/src/app/sitemap.ts` يجمع كل صفحات المنتجات المتاحة.
 7. تم إصلاح تكرار `product_id` في cart checkout عبر validation وداخل `CreateQuickOrder`.
 8. docs الإنتاج والأمن صريحة في أن monitoring/backup/restore/proxy موجودة كrunbooks لا كدليل تشغيل production.
-9. تم التحقق محلياً من Dockerfile checks وimage build smoke للـ backend/storefront بتاريخ 2026-05-12، وتم إثبات GitHub required checks وGHCR publish. يوجد الآن smoke runner جاهز، لكن لم يتم بعد إثبات staging smoke حقيقي لغياب قيم الخدمات والأسرار.
+9. تم التحقق محلياً من Dockerfile checks وimage build smoke للـ backend/storefront بتاريخ 2026-05-12، وتم إثبات GitHub required checks وGHCR publish. يوجد الآن smoke runner وworkflow يدوي جاهزان، لكن لم يتم بعد إثبات staging smoke حقيقي لأن GitHub environment `staging` موجودة بلا secrets أو variables.
 
 ---
 
@@ -1145,7 +1145,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 ## 20. خلاصة العمل القادم
 
-المشروع جيد بما يكفي ليستحق البناء الطويل، وليس جيداً بما يكفي للإطلاق المتسرع. نحن ما زلنا داخل Phase 0، لكن بوابة أمان الواجهة أُغلقت محلياً وداخل GitHub Actions، وتم تفعيل required gates على `main`، وتم إثبات GHCR staging publish، وأصبح staging smoke قابلاً للتشغيل بسكربت fail-closed. الخطوة التالية الدقيقة الآن هي توفير أسرار وخدمات staging ثم تشغيل smoke حقيقي، وبعدها monitoring/backup/restore/security hardening.
+المشروع جيد بما يكفي ليستحق البناء الطويل، وليس جيداً بما يكفي للإطلاق المتسرع. نحن ما زلنا داخل Phase 0، لكن بوابة أمان الواجهة أُغلقت محلياً وداخل GitHub Actions، وتم تفعيل required gates على `main`، وتم إثبات GHCR staging publish، وأصبح staging smoke قابلاً للتشغيل بسكربت fail-closed وworkflow يدوي. الخطوة التالية الدقيقة الآن هي تعبئة GitHub environment `staging` بالخدمات والأسرار ثم تشغيل smoke حقيقي، وبعدها monitoring/backup/restore/security hardening.
 
 بعد ذلك يمكن الانتقال بثقة إلى SaaS usability، ثم commerce expansion، ثم shipping/COD الجزائري، ثم billing/revenue ops، ثم growth/integrations/scale.
 

@@ -69,6 +69,7 @@ The baseline workflow is:
 
 - `.github/workflows/quality.yml`
 - `.github/workflows/container-images.yml`
+- `.github/workflows/staging-smoke.yml`
 
 Current status:
 
@@ -77,6 +78,7 @@ Current status:
 - Backend CI includes Composer audit and Pint.
 - Storefront CI includes pnpm audit at `moderate` or higher.
 - Container image publishing builds and pushes backend/storefront images to GHCR on manual dispatch or version tags.
+- Staging smoke is a manual workflow that renders ignored staging env files from the GitHub `staging` environment and delegates to `deploy/staging/staging-smoke.sh`.
 - The workflow was proven green in GitHub Actions on PR #1 / run `25743248405`.
 - As of 2026-05-12, main branch protection requires `Repository Hygiene`, `Backend`, `Storefront`, `Dockerfile Checks`, and `Storefront E2E` with strict status checks and admin enforcement enabled.
 - Treat this as the active CI contract for pull requests into `main`.
@@ -90,6 +92,8 @@ Required CI gates before broad AI/Codex development:
 - `Storefront E2E`
 
 Do not mark CI as complete after future workflow edits until a real GitHub Actions run proves these jobs again on the repository that receives pull requests.
+
+Do not mark staging as proven until **Staging Smoke** has run with `mode=all` against real staging backing services and the result is recorded in `docs/PRODUCTION_READINESS.md`.
 
 Run repository hygiene locally when env, deployment, CI, ignore rules, or release packaging changes:
 
