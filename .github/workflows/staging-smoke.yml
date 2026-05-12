@@ -6,11 +6,12 @@ on:
       backend_image:
         description: Immutable backend image tag or digest to smoke. Use a tag built after S3 filesystem support was added.
         required: true
+        default: ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-096bc05
         type: string
       storefront_image:
         description: Immutable storefront image tag or digest to smoke.
         required: true
-        default: ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-a1e913d
+        default: ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-096bc05
         type: string
       target:
         description: Smoke target. Use ephemeral for a self-contained proof on the runner.

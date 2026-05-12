@@ -12,8 +12,8 @@ else
 fi
 ACTION="${1:-all}"
 
-BACKEND_IMAGE="${BACKEND_IMAGE:-}"
-STOREFRONT_IMAGE="${STOREFRONT_IMAGE:-ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-a1e913d}"
+BACKEND_IMAGE="${BACKEND_IMAGE:-ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-096bc05}"
+STOREFRONT_IMAGE="${STOREFRONT_IMAGE:-ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-096bc05}"
 EDGE_PORT="${EDGE_PORT:-18080}"
 COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-dz-saas-staging-ephemeral}"
 COMPOSE_FILES="${STAGING_DIR}/docker-compose.staging.example.yml:${STAGING_DIR}/docker-compose.staging.ephemeral.yml"

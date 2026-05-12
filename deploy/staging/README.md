@@ -35,13 +35,18 @@ STOREFRONT_ENV_FILE=./storefront.env
 Latest scanned staging image publish, 2026-05-12:
 
 ```dotenv
-BACKEND_IMAGE=ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-a1e913d
-STOREFRONT_IMAGE=ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-a1e913d
+BACKEND_IMAGE=ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-096bc05
+STOREFRONT_IMAGE=ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-096bc05
 ```
 
-The same workflow run also published `sha-a1e913db7d4c` and `staging` tags after Trivy image scanning passed. A real staging smoke should use the scanned `staging-20260512-a1e913d` or `sha-a1e913db7d4c` tags. It still requires staging-only `backend.env` and `storefront.env` values for PostgreSQL, Redis, Meilisearch, object storage, SMTP, domains, and app secrets.
+Container Images run `25756290200` also published `sha-096bc05a0773` and `staging` tags after Trivy image scanning passed.
 
-Important: the backend image above predates the S3 filesystem adapter fix discovered by the ephemeral smoke. It remains proof that GHCR publishing and scanning worked, but do not use it as the final S3-backed staging smoke image. Publish a new scanned backend image from the fixed commit, then record that tag/digest here.
+Digests:
+
+- backend: `sha256:ab68061bdbe14d6c545babb2981aa761a778369c92b7393be993fca326ba05cc`
+- storefront: `sha256:d71c659acb567fd80623c2487494c01b4440683a25e38a64ab220b232ec8a358`
+
+GitHub **Staging Smoke** passed with `target=ephemeral` and `mode=all` on run `25756545567` using these tags. A real staging smoke still requires staging-only `backend.env` and `storefront.env` values for PostgreSQL, Redis, Meilisearch, object storage, SMTP, domains, and app secrets.
 
 ## GitHub Smoke
 
@@ -57,8 +62,8 @@ Use `mode=validate` first to prove the selected contract and Compose rendering. 
 Use this path when real staging secrets or managed services are not ready yet:
 
 ```bash
-BACKEND_IMAGE=ghcr.io/xke0ra/dz-saas-commerce/backend:staging-YYYYMMDD-<fixed-sha> \
-STOREFRONT_IMAGE=ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-a1e913d \
+BACKEND_IMAGE=ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-096bc05 \
+STOREFRONT_IMAGE=ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-096bc05 \
 deploy/staging/staging-ephemeral-smoke.sh all
 ```
 
@@ -70,7 +75,7 @@ docker buildx build --load -f backend/Dockerfile \
 
 SKIP_PULL=1 \
 BACKEND_IMAGE=ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-localtest \
-STOREFRONT_IMAGE=ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-a1e913d \
+STOREFRONT_IMAGE=ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-096bc05 \
 deploy/staging/staging-ephemeral-smoke.sh all
 ```
 

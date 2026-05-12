@@ -208,6 +208,8 @@ Before launch, document:
 - The GHCR publish workflow uses the same scan policy before pushing image tags.
 - A local ephemeral staging smoke with disposable PostgreSQL, Redis, Meilisearch, MinIO, and Mailpit exposed a missing production S3 dependency; adding `league/flysystem-aws-s3-v3` made Laravel storage readiness pass against S3/MinIO.
 - The locally rebuilt backend image `ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-localtest` passed Trivy `0.70.0` with 0 OS and 0 Composer-vendor vulnerabilities.
+- GHCR publish run `25756290200` pushed S3-ready `staging-20260512-096bc05` images after the same scan policy passed.
+- GitHub Staging Smoke run `25756545567` passed with `target=ephemeral` and `mode=all`, proving the published S3-ready backend image can pass storage readiness against disposable MinIO.
 
 ## Audit Logging
 
