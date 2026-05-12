@@ -18,6 +18,7 @@ Implemented in this foundation pass:
 - root `.dockerignore`
 - `.github/workflows/quality.yml` CI baseline
 - `.github/workflows/container-images.yml` GHCR image publish baseline
+- `.github/workflows/staging-smoke.yml` manual staging smoke baseline
 - repository secret hygiene check through `scripts/security/secret-hygiene.sh`
 - backend liveness/readiness endpoints
 - `php artisan system:health`
@@ -37,8 +38,8 @@ Implemented in this foundation pass:
 
 Still required:
 
-- Make staging consume pinned image tags or digests from the registry
-- Execute the staging compose skeleton against real staging services
+- Populate the GitHub `staging` environment secret/variable contract
+- Execute the staging compose skeleton against real staging services through the manual staging smoke workflow or a staging host
 - image vulnerability scanning
 - reverse proxy deployment in staging and TLS/custom-domain validation
 - deploy automated backup schedules and execute restore drill
@@ -60,6 +61,7 @@ Latest local smoke verification: 2026-05-12.
 - GitHub Actions Quality Gates also passed after merge on `main` / run `25744282999`.
 - Container image publishing to GHCR passed on `main` / run `25744615858` for both backend and storefront, using the `staging` channel and `staging-20260512-b8ef243` tag.
 - Staging compose config validation passed locally with the published GHCR tags.
+- The GitHub `staging` environment currently exists, but it has no configured secrets or variables as of 2026-05-12.
 - This verification does not prove a real staging deployment against live PostgreSQL/Redis/Meilisearch/S3/SMTP services, image vulnerability scanning, TLS/custom-domain routing, or restore drills.
 
 ## Image Build Commands
@@ -131,6 +133,7 @@ It includes:
 - `backend.env.example`
 - `storefront.env.example`
 - `staging-smoke.sh`
+- `GITHUB_ENVIRONMENT.md`
 - `README.md`
 
 The compose file expects immutable backend and storefront images, then starts:
@@ -150,6 +153,8 @@ The smoke runner validates that image references are immutable enough for a reco
 - failed jobs listing
 - storefront edge HTTP response
 - backend live and ready HTTP health through the edge proxy
+
+The manual workflow `.github/workflows/staging-smoke.yml` renders the ignored `deploy/staging/*.env` files from the GitHub `staging` environment, logs into GHCR, and delegates to the same smoke runner. Start with `mode=validate`, then run `mode=all` only from a runner that can reach the staging PostgreSQL, Redis, Meilisearch, object storage, SMTP, and edge hostnames.
 
 ## Environment Separation
 

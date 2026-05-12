@@ -171,6 +171,7 @@ Rules:
 - Meilisearch, S3, mail, payment, and shipping credentials must be rotatable
 - `.env` and `.env.local` must not be committed or included in clean delivery bundles
 - `.env.example` and `.env.testing.example` must contain only placeholders or local-only dummy values
+- staging secrets and variables must be configured through the GitHub `staging` environment contract in `deploy/staging/GITHUB_ENVIRONMENT.md`, not committed env files
 
 Before launch, document:
 
@@ -200,6 +201,7 @@ Before launch, document:
 - `composer audit --no-interaction` reported no backend advisories.
 - `pnpm audit --audit-level moderate` reported no known storefront vulnerabilities after updating Next to `15.5.18`.
 - The same audit was proven inside GitHub Actions on PR #1 / run `25743248405`, and main branch protection now requires the Quality Gates checks.
+- The GitHub `staging` environment exists but currently has no secrets or variables configured; staging smoke is blocked until that contract is populated.
 
 ## Audit Logging
 

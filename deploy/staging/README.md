@@ -10,6 +10,8 @@ It is not a production installer. It is a repeatable staging proof target for:
 - storefront Next.js server
 - Nginx edge proxy
 
+GitHub Actions can run the same smoke contract through `.github/workflows/staging-smoke.yml` after the `staging` environment is populated. See `deploy/staging/GITHUB_ENVIRONMENT.md` for the required secret and variable names.
+
 ## Prepare
 
 Copy the examples and replace every placeholder with staging-only values:
@@ -36,6 +38,12 @@ STOREFRONT_IMAGE=ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-b8e
 ```
 
 The same workflow run also published `sha-b8ef2437f12b` and `staging` tags. The compose config was validated locally with the `staging-20260512-b8ef243` tags. A real staging smoke still requires staging-only `backend.env` and `storefront.env` values for PostgreSQL, Redis, Meilisearch, object storage, SMTP, domains, and app secrets.
+
+## GitHub Smoke
+
+The manual **Staging Smoke** workflow renders ignored staging env files from the GitHub `staging` environment, logs into GHCR, and calls `deploy/staging/staging-smoke.sh`.
+
+Use `mode=validate` first to prove the secret/variable contract and Compose rendering. Use `mode=all` only when the selected runner can reach all staging backing services. If the services are private-network only, dispatch the workflow against a self-hosted runner with the required network access.
 
 ## Validate
 
