@@ -30,14 +30,14 @@ BACKEND_ENV_FILE=./backend.env
 STOREFRONT_ENV_FILE=./storefront.env
 ```
 
-Latest proven staging image publish, 2026-05-12:
+Latest scanned staging image publish, 2026-05-12:
 
 ```dotenv
-BACKEND_IMAGE=ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-b8ef243
-STOREFRONT_IMAGE=ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-b8ef243
+BACKEND_IMAGE=ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-a1e913d
+STOREFRONT_IMAGE=ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-a1e913d
 ```
 
-The same workflow run also published `sha-b8ef2437f12b` and `staging` tags. The compose config was validated locally with the `staging-20260512-b8ef243` tags. A real staging smoke still requires staging-only `backend.env` and `storefront.env` values for PostgreSQL, Redis, Meilisearch, object storage, SMTP, domains, and app secrets.
+The same workflow run also published `sha-a1e913db7d4c` and `staging` tags after Trivy image scanning passed. A real staging smoke should use the scanned `staging-20260512-a1e913d` or `sha-a1e913db7d4c` tags. It still requires staging-only `backend.env` and `storefront.env` values for PostgreSQL, Redis, Meilisearch, object storage, SMTP, domains, and app secrets.
 
 ## GitHub Smoke
 

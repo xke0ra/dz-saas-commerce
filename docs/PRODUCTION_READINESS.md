@@ -60,12 +60,12 @@ Latest local smoke verification: 2026-05-12.
 - GitHub Actions Quality Gates passed on PR #1 / run `25743248405`: `Repository Hygiene`, `Backend`, `Storefront`, `Dockerfile Checks`, and `Storefront E2E`.
 - Main branch protection now requires those five checks with strict status checks enabled and admin enforcement enabled.
 - GitHub Actions Quality Gates also passed after merge on `main` / run `25744282999`.
-- Container image publishing to GHCR passed on `main` / run `25744615858` for both backend and storefront, using the `staging` channel and `staging-20260512-b8ef243` tag.
+- Container image publishing to GHCR passed on `main` / run `25751543062` for both backend and storefront, using the `staging` channel and `staging-20260512-a1e913d` tag after Trivy image scans passed.
 - Staging compose config validation passed locally with the published GHCR tags.
 - The GitHub `staging` environment currently exists, but it has no configured secrets or variables as of 2026-05-12.
 - Local Trivy `0.70.0` scan passed for the backend CI image with `--scanners vuln --ignore-unfixed --pkg-types os,library --severity CRITICAL,HIGH`.
 - Local Trivy `0.70.0` scan passed for the storefront CI image after updating the runtime image's bundled npm to `11.14.1`.
-- This verification does not prove a real staging deployment against live PostgreSQL/Redis/Meilisearch/S3/SMTP services, TLS/custom-domain routing, restore drills, or retroactive vulnerability scanning of the already-published GHCR staging tags.
+- This verification does not prove a real staging deployment against live PostgreSQL/Redis/Meilisearch/S3/SMTP services, TLS/custom-domain routing, or restore drills.
 
 ## Image Build Commands
 
@@ -98,9 +98,11 @@ Supported publishing paths:
 
 Latest proven staging publish on 2026-05-12:
 
-- `ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-b8ef243`
-- `ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-b8ef243`
-- also tagged by workflow as `sha-b8ef2437f12b` and `staging`
+- `ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-a1e913d`
+- `ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-a1e913d`
+- also tagged by workflow as `sha-a1e913db7d4c` and `staging`
+- backend digest: `sha256:94a4bec0c697c08c39fc9c56d9b9e602ca8ffeea264a15a1f4a99be48f51b950`
+- storefront digest: `sha256:53781aa4fdce7079b784b3288e95a5d62a5789a3806b8c07035fb48dc5ff4eaf`
 
 Each image receives:
 
