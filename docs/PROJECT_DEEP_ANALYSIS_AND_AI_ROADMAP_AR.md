@@ -25,7 +25,7 @@
 
 الواجهة `storefront/` جيدة كبداية فعلية: صفحات متجر، منتجات، تصنيفات، بحث، سلة، checkout، تتبع طلب، SEO، robots، sitemap، وJSON-LD. تم توحيد الاعتماد الفعلي على `storefront/pnpm-lock.yaml`، وتم إغلاق بوابة أمان الواجهة في 2026-05-12 بتحديث Next إلى `15.5.18`. التحقق المحلي الحالي يثبت `pnpm audit --audit-level moderate`, `pnpm build`, `pnpm typecheck`, و`pnpm test:e2e` بنجاح.
 
-الجاهزية للإنتاج غير مكتملة. توجد Dockerfiles، health/readiness، runbooks، CI baseline، backup/proxy/monitoring docs، وأساس أمني. تم في 2026-05-12 إثبات Quality Gates داخل GitHub Actions على PR #1 / run `25743248405` وبعد الدمج على `main` / run `25744282999`، وتفعيلها كـ required checks على `main`. وتم أيضاً إثبات GHCR staging image publish عبر run `25744615858`. لا يوجد بعد دليل كاف على staging deployment حقيقي، restore drill منفذ، monitoring/alerting فعلي، error tracking، أو security hardening كامل.
+الجاهزية للإنتاج غير مكتملة. توجد Dockerfiles، health/readiness، runbooks، CI baseline، backup/proxy/monitoring docs، وأساس أمني. تم في 2026-05-12 إثبات Quality Gates داخل GitHub Actions على PR #1 / run `25743248405` وبعد الدمج على `main` / run `25744282999`، وتفعيلها كـ required checks على `main`. وتم أيضاً إثبات GHCR staging image publish بعد Trivy scan عبر run `25751543062`. لا يوجد بعد دليل كاف على staging deployment حقيقي، restore drill منفذ، monitoring/alerting فعلي، error tracking، أو security hardening كامل.
 
 الهدف بعيد المدى ليس إطلاق متجر واحد، بل بناء منصة SaaS تجارية واسعة شبيهة بـ Shopify ومناسبة للجزائر. لذلك لا ينصح بالإطلاق قبل إغلاق التشغيل، الأمان، العزل بين المستأجرين، موثوقية CI، النسخ الاحتياطي، والمراقبة.
 
@@ -376,7 +376,7 @@
 
 ملاحظة تحقق مهمة: تشغيل `pnpm typecheck` بالتوازي مع `pnpm build` فشل مرة بسبب إعادة توليد `.next/types` أثناء فحص TypeScript. هذا يؤكد قاعدة موجودة في `TESTING_STRATEGY.md`: لا تشغل typecheck وbuild بالتوازي على نفس checkout. التشغيل المتسلسل بعد build نجح.
 
-حدود هذا التحقق: لم يتم في هذه الجولة تشغيل `migrate:status` أو `queue:failed` أو `checkout-idempotency:prune --dry-run`. تم تشغيل مسار Docker الكامل للواجهة وDockerfile checks وimage build smoke للـ backend/storefront في 2026-05-12، وتم إثبات GitHub required checks عبر PR #1 / run `25743248405` وبعد الدمج على `main` / run `25744282999`. تم إثبات GHCR image publishing عبر `container-images` run `25744615858`. لم يتم بعد إثبات staging deployment حقيقي أو restore drill.
+حدود هذا التحقق: لم يتم في هذه الجولة تشغيل `migrate:status` أو `queue:failed` أو `checkout-idempotency:prune --dry-run`. تم تشغيل مسار Docker الكامل للواجهة وDockerfile checks وimage build smoke للـ backend/storefront في 2026-05-12، وتم إثبات GitHub required checks عبر PR #1 / run `25743248405` وبعد الدمج على `main` / run `25744282999`. تم إثبات GHCR image publishing بعد Trivy scan عبر `container-images` run `25751543062`. لم يتم بعد إثبات staging deployment حقيقي أو restore drill.
 
 ### تحقق الواجهة
 
@@ -470,7 +470,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 | Production readiness غير مكتمل | توجد runbooks وأساس، وأضيف skeleton للـ staging في `deploy/staging/`، لكن لا يوجد إثبات staging كامل. | تشغيل staging deployment، TLS/proxy، queues/scheduler، health، monitoring، rollback. |
 | Frontend verification path | الفحص المحلي 2026-05-12 أثبت `audit/build/typecheck/e2e`، ومسار Docker الكامل للواجهة أثبت `install/typecheck/build/e2e`. | ربط نفس العقد بالـ CI required gates وعدم قبول merge إذا انكسر أحدها. |
 | CI required gates | تم إثبات Quality Gates داخل GitHub Actions في PR #1 / run `25743248405`، وتفعيل required checks على `main` مع strict status checks وadmin enforcement. | إبقاء هذه البوابة مطلوبة عند أي تعديل للـ workflow، ومراقبة تنبيهات GitHub الخاصة بانتقال Actions runtime من Node 20 إلى Node 24. |
-| Clean deployment proof غير مكتمل | Dockerfiles موجودة، وتم إثبات build smoke محلياً وGHCR staging publish عبر run `25744615858`. كما أضيف `deploy/staging/staging-smoke.sh` ليمنع placeholders وmutable channel tags قبل التشغيل. | تشغيل staging حقيقي يستهلك tag/digest مثبتاً، ثم `deploy/staging/staging-smoke.sh all` على edge/backend/storefront/queue/scheduler. |
+| Clean deployment proof غير مكتمل | Dockerfiles موجودة، وتم إثبات build smoke محلياً وGHCR staging publish بعد Trivy scan عبر run `25751543062`. كما أضيف `deploy/staging/staging-smoke.sh` ليمنع placeholders وmutable channel tags قبل التشغيل. | تشغيل staging حقيقي يستهلك tag/digest مثبتاً، ثم `deploy/staging/staging-smoke.sh all` على edge/backend/storefront/queue/scheduler. |
 | Monitoring/alerting/backups/restore | docs موجودة لكن لا يوجد تشغيل فعلي مثبت. | uptime، failed jobs، queue/scheduler، restore drill، alerts. |
 | Security hardening | CSP واسع، لا 2FA، لا session/device management، وdependency audits صارت تمر محلياً وداخل CI، وأضيف image vulnerability scan إلى Dockerfile Checks وpublish workflow. | إبقاء scans خضراء، ثم 2FA، CSP tightening، secrets rotation، vulnerability review workflow أوسع. |
 | Store tenant scoping review | تم في 2026-05-09 توثيق `Store` كاستثناء من `BelongsToTenant`، وجعل `forTenant(null)` fail-closed، وإزالة `tenant_id` من `Storefront/StoreResource` العام. | يبقى audit لاحق لأي query جديد على `Store` وتوسيع platform/admin tests عند إضافة flows جديدة. |
@@ -547,7 +547,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 - `مكتمل 2026-05-12`: إثبات `.github/workflows/quality.yml` داخل GitHub Actions على PR #1 / run `25743248405`.
 - `مكتمل 2026-05-12`: تفعيل required checks على `main`: `Repository Hygiene`, `Backend`, `Storefront`, `Dockerfile Checks`, `Storefront E2E`.
 - `مكتمل جزئياً`: staging deployment skeleton في `deploy/staging/`، ونجح `docker compose config` مع tags المنشورة، وأضيف smoke runner fail-closed وworkflow يدوي `.github/workflows/staging-smoke.yml`؛ المتبقي تعبئة GitHub environment `staging` وتشغيله على بيئة staging حقيقية.
-- `مكتمل 2026-05-12`: Docker image push/promotion عبر GHCR workflow للـ staging channel في run `25744615858`.
+- `مكتمل 2026-05-12`: Docker image push/promotion عبر GHCR workflow للـ staging channel في run `25751543062` بعد Trivy image scan.
 - monitoring.
 - backup schedule.
 - restore drill.

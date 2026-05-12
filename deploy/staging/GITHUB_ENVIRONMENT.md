@@ -63,8 +63,8 @@ Run **Staging Smoke** manually from GitHub Actions.
 Recommended first dispatch:
 
 - `mode`: `validate`
-- `backend_image`: `ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-b8ef243`
-- `storefront_image`: `ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-b8ef243`
+- `backend_image`: `ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-a1e913d`
+- `storefront_image`: `ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-a1e913d`
 - `runner`: `ubuntu-latest`, unless staging services are private-network only
 
 Use `mode=all` only when the runner can reach PostgreSQL, Redis, Meilisearch, object storage, SMTP, and any hostnames used by the edge smoke checks.
