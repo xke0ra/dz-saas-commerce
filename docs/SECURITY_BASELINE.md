@@ -199,7 +199,7 @@ Before launch, document:
 - `scripts/release/clean-export-check.sh` passed and produced a clean export archive of `1.8M`.
 - `composer audit --no-interaction` reported no backend advisories.
 - `pnpm audit --audit-level moderate` reported no known storefront vulnerabilities after updating Next to `15.5.18`.
-- The same audit still needs to be proven inside GitHub Actions before the CI workflow is enabled as a required production/beta gate.
+- The same audit was proven inside GitHub Actions on PR #1 / run `25743248405`, and main branch protection now requires the Quality Gates checks.
 
 ## Audit Logging
 

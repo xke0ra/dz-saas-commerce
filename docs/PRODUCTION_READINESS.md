@@ -37,7 +37,6 @@ Implemented in this foundation pass:
 
 Still required:
 
-- Prove CI inside GitHub Actions on the real repository root
 - Prove the container image publish workflow against GHCR
 - Make staging consume pinned image tags or digests from the registry
 - Execute the staging compose skeleton against real staging services
@@ -57,7 +56,9 @@ Latest local smoke verification: 2026-05-12.
 - Storefront local verification passed for `pnpm build`, sequential `pnpm typecheck`, and `pnpm test:e2e` (`6 passed`) on Next.js `15.5.18`.
 - Storefront Docker verification passed on 2026-05-12: `./storefront/scripts/verify-docker.sh all` completed install/typecheck/build and Playwright e2e (`6 passed`).
 - Dockerfile checks and local image build smoke passed on 2026-05-12 for backend and storefront through `docker buildx build --check` and `docker buildx build --load`.
-- This local verification does not prove GitHub branch protection, GHCR publishing, image vulnerability scanning, staging deployment, TLS/custom-domain routing, or restore drills.
+- GitHub Actions Quality Gates passed on PR #1 / run `25743248405`: `Repository Hygiene`, `Backend`, `Storefront`, `Dockerfile Checks`, and `Storefront E2E`.
+- Main branch protection now requires those five checks with strict status checks enabled and admin enforcement enabled.
+- This verification does not prove GHCR publishing, image vulnerability scanning, staging deployment, TLS/custom-domain routing, or restore drills.
 
 ## Image Build Commands
 
@@ -164,10 +165,9 @@ It currently checks:
 
 Limitations:
 
-- The storefront dependency audit is green locally on Next `15.5.18`, but the full workflow is not yet proven as an active required pull request gate in GitHub Actions.
-- Image publish automation exists, but it still needs a real GHCR run and downstream staging consumption proof.
+- The Quality Gates workflow is proven and required, but image publish automation still needs a real GHCR run and downstream staging consumption proof.
 - It does not yet run container image vulnerability scanning.
-- GitHub branch protection still has to mark the workflow jobs as required checks.
+- The latest GitHub Actions run emitted Node.js 20 action runtime deprecation annotations for `actions/checkout@v4`, `actions/cache@v4`, and `actions/setup-node@v4`; this is not a current failure, but it should be watched before GitHub's Node 24 runner enforcement dates.
 
 Required branch protection checks for `.github/workflows/quality.yml`:
 

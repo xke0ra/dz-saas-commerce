@@ -34,7 +34,7 @@ Latest recorded verification: 2026-05-12.
 - Storefront dependency audit: passed. `pnpm audit --audit-level moderate` reports no known vulnerabilities after updating Next to `15.5.18`.
 - Storefront Docker verification: `./storefront/scripts/verify-docker.sh all` passed on 2026-05-12 with Playwright reporting `6 passed`.
 - Dockerfile checks and local image build smoke: backend and storefront passed on 2026-05-12 through `docker buildx build --check` and `docker buildx build --load`.
-- CI baseline: `.github/workflows/quality.yml` now includes repository hygiene, clean export rehearsal, backend/frontend dependency audits, backend Pint, required storefront e2e, and Docker image build smoke checks, but has not yet been proven as an active required GitHub Actions merge gate. It should not be made a required merge gate until the workflow is proven green once on the real repository.
+- CI baseline: `.github/workflows/quality.yml` includes repository hygiene, clean export rehearsal, backend/frontend dependency audits, backend Pint, required storefront e2e, and Docker image build smoke checks. It passed in GitHub Actions on PR #1 / run `25743248405`, and main branch protection now requires all five Quality Gates checks.
 
 These numbers must be updated in the living roadmap when they change.
 

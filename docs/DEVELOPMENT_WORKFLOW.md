@@ -77,9 +77,9 @@ Current status:
 - Backend CI includes Composer audit and Pint.
 - Storefront CI includes pnpm audit at `moderate` or higher.
 - Container image publishing builds and pushes backend/storefront images to GHCR on manual dispatch or version tags.
-- The workspace root is a Git repository, but this workflow is not yet proven as an active required merge gate.
-- As of 2026-05-12, the storefront audit is green locally after updating Next to `15.5.18`; prove the same workflow inside GitHub Actions before enabling required branch protection.
-- Treat it as the target CI contract until it runs inside GitHub Actions and is configured as a required check.
+- The workflow was proven green in GitHub Actions on PR #1 / run `25743248405`.
+- As of 2026-05-12, main branch protection requires `Repository Hygiene`, `Backend`, `Storefront`, `Dockerfile Checks`, and `Storefront E2E` with strict status checks and admin enforcement enabled.
+- Treat this as the active CI contract for pull requests into `main`.
 
 Required CI gates before broad AI/Codex development:
 
@@ -89,7 +89,7 @@ Required CI gates before broad AI/Codex development:
 - `Dockerfile Checks`
 - `Storefront E2E`
 
-Do not mark CI as complete until a real GitHub Actions run proves these jobs on the repository that receives pull requests.
+Do not mark CI as complete after future workflow edits until a real GitHub Actions run proves these jobs again on the repository that receives pull requests.
 
 Run repository hygiene locally when env, deployment, CI, ignore rules, or release packaging changes:
 
