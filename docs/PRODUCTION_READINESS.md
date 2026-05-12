@@ -1,6 +1,6 @@
 # Production Readiness Runbook
 
-Last updated: 2026-05-09
+Last updated: 2026-05-12
 
 This runbook records the production foundation for `dz-saas-commerce`. It is not a deployment guarantee yet; it defines the required operating contract before beta or production.
 
@@ -49,12 +49,14 @@ Still required:
 - real uptime checks, alert routing, and centralized log aggregation
 - CSP tightening after staging/proxy browser and e2e validation
 
-Latest local smoke verification: 2026-05-09.
+Latest local smoke verification: 2026-05-12.
 
-- Backend smoke passed locally: `composer validate --strict`, `composer audit --no-interaction`, `php vendor/bin/pint --test`, `php artisan route:list`, `php artisan system:health --scope=live --format=json`, `php artisan system:health --scope=ready --format=json`, `php artisan schedule:list`, and `php artisan test`.
+- Backend smoke passed locally: `composer audit --no-interaction`, `php vendor/bin/pint --test`, `php artisan system:health --scope=ready --format=json`, and `php artisan test` (`154 passed`, `629 assertions`).
 - Repository hygiene and clean export checks passed: `scripts/security/secret-hygiene.sh` and `scripts/release/clean-export-check.sh`.
-- Storefront Docker verification passed locally: `./storefront/scripts/verify-docker.sh all`, including typecheck, production build, and `6` Playwright e2e tests.
-- Dockerfile checks and local image build smoke passed for backend and storefront: `docker buildx build --check`, then `docker buildx build --load`.
+- Storefront dependency audit passed after updating Next to `15.5.18`: `pnpm audit --audit-level moderate` reported no known vulnerabilities.
+- Storefront local verification passed for `pnpm build`, sequential `pnpm typecheck`, and `pnpm test:e2e` (`6 passed`) on Next.js `15.5.18`.
+- Storefront Docker verification passed on 2026-05-12: `./storefront/scripts/verify-docker.sh all` completed install/typecheck/build and Playwright e2e (`6 passed`).
+- Dockerfile checks and local image build smoke passed on 2026-05-12 for backend and storefront through `docker buildx build --check` and `docker buildx build --load`.
 - This local verification does not prove GitHub branch protection, GHCR publishing, image vulnerability scanning, staging deployment, TLS/custom-domain routing, or restore drills.
 
 ## Image Build Commands
@@ -162,7 +164,7 @@ It currently checks:
 
 Limitations:
 
-- The workspace root is a Git repository, but this workflow is not yet proven as an active required pull request gate in GitHub Actions.
+- The storefront dependency audit is green locally on Next `15.5.18`, but the full workflow is not yet proven as an active required pull request gate in GitHub Actions.
 - Image publish automation exists, but it still needs a real GHCR run and downstream staging consumption proof.
 - It does not yet run container image vulnerability scanning.
 - GitHub branch protection still has to mark the workflow jobs as required checks.

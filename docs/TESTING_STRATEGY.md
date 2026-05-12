@@ -1,6 +1,6 @@
 # Testing Strategy
 
-Last updated: 2026-05-09
+Last updated: 2026-05-12
 
 This document defines how the project should be tested as it grows into a commercial SaaS platform.
 
@@ -23,18 +23,18 @@ Frontend:
 
 ## Current Baseline
 
-Latest recorded verification: 2026-05-09.
+Latest recorded verification: 2026-05-12.
 
 - Backend: `154 passed (629 assertions)`.
 - Repository hygiene: `scripts/security/secret-hygiene.sh` and `scripts/release/clean-export-check.sh` passed.
-- Backend smoke checks passed: `composer validate --strict`, `composer audit --no-interaction`, `php vendor/bin/pint --test`, `php artisan route:list`, `php artisan system:health --scope=live --format=json`, `php artisan system:health --scope=ready --format=json`, and `php artisan schedule:list`.
-- Storefront Docker verification: `./storefront/scripts/verify-docker.sh all` passed on 2026-05-09.
-- Storefront install: `pnpm install --frozen-lockfile` passed in Docker with Node `v24.15.0` and pnpm `10.33.2`.
-- Storefront typecheck: passed.
+- Backend smoke checks passed: `composer audit --no-interaction`, `php vendor/bin/pint --test`, and `php artisan system:health --scope=ready --format=json`.
 - Storefront build: passed.
+- Storefront typecheck: passed when run sequentially after build.
 - Storefront Playwright e2e: `6 passed`.
-- Dockerfile checks and local image build smoke: backend and storefront passed through `docker buildx build --check` and `docker buildx build --load`.
-- CI baseline: `.github/workflows/quality.yml` now includes repository hygiene, clean export rehearsal, backend/frontend dependency audits, backend Pint, required storefront e2e, and Docker image build smoke checks, but has not yet been proven as an active required GitHub Actions merge gate.
+- Storefront dependency audit: passed. `pnpm audit --audit-level moderate` reports no known vulnerabilities after updating Next to `15.5.18`.
+- Storefront Docker verification: `./storefront/scripts/verify-docker.sh all` passed on 2026-05-12 with Playwright reporting `6 passed`.
+- Dockerfile checks and local image build smoke: backend and storefront passed on 2026-05-12 through `docker buildx build --check` and `docker buildx build --load`.
+- CI baseline: `.github/workflows/quality.yml` now includes repository hygiene, clean export rehearsal, backend/frontend dependency audits, backend Pint, required storefront e2e, and Docker image build smoke checks, but has not yet been proven as an active required GitHub Actions merge gate. It should not be made a required merge gate until the workflow is proven green once on the real repository.
 
 These numbers must be updated in the living roadmap when they change.
 
@@ -149,12 +149,15 @@ Native WSL or Linux verification when Node/pnpm are installed in the same enviro
 cd storefront
 corepack enable
 corepack prepare pnpm@10.33.2 --activate
-pnpm typecheck
+pnpm audit --audit-level moderate
 pnpm build
+pnpm typecheck
 pnpm test:e2e
 ```
 
-Do not run `pnpm typecheck` while `pnpm build` is regenerating `.next/types`.
+As of 2026-05-12 `pnpm audit --audit-level moderate` passes after updating Next to `15.5.18`.
+
+Do not run `pnpm typecheck` while `pnpm build` is regenerating `.next/types`. A parallel local run on 2026-05-12 failed with missing generated `.next/types` files, while the sequential run passed.
 
 Do not mix a Windows Node runtime with a WSL-created pnpm `node_modules` tree over `\\wsl.localhost` paths. For reliable storefront verification, run Node and pnpm in the same environment that owns the checkout, or use a Dockerized storefront verification job.
 

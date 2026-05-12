@@ -1,6 +1,6 @@
 # Storefront SEO And Crawl Contract
 
-Last updated: 2026-05-09
+Last updated: 2026-05-12
 
 This document defines the current public storefront SEO contract.
 
@@ -68,14 +68,15 @@ Current Playwright coverage verifies:
 - Product detail pages expose title, canonical link, OpenGraph title, and OpenGraph type.
 - Product detail pages expose Product and BreadcrumbList JSON-LD.
 
-Latest local verification: `./storefront/scripts/verify-docker.sh all` passed on 2026-05-09, including `pnpm typecheck`, `pnpm build`, and `6` Playwright e2e tests.
+Latest local verification: `pnpm audit --audit-level moderate`, `pnpm build`, sequential `pnpm typecheck`, and `pnpm test:e2e` passed on 2026-05-12, with Playwright reporting `6 passed` on Next.js `15.5.18`. The full Docker verification path also passed on 2026-05-12.
 
 Verification commands:
 
 ```bash
 cd storefront
-pnpm typecheck
+pnpm audit --audit-level moderate
 pnpm build
+pnpm typecheck
 pnpm test:e2e
 ```
 

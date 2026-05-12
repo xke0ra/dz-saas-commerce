@@ -1,6 +1,6 @@
 # Development Workflow
 
-Last updated: 2026-05-09
+Last updated: 2026-05-12
 
 This document defines the working process for this project. It is optimized for careful, incremental development by a human or AI agent.
 
@@ -78,6 +78,7 @@ Current status:
 - Storefront CI includes pnpm audit at `moderate` or higher.
 - Container image publishing builds and pushes backend/storefront images to GHCR on manual dispatch or version tags.
 - The workspace root is a Git repository, but this workflow is not yet proven as an active required merge gate.
+- As of 2026-05-12, the storefront audit is green locally after updating Next to `15.5.18`; prove the same workflow inside GitHub Actions before enabling required branch protection.
 - Treat it as the target CI contract until it runs inside GitHub Actions and is configured as a required check.
 
 Required CI gates before broad AI/Codex development:
@@ -188,14 +189,15 @@ Native WSL/Linux commands are also acceptable when Node and pnpm are installed i
 ```bash
 cd storefront
 pnpm install --frozen-lockfile
-pnpm typecheck
+pnpm audit --audit-level moderate
 pnpm build
+pnpm typecheck
 pnpm test:e2e
 ```
 
-Do not run `pnpm typecheck` concurrently with `pnpm build`; `.next/types` can be regenerated during build.
+Do not run `pnpm typecheck` concurrently with `pnpm build`; `.next/types` can be regenerated during build. A 2026-05-12 parallel local run reproduced this failure mode, while sequential `build` then `typecheck` passed.
 
-If native Playwright fails before executing tests because the browser cannot launch, either fix host system dependencies or use `./storefront/scripts/verify-docker.sh e2e`. The Docker e2e path passed on 2026-05-09 with `6 passed`.
+If native Playwright fails before executing tests because the browser cannot launch, either fix host system dependencies or use `./storefront/scripts/verify-docker.sh e2e`. The full Docker storefront path passed on 2026-05-12 with Playwright reporting `6 passed`.
 
 ## Route Changes
 
@@ -211,8 +213,9 @@ After changing Next.js route files:
 
 ```bash
 cd storefront
-pnpm typecheck
+pnpm audit --audit-level moderate
 pnpm build
+pnpm typecheck
 ```
 
 ## Checkout Changes
@@ -237,8 +240,9 @@ php artisan test tests/Feature/Checkout/QuickCheckoutTest.php
 php artisan test
 
 cd ../storefront
-npm run typecheck
-npm run build
+pnpm audit --audit-level moderate
+pnpm build
+pnpm typecheck
 ```
 
 ## Package Changes

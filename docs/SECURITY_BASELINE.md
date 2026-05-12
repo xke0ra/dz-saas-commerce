@@ -1,6 +1,6 @@
 # Security Baseline
 
-Last updated: 2026-05-09
+Last updated: 2026-05-12
 
 This document defines the minimum security posture expected as the platform moves toward commercial launch.
 
@@ -46,7 +46,7 @@ Current important gaps:
 - CSP baseline is intentionally broad for Filament/Livewire/storefront compatibility and still needs production tightening after browser/e2e validation
 - backup/restore runbook and automation examples exist, but no deployed backup schedule or executed staging restore drill is recorded yet
 - no completed secrets rotation procedure
-- no formal vulnerability review workflow beyond the current CI dependency audit and secret hygiene baseline
+- no formal vulnerability review workflow beyond the current green dependency audit and secret hygiene baseline
 - no production monitoring/error tracking integration or alert routing
 - production `.env.production.example` files exist, but real secret management and rotation are not implemented yet
 - `Store` remains a documented exception to the global tenant scope; new store queries still need explicit review
@@ -192,6 +192,14 @@ Before launch, document:
 - `.github/workflows/quality.yml` runs both checks as `Repository Hygiene`.
 - `docs/PRODUCTION_READINESS.md` documents the first production runbook baseline.
 - A scan excluding local `.env` files found local dummy credentials in `docker-compose.yml` and `.env.example`; these are acceptable only for local development and must be rotated outside local use.
+
+2026-05-12 security verification:
+
+- `scripts/security/secret-hygiene.sh` passed.
+- `scripts/release/clean-export-check.sh` passed and produced a clean export archive of `1.8M`.
+- `composer audit --no-interaction` reported no backend advisories.
+- `pnpm audit --audit-level moderate` reported no known storefront vulnerabilities after updating Next to `15.5.18`.
+- The same audit still needs to be proven inside GitHub Actions before the CI workflow is enabled as a required production/beta gate.
 
 ## Audit Logging
 
