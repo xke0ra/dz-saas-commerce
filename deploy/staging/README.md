@@ -22,6 +22,15 @@ cp deploy/staging/storefront.env.example deploy/staging/storefront.env
 
 Set `BACKEND_IMAGE` and `STOREFRONT_IMAGE` to immutable tags or digests, for example `sha-<12-char-sha>`.
 
+Latest proven staging image publish, 2026-05-12:
+
+```dotenv
+BACKEND_IMAGE=ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-b8ef243
+STOREFRONT_IMAGE=ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-b8ef243
+```
+
+The same workflow run also published `sha-b8ef2437f12b` and `staging` tags. The compose config was validated locally with the `staging-20260512-b8ef243` tags. A real staging smoke still requires staging-only `backend.env` and `storefront.env` values for PostgreSQL, Redis, Meilisearch, object storage, SMTP, domains, and app secrets.
+
 ## Validate Compose
 
 ```bash
