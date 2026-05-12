@@ -130,6 +130,7 @@ It includes:
 - `images.env.example`
 - `backend.env.example`
 - `storefront.env.example`
+- `staging-smoke.sh`
 - `README.md`
 
 The compose file expects immutable backend and storefront images, then starts:
@@ -141,6 +142,14 @@ The compose file expects immutable backend and storefront images, then starts:
 - Nginx edge proxy
 
 It does not create production-like managed backing services. Staging operators must provide PostgreSQL, Redis, Meilisearch, object storage, mail, and real secrets through copied local env files that are ignored by Git.
+
+The smoke runner validates that image references are immutable enough for a recorded staging proof, rejects placeholders in env files, renders the Compose config, pulls images, starts the stack, and verifies:
+
+- Compose process state
+- Laravel readiness through `php artisan system:health --scope=ready --format=json`
+- failed jobs listing
+- storefront edge HTTP response
+- backend live and ready HTTP health through the edge proxy
 
 ## Environment Separation
 
