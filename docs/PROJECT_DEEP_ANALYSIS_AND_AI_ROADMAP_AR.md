@@ -549,7 +549,10 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 - `مكتمل جزئياً`: staging deployment skeleton في `deploy/staging/`، ونجح `docker compose config` مع tags المنشورة، وأضيف smoke runner fail-closed وworkflow يدوي `.github/workflows/staging-smoke.yml`.
 - `مكتمل محلياً 2026-05-12`: smoke مؤقت كامل عبر `deploy/staging/staging-ephemeral-smoke.sh all` مر على صورة backend محلية بعد إضافة `league/flysystem-aws-s3-v3`، وشمل migrations و`StorefrontDemoSeeder` وreadiness لكل من database/cache/queue/storage/redis/search.
 - `مكتمل 2026-05-12`: Docker image push/promotion عبر GHCR workflow للـ staging channel في run `25751543062` بعد Trivy image scan.
-- `التالي مباشرة`: دمج إصلاح S3 + smoke المؤقت، نشر صورة backend/storefront جديدة عبر `container-images`, ثم تشغيل **Staging Smoke** بـ `target=ephemeral` و`mode=all` على الوسوم الجديدة. بعد ذلك ينتقل العمل إلى تعبئة GitHub environment `staging` وتشغيل `target=environment` على خدمات staging حقيقية.
+- `مكتمل 2026-05-12`: دمج إصلاح S3 + smoke المؤقت في PR #7 / commit `096bc05`.
+- `مكتمل 2026-05-12`: نشر صور backend/storefront جديدة عبر `container-images` run `25756290200` بالوسم `staging-20260512-096bc05` بعد Trivy image scan.
+- `مكتمل 2026-05-12`: تشغيل **Staging Smoke** بـ `target=ephemeral` و`mode=all` على الصور المنشورة الجديدة في run `25756545567` ونجاح readiness بما فيها S3 storage.
+- `التالي مباشرة`: تعبئة GitHub environment `staging` بالقيم الحقيقية وتشغيل **Staging Smoke** بـ `target=environment` و`mode=all` على خدمات staging خارجية حقيقية، ثم الانتقال إلى restore drill وmonitoring/alerting.
 - monitoring.
 - backup schedule.
 - restore drill.

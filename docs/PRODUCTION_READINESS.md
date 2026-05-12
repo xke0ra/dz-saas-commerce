@@ -42,7 +42,6 @@ Implemented in this foundation pass:
 Still required:
 
 - Populate the GitHub `staging` environment secret/variable contract
-- Publish a new scanned backend image from a commit that includes S3 filesystem support
 - Execute the staging compose skeleton against real staging services through the manual staging smoke workflow or a staging host
 - keep container image vulnerability scans green as base images and advisories change
 - reverse proxy deployment in staging and TLS/custom-domain validation
@@ -64,6 +63,7 @@ Latest local smoke verification: 2026-05-12.
 - Main branch protection now requires those five checks with strict status checks enabled and admin enforcement enabled.
 - GitHub Actions Quality Gates also passed after merge on `main` / run `25744282999`.
 - Container image publishing to GHCR passed on `main` / run `25751543062` for both backend and storefront, using the `staging` channel and `staging-20260512-a1e913d` tag after Trivy image scans passed.
+- Container image publishing to GHCR passed again on `main` / run `25756290200` after the S3 filesystem fix, using tag `staging-20260512-096bc05`.
 - Staging compose config validation passed locally with the published GHCR tags.
 - The GitHub `staging` environment currently exists, but it has no configured secrets or variables as of 2026-05-12.
 - Local Trivy `0.70.0` scan passed for the backend CI image with `--scanners vuln --ignore-unfixed --pkg-types os,library --severity CRITICAL,HIGH`.
@@ -71,6 +71,7 @@ Latest local smoke verification: 2026-05-12.
 - Local ephemeral staging smoke passed on 2026-05-12 with generated staging-only secrets, disposable PostgreSQL/Redis/Meilisearch/MinIO/Mailpit services, backend migrations, `StorefrontDemoSeeder`, queue/scheduler containers, edge proxy checks, failed-job check, storefront HTTP response, and backend live/ready HTTP health.
 - That smoke used a locally rebuilt backend image tagged `ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-localtest`; Trivy `0.70.0` reported 0 OS and 0 Composer-vendor vulnerabilities for that image.
 - The run exposed and closed a real production dependency gap: the previously published backend image did not include Laravel's S3 Flysystem adapter, so readiness failed at the `storage` check when `FILESYSTEM_DISK=s3`.
+- GitHub **Staging Smoke** passed with `target=ephemeral` and `mode=all` on run `25756545567`, using the published `staging-20260512-096bc05` backend and storefront images.
 - This verification proves the Compose/process contract against disposable backing services. It still does not prove an externally provisioned staging deployment, TLS/custom-domain routing, restore drills, alert routing, or production-grade secret management.
 
 ## Image Build Commands
@@ -104,13 +105,15 @@ Supported publishing paths:
 
 Latest proven staging publish on 2026-05-12:
 
-- `ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-a1e913d`
-- `ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-a1e913d`
-- also tagged by workflow as `sha-a1e913db7d4c` and `staging`
-- backend digest: `sha256:94a4bec0c697c08c39fc9c56d9b9e602ca8ffeea264a15a1f4a99be48f51b950`
-- storefront digest: `sha256:53781aa4fdce7079b784b3288e95a5d62a5789a3806b8c07035fb48dc5ff4eaf`
+- run: `25756290200`
+- commit: `096bc05a077359dde63b6f77e7822aa8b45003c9`
+- backend: `ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-096bc05`
+- storefront: `ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-096bc05`
+- also tagged by workflow as `sha-096bc05a0773` and `staging`
+- backend digest: `sha256:ab68061bdbe14d6c545babb2981aa761a778369c92b7393be993fca326ba05cc`
+- storefront digest: `sha256:d71c659acb567fd80623c2487494c01b4440683a25e38a64ab220b232ec8a358`
 
-Important: the backend image above predates the S3 filesystem dependency fix. It is a valid scanned publish proof, but it must not be treated as the final staging smoke image for S3-backed storage. Publish a new scanned backend image from the fixed commit before recording a real staging smoke proof.
+The earlier `staging-20260512-a1e913d` backend publish remains a valid scanned GHCR publish proof, but it predates the S3 filesystem dependency fix and is superseded for staging smoke use.
 
 Each image receives:
 

@@ -67,10 +67,10 @@ Recommended first dispatch:
 
 - `target`: `ephemeral`
 - `mode`: `validate`
-- `backend_image`: a scanned backend image tag built after S3 filesystem support was added
-- `storefront_image`: `ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-a1e913d`
+- `backend_image`: `ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-096bc05`
+- `storefront_image`: `ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-096bc05`
 - `runner`: `ubuntu-latest`, unless staging services are private-network only
 
 Use `target=environment` with `mode=all` only when the runner can reach PostgreSQL, Redis, Meilisearch, object storage, SMTP, and any hostnames used by the edge smoke checks.
 
-Use `target=ephemeral` with `mode=all` to prove the selected images and process topology before the environment secret contract is fully populated. It still requires a backend image built from a commit that includes `league/flysystem-aws-s3-v3`; older backend images fail the S3 storage readiness check.
+Use `target=ephemeral` with `mode=all` to prove the selected images and process topology before the environment secret contract is fully populated. Run `25756545567` passed with the `staging-20260512-096bc05` images.
