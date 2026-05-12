@@ -6,6 +6,7 @@ STAGING_DIR="${ROOT_DIR}/deploy/staging"
 
 IMAGES_ENV="${IMAGES_ENV:-${STAGING_DIR}/images.env}"
 COMPOSE_FILE="${COMPOSE_FILE:-${STAGING_DIR}/docker-compose.staging.example.yml}"
+COMPOSE_FILES="${COMPOSE_FILES:-${COMPOSE_FILE}}"
 COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-dz-saas-staging}"
 ACTION="${1:-validate}"
 
@@ -69,16 +70,31 @@ validate_image_ref() {
 }
 
 compose_cmd() {
+  local compose_file_args=()
+  local compose_file
+
+  IFS=':' read -r -a compose_files <<< "${COMPOSE_FILES}"
+  for compose_file in "${compose_files[@]}"; do
+    [[ -n "${compose_file}" ]] || continue
+    compose_file_args+=(-f "${compose_file}")
+  done
+
   docker compose \
     --project-name "${COMPOSE_PROJECT_NAME}" \
     --env-file "${IMAGES_ENV}" \
-    -f "${COMPOSE_FILE}" \
+    "${compose_file_args[@]}" \
     "$@"
 }
 
 validate() {
   require_command docker
-  require_file "${COMPOSE_FILE}"
+  local compose_file
+  IFS=':' read -r -a compose_files <<< "${COMPOSE_FILES}"
+  for compose_file in "${compose_files[@]}"; do
+    [[ -n "${compose_file}" ]] || continue
+    require_file "${compose_file}"
+  done
+
   load_images_env
 
   : "${BACKEND_IMAGE:=}"

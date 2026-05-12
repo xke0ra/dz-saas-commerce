@@ -21,6 +21,7 @@ Implemented in this foundation pass:
 - `.github/workflows/staging-smoke.yml` manual staging smoke baseline
 - repository secret hygiene check through `scripts/security/secret-hygiene.sh`
 - shared container image scan policy through `scripts/security/container-image-scan.sh`
+- backend S3 filesystem runtime support through `league/flysystem-aws-s3-v3`
 - backend liveness/readiness endpoints
 - `php artisan system:health`
 - backend Docker `HEALTHCHECK` using liveness scope
@@ -36,10 +37,12 @@ Implemented in this foundation pass:
 - documented monitoring/alerting runbook
 - production logging example routes Laravel logs to `stderr` for container collection
 - staging deployment skeleton in `deploy/staging/`
+- self-contained ephemeral staging smoke overlay in `deploy/staging/docker-compose.staging.ephemeral.yml`
 
 Still required:
 
 - Populate the GitHub `staging` environment secret/variable contract
+- Publish a new scanned backend image from a commit that includes S3 filesystem support
 - Execute the staging compose skeleton against real staging services through the manual staging smoke workflow or a staging host
 - keep container image vulnerability scans green as base images and advisories change
 - reverse proxy deployment in staging and TLS/custom-domain validation
@@ -65,7 +68,10 @@ Latest local smoke verification: 2026-05-12.
 - The GitHub `staging` environment currently exists, but it has no configured secrets or variables as of 2026-05-12.
 - Local Trivy `0.70.0` scan passed for the backend CI image with `--scanners vuln --ignore-unfixed --pkg-types os,library --severity CRITICAL,HIGH`.
 - Local Trivy `0.70.0` scan passed for the storefront CI image after updating the runtime image's bundled npm to `11.14.1`.
-- This verification does not prove a real staging deployment against live PostgreSQL/Redis/Meilisearch/S3/SMTP services, TLS/custom-domain routing, or restore drills.
+- Local ephemeral staging smoke passed on 2026-05-12 with generated staging-only secrets, disposable PostgreSQL/Redis/Meilisearch/MinIO/Mailpit services, backend migrations, `StorefrontDemoSeeder`, queue/scheduler containers, edge proxy checks, failed-job check, storefront HTTP response, and backend live/ready HTTP health.
+- That smoke used a locally rebuilt backend image tagged `ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-localtest`; Trivy `0.70.0` reported 0 OS and 0 Composer-vendor vulnerabilities for that image.
+- The run exposed and closed a real production dependency gap: the previously published backend image did not include Laravel's S3 Flysystem adapter, so readiness failed at the `storage` check when `FILESYSTEM_DISK=s3`.
+- This verification proves the Compose/process contract against disposable backing services. It still does not prove an externally provisioned staging deployment, TLS/custom-domain routing, restore drills, alert routing, or production-grade secret management.
 
 ## Image Build Commands
 
@@ -104,6 +110,8 @@ Latest proven staging publish on 2026-05-12:
 - backend digest: `sha256:94a4bec0c697c08c39fc9c56d9b9e602ca8ffeea264a15a1f4a99be48f51b950`
 - storefront digest: `sha256:53781aa4fdce7079b784b3288e95a5d62a5789a3806b8c07035fb48dc5ff4eaf`
 
+Important: the backend image above predates the S3 filesystem dependency fix. It is a valid scanned publish proof, but it must not be treated as the final staging smoke image for S3-backed storage. Publish a new scanned backend image from the fixed commit before recording a real staging smoke proof.
+
 Each image receives:
 
 - immutable `sha-<12-char-sha>` tag
@@ -136,10 +144,12 @@ The first staging smoke target is in `deploy/staging/`.
 It includes:
 
 - `docker-compose.staging.example.yml`
+- `docker-compose.staging.ephemeral.yml`
 - `images.env.example`
 - `backend.env.example`
 - `storefront.env.example`
 - `staging-smoke.sh`
+- `staging-ephemeral-smoke.sh`
 - `GITHUB_ENVIRONMENT.md`
 - `README.md`
 
@@ -153,6 +163,8 @@ The compose file expects immutable backend and storefront images, then starts:
 
 It does not create production-like managed backing services. Staging operators must provide PostgreSQL, Redis, Meilisearch, object storage, mail, and real secrets through copied local env files that are ignored by Git.
 
+For runner-local proof before real staging services exist, `staging-ephemeral-smoke.sh` overlays disposable PostgreSQL, Redis, Meilisearch, MinIO, and Mailpit services. It generates temporary env files, migrates the database, seeds `StorefrontDemoSeeder`, and delegates validation/startup/verification to the same smoke runner. This is a staging contract proof, not a substitute for externally managed staging infrastructure.
+
 The smoke runner validates that image references are immutable enough for a recorded staging proof, rejects placeholders in env files, renders the Compose config, pulls images, starts the stack, and verifies:
 
 - Compose process state
@@ -161,7 +173,10 @@ The smoke runner validates that image references are immutable enough for a reco
 - storefront edge HTTP response
 - backend live and ready HTTP health through the edge proxy
 
-The manual workflow `.github/workflows/staging-smoke.yml` renders the ignored `deploy/staging/*.env` files from the GitHub `staging` environment, logs into GHCR, and delegates to the same smoke runner. Start with `mode=validate`, then run `mode=all` only from a runner that can reach the staging PostgreSQL, Redis, Meilisearch, object storage, SMTP, and edge hostnames.
+The manual workflow `.github/workflows/staging-smoke.yml` supports two targets:
+
+- `target=environment`: renders the ignored `deploy/staging/*.env` files from the GitHub `staging` environment, logs into GHCR, and delegates to the same smoke runner. Start with `mode=validate`, then run `mode=all` only from a runner that can reach the staging PostgreSQL, Redis, Meilisearch, object storage, SMTP, and edge hostnames.
+- `target=ephemeral`: runs the disposable overlay on the selected runner. Use it as a fast proof of image/process compatibility before real staging services are ready.
 
 ## Environment Separation
 

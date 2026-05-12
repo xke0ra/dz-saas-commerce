@@ -85,6 +85,7 @@ Production container foundation now exists as a first baseline:
 
 - `backend/Dockerfile`: PHP-FPM runtime with Composer dependencies and Vite asset build.
 - `storefront/Dockerfile`: Next.js production runtime using pnpm.
+- backend production dependencies include `league/flysystem-aws-s3-v3` for S3-compatible object storage.
 - `backend/.env.production.example`
 - `storefront/.env.production.example`
 - `docs/PRODUCTION_READINESS.md`
@@ -94,9 +95,10 @@ Production container foundation now exists as a first baseline:
 - `docs/MONITORING_ALERTING_RUNBOOK.md`
 - `docs/adr/`
 - `deploy/reverse-proxy/nginx-edge.conf.example`
+- `deploy/staging/`
 - `deploy/backup/`
 
-This does not yet make production readiness complete. Reverse proxy staging deployment, CI image builds, deployed backup schedules, restore drill execution, process supervision deployment, centralized log aggregation, alert routing, and error tracking integration remain required before beta/production. Health/readiness, backup/restore documentation, backup automation examples, reverse proxy strategy, queue/scheduler supervision documentation, and monitoring/alerting documentation now exist as baselines.
+This does not yet make production readiness complete. The ephemeral staging smoke proves the image/process contract against disposable PostgreSQL, Redis, Meilisearch, MinIO, and Mailpit services, but externally provisioned staging, TLS/custom-domain routing, deployed backup schedules, restore drill execution, process supervision deployment, centralized log aggregation, alert routing, and error tracking integration remain required before beta/production. Health/readiness, backup/restore documentation, backup automation examples, reverse proxy strategy, queue/scheduler supervision documentation, and monitoring/alerting documentation now exist as baselines.
 
 ## Backend Domain Layout
 

@@ -4,15 +4,22 @@ on:
   workflow_dispatch:
     inputs:
       backend_image:
-        description: Immutable backend image tag or digest to smoke.
+        description: Immutable backend image tag or digest to smoke. Use a tag built after S3 filesystem support was added.
         required: true
-        default: ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-b8ef243
         type: string
       storefront_image:
         description: Immutable storefront image tag or digest to smoke.
         required: true
-        default: ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-b8ef243
+        default: ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-a1e913d
         type: string
+      target:
+        description: Smoke target. Use ephemeral for a self-contained proof on the runner.
+        required: true
+        default: environment
+        type: choice
+        options:
+          - environment
+          - ephemeral
       mode:
         description: Smoke runner action.
         required: true
@@ -57,6 +64,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Require Staging Contract
+        if: ${{ inputs.target == 'environment' }}
         shell: bash
         env:
           STAGING_APP_KEY: ${{ secrets.STAGING_APP_KEY }}
@@ -127,6 +135,7 @@ jobs:
           exit "${missing}"
 
       - name: Render Staging Env Files
+        if: ${{ inputs.target == 'environment' }}
         shell: bash
         env:
           BACKEND_IMAGE: ${{ inputs.backend_image }}
@@ -274,5 +283,14 @@ jobs:
           EOF
 
       - name: Run Staging Smoke
+        if: ${{ inputs.target == 'environment' }}
         shell: bash
         run: deploy/staging/staging-smoke.sh "${{ inputs.mode }}"
+
+      - name: Run Ephemeral Staging Smoke
+        if: ${{ inputs.target == 'ephemeral' }}
+        shell: bash
+        env:
+          BACKEND_IMAGE: ${{ inputs.backend_image }}
+          STOREFRONT_IMAGE: ${{ inputs.storefront_image }}
+        run: deploy/staging/staging-ephemeral-smoke.sh "${{ inputs.mode }}"

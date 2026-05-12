@@ -61,6 +61,8 @@ docker build -f storefront/Dockerfile -t dz-saas-commerce-storefront:local store
 
 The first staging compose skeleton is in `deploy/staging/`. It expects immutable GHCR image tags or digests and staging-only env files copied from the committed examples.
 
+For a runner-local proof before real staging services are ready, use `deploy/staging/staging-ephemeral-smoke.sh`. It overlays disposable PostgreSQL, Redis, Meilisearch, MinIO, and Mailpit services, generates temporary staging env files, runs migrations and `StorefrontDemoSeeder`, then executes the same readiness and edge checks.
+
 Do not add real production secrets to image builds. Runtime configuration must come from environment variables or a secret manager.
 
 ## CI Quality Gates
@@ -79,7 +81,7 @@ Current status:
 - Storefront CI includes pnpm audit at `moderate` or higher.
 - Dockerfile Checks builds backend/storefront images and runs Trivy image vulnerability scans for fixed `HIGH` and `CRITICAL` OS/library vulnerabilities.
 - Container image publishing builds, scans, and pushes backend/storefront images to GHCR on manual dispatch or version tags.
-- Staging smoke is a manual workflow that renders ignored staging env files from the GitHub `staging` environment and delegates to `deploy/staging/staging-smoke.sh`.
+- Staging smoke is a manual workflow with `target=environment` for real staging env files and `target=ephemeral` for disposable runner-local backing services.
 - The workflow was proven green in GitHub Actions on PR #1 / run `25743248405`.
 - As of 2026-05-12, main branch protection requires `Repository Hygiene`, `Backend`, `Storefront`, `Dockerfile Checks`, and `Storefront E2E` with strict status checks and admin enforcement enabled.
 - Treat this as the active CI contract for pull requests into `main`.
@@ -94,7 +96,7 @@ Required CI gates before broad AI/Codex development:
 
 Do not mark CI as complete after future workflow edits until a real GitHub Actions run proves these jobs again on the repository that receives pull requests.
 
-Do not mark staging as proven until **Staging Smoke** has run with `mode=all` against real staging backing services and the result is recorded in `docs/PRODUCTION_READINESS.md`.
+Do not mark real staging as proven until **Staging Smoke** has run with `target=environment` and `mode=all` against real staging backing services and the result is recorded in `docs/PRODUCTION_READINESS.md`. A successful `target=ephemeral` run proves image/process compatibility only.
 
 Run repository hygiene locally when env, deployment, CI, ignore rules, or release packaging changes:
 

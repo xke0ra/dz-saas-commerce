@@ -103,6 +103,16 @@ php artisan queue:failed
 php artisan schedule:list
 ```
 
+Run staging smoke checks when deployment scripts, Dockerfiles, runtime dependencies, or proxy config change:
+
+```bash
+BACKEND_IMAGE=ghcr.io/xke0ra/dz-saas-commerce/backend:staging-YYYYMMDD-<sha> \
+STOREFRONT_IMAGE=ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-YYYYMMDD-<sha> \
+deploy/staging/staging-ephemeral-smoke.sh all
+```
+
+For local validation of an unpublished backend image, tag it with a staging-style immutable tag and set `SKIP_PULL=1`. A successful ephemeral smoke proves process and dependency compatibility only; real staging still needs `target=environment` against externally managed services.
+
 Run backup automation syntax checks when backup scripts or systemd examples change:
 
 ```bash
