@@ -33,6 +33,7 @@ Currently present:
 - repository secret hygiene check in CI through `scripts/security/secret-hygiene.sh`
 - backend security headers middleware
 - storefront security headers through Next.js `headers()`
+- container image vulnerability scanning in CI for fixed `HIGH` and `CRITICAL` OS/library vulnerabilities
 - readiness fails in production when `APP_DEBUG=true` or `APP_KEY` is missing
 - trusted proxy config through `TRUSTED_PROXIES`
 - test coverage for forwarded HTTPS only from configured proxies
@@ -46,7 +47,7 @@ Current important gaps:
 - CSP baseline is intentionally broad for Filament/Livewire/storefront compatibility and still needs production tightening after browser/e2e validation
 - backup/restore runbook and automation examples exist, but no deployed backup schedule or executed staging restore drill is recorded yet
 - no completed secrets rotation procedure
-- no formal vulnerability review workflow beyond the current green dependency audit and secret hygiene baseline
+- no formal vulnerability review workflow beyond dependency audits, image vulnerability scanning, and secret hygiene baseline
 - no production monitoring/error tracking integration or alert routing
 - production `.env.production.example` files exist, but real secret management and rotation are not implemented yet
 - `Store` remains a documented exception to the global tenant scope; new store queries still need explicit review
@@ -202,6 +203,8 @@ Before launch, document:
 - `pnpm audit --audit-level moderate` reported no known storefront vulnerabilities after updating Next to `15.5.18`.
 - The same audit was proven inside GitHub Actions on PR #1 / run `25743248405`, and main branch protection now requires the Quality Gates checks.
 - The GitHub `staging` environment exists but currently has no secrets or variables configured; staging smoke is blocked until that contract is populated.
+- Trivy `0.70.0` image scanning runs in `Dockerfile Checks` for backend and storefront CI images, failing on fixed `HIGH` and `CRITICAL` OS/library vulnerabilities.
+- The GHCR publish workflow uses the same scan policy before pushing image tags.
 
 ## Audit Logging
 

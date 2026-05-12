@@ -472,7 +472,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 | CI required gates | تم إثبات Quality Gates داخل GitHub Actions في PR #1 / run `25743248405`، وتفعيل required checks على `main` مع strict status checks وadmin enforcement. | إبقاء هذه البوابة مطلوبة عند أي تعديل للـ workflow، ومراقبة تنبيهات GitHub الخاصة بانتقال Actions runtime من Node 20 إلى Node 24. |
 | Clean deployment proof غير مكتمل | Dockerfiles موجودة، وتم إثبات build smoke محلياً وGHCR staging publish عبر run `25744615858`. كما أضيف `deploy/staging/staging-smoke.sh` ليمنع placeholders وmutable channel tags قبل التشغيل. | تشغيل staging حقيقي يستهلك tag/digest مثبتاً، ثم `deploy/staging/staging-smoke.sh all` على edge/backend/storefront/queue/scheduler. |
 | Monitoring/alerting/backups/restore | docs موجودة لكن لا يوجد تشغيل فعلي مثبت. | uptime، failed jobs، queue/scheduler، restore drill، alerts. |
-| Security hardening | CSP واسع، لا 2FA، لا session/device management، وdependency audits صارت تمر محلياً بعد تحديث Next. | تثبيت audit الأخضر داخل CI، ثم 2FA، CSP tightening، secrets rotation، vulnerability review workflow. |
+| Security hardening | CSP واسع، لا 2FA، لا session/device management، وdependency audits صارت تمر محلياً وداخل CI، وأضيف image vulnerability scan إلى Dockerfile Checks وpublish workflow. | إبقاء scans خضراء، ثم 2FA، CSP tightening، secrets rotation، vulnerability review workflow أوسع. |
 | Store tenant scoping review | تم في 2026-05-09 توثيق `Store` كاستثناء من `BelongsToTenant`، وجعل `forTenant(null)` fail-closed، وإزالة `tenant_id` من `Storefront/StoreResource` العام. | يبقى audit لاحق لأي query جديد على `Store` وتوسيع platform/admin tests عند إضافة flows جديدة. |
 | catalog pagination/sitemap 48-limit | تم إصلاحه في 2026-05-09: sitemap صار يجمع المنتجات عبر pagination ويثبت ذلك E2E، والـ backend test يؤكد cap الصفحة الثانية. | يبقى sitemap index لاحقاً للمتاجر التي تتجاوز حد URL الآمن لكل sitemap. |
 | cart duplicate item quantity normalization | تم إصلاحه في 2026-05-09: request validation و`CreateQuickOrder` يرفضان تكرار `product_id` في نفس checkout. | يبقى تحسين metrics للـ abuse/idempotency لاحقاً. |
@@ -542,6 +542,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 - `مكتمل محلياً 2026-05-12`: `pnpm build`, `pnpm typecheck`, و`pnpm test:e2e` تمر محلياً عند التشغيل المتسلسل، وآخر e2e أعطى `6 passed`.
 - `مكتمل محلياً 2026-05-12`: `./storefront/scripts/verify-docker.sh all` مر بالكامل، بما فيه Playwright `6 passed`.
 - `مكتمل محلياً 2026-05-12`: Dockerfile checks وDocker image build smoke للـ backend/storefront عبر `docker buildx build --check` و`docker buildx build --load`.
+- `مكتمل محلياً 2026-05-12`: إضافة Trivy `0.70.0` إلى `Dockerfile Checks` و`container-images` لفحص صور backend/storefront ضد fixed `HIGH` و`CRITICAL` OS/library vulnerabilities، ومر الفحص محلياً للصورتين.
 - `مكتمل جزئياً`: تقوية workflow بإضافة Composer audit، Pint، pnpm audit، E2E required، وDocker image build smoke.
 - `مكتمل 2026-05-12`: إثبات `.github/workflows/quality.yml` داخل GitHub Actions على PR #1 / run `25743248405`.
 - `مكتمل 2026-05-12`: تفعيل required checks على `main`: `Repository Hygiene`, `Backend`, `Storefront`, `Dockerfile Checks`, `Storefront E2E`.
@@ -1066,7 +1067,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 6. تفعيل monitoring/alerting/error tracking.
 7. `مكتمل 2026-05-09`: مراجعة tenant scoping الأساسية لـ `Store`، مع إبقائه exception موثقاً وfail-closed عند `forTenant(null)`.
 8. `مكتمل 2026-05-09`: إصلاح catalog pagination وsitemap حتى لا تختفي المنتجات بعد أول 48 منتج.
-9. security hardening: 2FA، CSP، vulnerability review workflow، secrets rotation. تم إضافة secret hygiene وclean export baseline في 2026-05-09.
+9. security hardening: 2FA، CSP، vulnerability review workflow، secrets rotation. تم إضافة secret hygiene وclean export baseline في 2026-05-09، وأضيف image vulnerability scanning إلى CI وpublish workflow في 2026-05-12.
 10. merchant onboarding + store readiness، ثم product variants + stock movements.
 
 هذا الترتيب يبدأ بالبنية والموثوقية قبل الميزات؛ لأن المشروع سيكبر عبر Codex، وأي ضعف في CI أو العزل أو التشغيل سيصبح مكلفاً لاحقاً.
@@ -1125,7 +1126,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 6. تم إصلاح sitemap 48-limit: `storefront/src/lib/api.ts` صار يقرأ pagination meta، و`storefront/src/app/sitemap.ts` يجمع كل صفحات المنتجات المتاحة.
 7. تم إصلاح تكرار `product_id` في cart checkout عبر validation وداخل `CreateQuickOrder`.
 8. docs الإنتاج والأمن صريحة في أن monitoring/backup/restore/proxy موجودة كrunbooks لا كدليل تشغيل production.
-9. تم التحقق محلياً من Dockerfile checks وimage build smoke للـ backend/storefront بتاريخ 2026-05-12، وتم إثبات GitHub required checks وGHCR publish. يوجد الآن smoke runner وworkflow يدوي جاهزان، لكن لم يتم بعد إثبات staging smoke حقيقي لأن GitHub environment `staging` موجودة بلا secrets أو variables.
+9. تم التحقق محلياً من Dockerfile checks وimage build smoke للـ backend/storefront بتاريخ 2026-05-12، وتم إثبات GitHub required checks وGHCR publish. يوجد الآن smoke runner وworkflow يدوي جاهزان، وأضيف Trivy image scanning إلى CI وpublish workflow، لكن لم يتم بعد إثبات staging smoke حقيقي لأن GitHub environment `staging` موجودة بلا secrets أو variables.
 
 ---
 
@@ -1145,7 +1146,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 ## 20. خلاصة العمل القادم
 
-المشروع جيد بما يكفي ليستحق البناء الطويل، وليس جيداً بما يكفي للإطلاق المتسرع. نحن ما زلنا داخل Phase 0، لكن بوابة أمان الواجهة أُغلقت محلياً وداخل GitHub Actions، وتم تفعيل required gates على `main`، وتم إثبات GHCR staging publish، وأصبح staging smoke قابلاً للتشغيل بسكربت fail-closed وworkflow يدوي. الخطوة التالية الدقيقة الآن هي تعبئة GitHub environment `staging` بالخدمات والأسرار ثم تشغيل smoke حقيقي، وبعدها monitoring/backup/restore/security hardening.
+المشروع جيد بما يكفي ليستحق البناء الطويل، وليس جيداً بما يكفي للإطلاق المتسرع. نحن ما زلنا داخل Phase 0، لكن بوابة أمان الواجهة أُغلقت محلياً وداخل GitHub Actions، وتم تفعيل required gates على `main`، وتم إثبات GHCR staging publish، وأصبح staging smoke قابلاً للتشغيل بسكربت fail-closed وworkflow يدوي، وارتفع مستوى Dockerfile Checks بإضافة image vulnerability scan. الخطوة التالية الدقيقة التي تحتاج مدخلاً خارجياً هي تعبئة GitHub environment `staging` بالخدمات والأسرار ثم تشغيل smoke حقيقي، وبعدها monitoring/backup/restore/security hardening.
 
 بعد ذلك يمكن الانتقال بثقة إلى SaaS usability، ثم commerce expansion، ثم shipping/COD الجزائري، ثم billing/revenue ops، ثم growth/integrations/scale.
 

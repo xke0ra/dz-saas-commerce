@@ -25,6 +25,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
+  TRIVY_IMAGE: aquasec/trivy:0.70.0
 
 jobs:
   build-and-push:
@@ -74,6 +75,7 @@ jobs:
           repository="${GITHUB_REPOSITORY,,}"
           image="${REGISTRY}/${repository}/${COMPONENT}"
           short_sha="${GITHUB_SHA::12}"
+          primary_tag="${image}:sha-${short_sha}"
 
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
             channel="${INPUT_CHANNEL:-staging}"
@@ -94,13 +96,15 @@ jobs:
 
           {
             echo "tags<<EOF"
-            echo "${image}:sha-${short_sha}"
+            echo "${primary_tag}"
             if [[ -n "${requested_tag}" ]]; then
               echo "${image}:${requested_tag}"
             fi
             echo "${image}:${channel}"
             echo "EOF"
           } >> "${GITHUB_OUTPUT}"
+
+          echo "primary_tag=${primary_tag}" >> "${GITHUB_OUTPUT}"
 
           {
             echo "labels<<EOF"
@@ -110,13 +114,26 @@ jobs:
             echo "EOF"
           } >> "${GITHUB_OUTPUT}"
 
-      - name: Build and Push Image
+      - name: Build Image
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
-          push: true
+          load: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.component }}
           cache-to: type=gha,mode=max,scope=${{ matrix.component }}
+
+      - name: Scan Image
+        run: scripts/security/container-image-scan.sh "${{ steps.meta.outputs.primary_tag }}"
+
+      - name: Push Image Tags
+        shell: bash
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          while IFS= read -r tag; do
+            [[ -n "${tag}" ]] || continue
+            docker push "${tag}"
+          done <<< "${TAGS}"
