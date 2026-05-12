@@ -21,6 +21,12 @@ cp deploy/staging/storefront.env.example deploy/staging/storefront.env
 ```
 
 Set `BACKEND_IMAGE` and `STOREFRONT_IMAGE` to immutable tags or digests, for example `sha-<12-char-sha>`.
+`images.env.example` also points Compose at the copied `backend.env` and `storefront.env` files:
+
+```dotenv
+BACKEND_ENV_FILE=./backend.env
+STOREFRONT_ENV_FILE=./storefront.env
+```
 
 Latest proven staging image publish, 2026-05-12:
 
@@ -31,38 +37,27 @@ STOREFRONT_IMAGE=ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-b8e
 
 The same workflow run also published `sha-b8ef2437f12b` and `staging` tags. The compose config was validated locally with the `staging-20260512-b8ef243` tags. A real staging smoke still requires staging-only `backend.env` and `storefront.env` values for PostgreSQL, Redis, Meilisearch, object storage, SMTP, domains, and app secrets.
 
-## Validate Compose
+## Validate
+
+The smoke runner fails before deployment if any env file still contains placeholder values or mutable channel-only image tags such as `:staging`.
 
 ```bash
-docker compose \
-  --env-file deploy/staging/images.env \
-  -f deploy/staging/docker-compose.staging.example.yml \
-  config
+deploy/staging/staging-smoke.sh validate
 ```
 
 ## Deploy Smoke
 
 ```bash
-docker compose \
-  --env-file deploy/staging/images.env \
-  -f deploy/staging/docker-compose.staging.example.yml \
-  pull
-
-docker compose \
-  --env-file deploy/staging/images.env \
-  -f deploy/staging/docker-compose.staging.example.yml \
-  up -d
+deploy/staging/staging-smoke.sh pull
+deploy/staging/staging-smoke.sh up
 ```
 
 ## Verify
 
 ```bash
-docker compose \
-  --env-file deploy/staging/images.env \
-  -f deploy/staging/docker-compose.staging.example.yml \
-  ps
-
-curl -I http://127.0.0.1:${EDGE_PORT:-8080}
+deploy/staging/staging-smoke.sh verify
 ```
+
+`verify` checks Compose process state, Laravel readiness, failed jobs, the storefront edge response, and backend live/ready HTTP health through the edge proxy. Use `deploy/staging/staging-smoke.sh all` for validate + pull + up + verify, and `deploy/staging/staging-smoke.sh down` to stop the stack.
 
 For a real staging environment, route TLS/load-balancer traffic to the edge service and run the reverse proxy checks in `docs/REVERSE_PROXY_RUNBOOK.md`.

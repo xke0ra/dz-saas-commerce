@@ -470,7 +470,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 | Production readiness غير مكتمل | توجد runbooks وأساس، وأضيف skeleton للـ staging في `deploy/staging/`، لكن لا يوجد إثبات staging كامل. | تشغيل staging deployment، TLS/proxy، queues/scheduler، health، monitoring، rollback. |
 | Frontend verification path | الفحص المحلي 2026-05-12 أثبت `audit/build/typecheck/e2e`، ومسار Docker الكامل للواجهة أثبت `install/typecheck/build/e2e`. | ربط نفس العقد بالـ CI required gates وعدم قبول merge إذا انكسر أحدها. |
 | CI required gates | تم إثبات Quality Gates داخل GitHub Actions في PR #1 / run `25743248405`، وتفعيل required checks على `main` مع strict status checks وadmin enforcement. | إبقاء هذه البوابة مطلوبة عند أي تعديل للـ workflow، ومراقبة تنبيهات GitHub الخاصة بانتقال Actions runtime من Node 20 إلى Node 24. |
-| Clean deployment proof غير مكتمل | Dockerfiles موجودة، وتم إثبات build smoke محلياً وGHCR staging publish عبر run `25744615858`. كما نجح `docker compose config` محلياً باستعمال tags المنشورة. | تشغيل staging حقيقي يستهلك tag/digest مثبتاً، ثم smoke على edge/backend/storefront/queue/scheduler. |
+| Clean deployment proof غير مكتمل | Dockerfiles موجودة، وتم إثبات build smoke محلياً وGHCR staging publish عبر run `25744615858`. كما أضيف `deploy/staging/staging-smoke.sh` ليمنع placeholders وmutable channel tags قبل التشغيل. | تشغيل staging حقيقي يستهلك tag/digest مثبتاً، ثم `deploy/staging/staging-smoke.sh all` على edge/backend/storefront/queue/scheduler. |
 | Monitoring/alerting/backups/restore | docs موجودة لكن لا يوجد تشغيل فعلي مثبت. | uptime، failed jobs، queue/scheduler، restore drill، alerts. |
 | Security hardening | CSP واسع، لا 2FA، لا session/device management، وdependency audits صارت تمر محلياً بعد تحديث Next. | تثبيت audit الأخضر داخل CI، ثم 2FA، CSP tightening، secrets rotation، vulnerability review workflow. |
 | Store tenant scoping review | تم في 2026-05-09 توثيق `Store` كاستثناء من `BelongsToTenant`، وجعل `forTenant(null)` fail-closed، وإزالة `tenant_id` من `Storefront/StoreResource` العام. | يبقى audit لاحق لأي query جديد على `Store` وتوسيع platform/admin tests عند إضافة flows جديدة. |
@@ -545,7 +545,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 - `مكتمل جزئياً`: تقوية workflow بإضافة Composer audit، Pint، pnpm audit، E2E required، وDocker image build smoke.
 - `مكتمل 2026-05-12`: إثبات `.github/workflows/quality.yml` داخل GitHub Actions على PR #1 / run `25743248405`.
 - `مكتمل 2026-05-12`: تفعيل required checks على `main`: `Repository Hygiene`, `Backend`, `Storefront`, `Dockerfile Checks`, `Storefront E2E`.
-- `مكتمل جزئياً`: staging deployment skeleton في `deploy/staging/`، ونجح `docker compose config` مع tags المنشورة؛ المتبقي تشغيله على بيئة staging حقيقية.
+- `مكتمل جزئياً`: staging deployment skeleton في `deploy/staging/`، ونجح `docker compose config` مع tags المنشورة، وأضيف smoke runner fail-closed؛ المتبقي تشغيله على بيئة staging حقيقية.
 - `مكتمل 2026-05-12`: Docker image push/promotion عبر GHCR workflow للـ staging channel في run `25744615858`.
 - monitoring.
 - backup schedule.
@@ -1062,7 +1062,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 2. `مكتمل 2026-05-12`: إعادة تشغيل التحقق الكامل للواجهة: `pnpm build`, `pnpm typecheck`, `pnpm test:e2e`، ثم `./storefront/scripts/verify-docker.sh all`.
 3. `مكتمل 2026-05-12`: تمرير `.github/workflows/quality.yml` داخل GitHub Actions وتفعيلها في branch protection كـ required checks.
 4. `مكتمل 2026-05-12`: تشغيل `container-images` workflow فعلياً إلى GHCR للـ staging channel.
-5. `الخطوة التالية الدقيقة`: تشغيل staging حقيقي يستهلك `staging-20260512-b8ef243` أو `sha-b8ef2437f12b`، ثم تنفيذ smoke على edge/backend/storefront.
+5. `الخطوة التالية الدقيقة`: توفير قيم `deploy/staging/backend.env` و`deploy/staging/storefront.env` الحقيقية، ثم تشغيل `deploy/staging/staging-smoke.sh all` باستخدام `staging-20260512-b8ef243` أو `sha-b8ef2437f12b`.
 6. تفعيل monitoring/alerting/error tracking.
 7. `مكتمل 2026-05-09`: مراجعة tenant scoping الأساسية لـ `Store`، مع إبقائه exception موثقاً وfail-closed عند `forTenant(null)`.
 8. `مكتمل 2026-05-09`: إصلاح catalog pagination وsitemap حتى لا تختفي المنتجات بعد أول 48 منتج.
@@ -1125,7 +1125,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 6. تم إصلاح sitemap 48-limit: `storefront/src/lib/api.ts` صار يقرأ pagination meta، و`storefront/src/app/sitemap.ts` يجمع كل صفحات المنتجات المتاحة.
 7. تم إصلاح تكرار `product_id` في cart checkout عبر validation وداخل `CreateQuickOrder`.
 8. docs الإنتاج والأمن صريحة في أن monitoring/backup/restore/proxy موجودة كrunbooks لا كدليل تشغيل production.
-9. تم التحقق محلياً من Dockerfile checks وimage build smoke للـ backend/storefront بتاريخ 2026-05-12، وتم إثبات GitHub required checks وGHCR publish. لم يتم بعد إثبات staging smoke حقيقي.
+9. تم التحقق محلياً من Dockerfile checks وimage build smoke للـ backend/storefront بتاريخ 2026-05-12، وتم إثبات GitHub required checks وGHCR publish. يوجد الآن smoke runner جاهز، لكن لم يتم بعد إثبات staging smoke حقيقي لغياب قيم الخدمات والأسرار.
 
 ---
 
@@ -1145,7 +1145,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 ## 20. خلاصة العمل القادم
 
-المشروع جيد بما يكفي ليستحق البناء الطويل، وليس جيداً بما يكفي للإطلاق المتسرع. نحن ما زلنا داخل Phase 0، لكن بوابة أمان الواجهة أُغلقت محلياً وداخل GitHub Actions، وتم تفعيل required gates على `main`، وتم إثبات GHCR staging publish. الخطوة التالية الدقيقة الآن هي staging smoke حقيقي، وبعدها monitoring/backup/restore/security hardening.
+المشروع جيد بما يكفي ليستحق البناء الطويل، وليس جيداً بما يكفي للإطلاق المتسرع. نحن ما زلنا داخل Phase 0، لكن بوابة أمان الواجهة أُغلقت محلياً وداخل GitHub Actions، وتم تفعيل required gates على `main`، وتم إثبات GHCR staging publish، وأصبح staging smoke قابلاً للتشغيل بسكربت fail-closed. الخطوة التالية الدقيقة الآن هي توفير أسرار وخدمات staging ثم تشغيل smoke حقيقي، وبعدها monitoring/backup/restore/security hardening.
 
 بعد ذلك يمكن الانتقال بثقة إلى SaaS usability، ثم commerce expansion، ثم shipping/COD الجزائري، ثم billing/revenue ops، ثم growth/integrations/scale.
 
