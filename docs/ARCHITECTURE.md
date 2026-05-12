@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: 2026-05-09
+Last updated: 2026-05-12
 
 This document describes the current architecture of `dz-saas-commerce` based on the repository state. It is an execution reference, not a marketing overview.
 
@@ -263,6 +263,7 @@ Before commercial launch, the architecture must include:
 
 - 2FA for super admins and tenant owners
 - stricter rate limits for sensitive actions
+- a green storefront dependency audit, maintained locally and in CI; as of 2026-05-12 the storefront is on Next `15.5.18`
 - security headers baseline and production CSP tightening
 - trusted proxy configuration for forwarded HTTPS/IP headers
 - tested backup and restore process; runbook exists but drill execution is still required

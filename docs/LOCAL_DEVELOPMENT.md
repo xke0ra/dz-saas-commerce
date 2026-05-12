@@ -1,6 +1,6 @@
 # Local Development Setup
 
-Last updated: 2026-05-09
+Last updated: 2026-05-12
 
 This is the clean-clone local setup contract for `dz-saas-commerce`. It intentionally uses local-only dummy credentials from `docker-compose.yml`; rotate anything used outside local development.
 
@@ -147,8 +147,9 @@ Storefront:
 
 ```bash
 cd storefront
-pnpm typecheck
+pnpm audit --audit-level moderate
 pnpm build
+pnpm typecheck
 ```
 
 Playwright e2e:
@@ -160,7 +161,7 @@ pnpm test:e2e
 
 If Chromium fails to launch with missing shared libraries in native WSL, install Playwright system dependencies for the host OS. The Docker verification path avoids this by using the official Playwright image.
 
-As of the 2026-05-09 verification pass, the Docker path successfully ran `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm build`, and `pnpm test:e2e`. The run used Node `v24.15.0`, pnpm `10.33.2`, and Playwright reported `6 passed`.
+As of the 2026-05-12 verification pass, native storefront `pnpm audit --audit-level moderate`, `pnpm build`, sequential `pnpm typecheck`, and `pnpm test:e2e` passed with Playwright reporting `6 passed`. The Docker path also passed fully on 2026-05-12 with Node `v24.15.0`, pnpm `10.33.2`, Next.js `15.5.18`, and Playwright `6 passed`.
 
 Repository hygiene and clean export checks:
 

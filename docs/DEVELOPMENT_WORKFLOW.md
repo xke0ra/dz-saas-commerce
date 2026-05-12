@@ -1,6 +1,6 @@
 # Development Workflow
 
-Last updated: 2026-05-09
+Last updated: 2026-05-12
 
 This document defines the working process for this project. It is optimized for careful, incremental development by a human or AI agent.
 
@@ -77,8 +77,9 @@ Current status:
 - Backend CI includes Composer audit and Pint.
 - Storefront CI includes pnpm audit at `moderate` or higher.
 - Container image publishing builds and pushes backend/storefront images to GHCR on manual dispatch or version tags.
-- The workspace root is a Git repository, but this workflow is not yet proven as an active required merge gate.
-- Treat it as the target CI contract until it runs inside GitHub Actions and is configured as a required check.
+- The workflow was proven green in GitHub Actions on PR #1 / run `25743248405`.
+- As of 2026-05-12, main branch protection requires `Repository Hygiene`, `Backend`, `Storefront`, `Dockerfile Checks`, and `Storefront E2E` with strict status checks and admin enforcement enabled.
+- Treat this as the active CI contract for pull requests into `main`.
 
 Required CI gates before broad AI/Codex development:
 
@@ -88,7 +89,7 @@ Required CI gates before broad AI/Codex development:
 - `Dockerfile Checks`
 - `Storefront E2E`
 
-Do not mark CI as complete until a real GitHub Actions run proves these jobs on the repository that receives pull requests.
+Do not mark CI as complete after future workflow edits until a real GitHub Actions run proves these jobs again on the repository that receives pull requests.
 
 Run repository hygiene locally when env, deployment, CI, ignore rules, or release packaging changes:
 
@@ -188,14 +189,15 @@ Native WSL/Linux commands are also acceptable when Node and pnpm are installed i
 ```bash
 cd storefront
 pnpm install --frozen-lockfile
-pnpm typecheck
+pnpm audit --audit-level moderate
 pnpm build
+pnpm typecheck
 pnpm test:e2e
 ```
 
-Do not run `pnpm typecheck` concurrently with `pnpm build`; `.next/types` can be regenerated during build.
+Do not run `pnpm typecheck` concurrently with `pnpm build`; `.next/types` can be regenerated during build. A 2026-05-12 parallel local run reproduced this failure mode, while sequential `build` then `typecheck` passed.
 
-If native Playwright fails before executing tests because the browser cannot launch, either fix host system dependencies or use `./storefront/scripts/verify-docker.sh e2e`. The Docker e2e path passed on 2026-05-09 with `6 passed`.
+If native Playwright fails before executing tests because the browser cannot launch, either fix host system dependencies or use `./storefront/scripts/verify-docker.sh e2e`. The full Docker storefront path passed on 2026-05-12 with Playwright reporting `6 passed`.
 
 ## Route Changes
 
@@ -211,8 +213,9 @@ After changing Next.js route files:
 
 ```bash
 cd storefront
-pnpm typecheck
+pnpm audit --audit-level moderate
 pnpm build
+pnpm typecheck
 ```
 
 ## Checkout Changes
@@ -237,8 +240,9 @@ php artisan test tests/Feature/Checkout/QuickCheckoutTest.php
 php artisan test
 
 cd ../storefront
-npm run typecheck
-npm run build
+pnpm audit --audit-level moderate
+pnpm build
+pnpm typecheck
 ```
 
 ## Package Changes

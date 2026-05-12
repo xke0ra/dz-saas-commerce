@@ -1,6 +1,6 @@
 # التحليل العميق وخارطة الطريق الاستراتيجية لمنصة dz-saas-commerce
 
-آخر تحديث: 2026-05-09
+آخر تحديث: 2026-05-12
 
 نوع الوثيقة: مرجع استراتيجي أعلى + تحليل معماري + خارطة طريق تنفيذية طويلة المدى لعمل الإنسان وCodex على المشروع.
 
@@ -9,7 +9,7 @@
 مصادر هذه النسخة:
 
 - قراءة بنية المستودع وملفات `backend/`, `storefront/`, `docs/`, `docker-compose.yml`, و`.github/workflows/quality.yml`.
-- نتائج فحص عملي محلية بتاريخ 2026-05-09، مع الاحتفاظ بسياق التحقق السابق بتاريخ 2026-05-08.
+- نتائج فحص عملي محلية بتاريخ 2026-05-12، مع الاحتفاظ بسياق التحقق السابق بتاريخ 2026-05-09 و2026-05-08.
 - الوثائق الموجودة فعلياً داخل `docs/`.
 - مبدأ المنتج المعلن: بناء منصة SaaS تجارة إلكترونية ضخمة شبيهة بـ Shopify، لكنها مخصصة للسوق الجزائري، بدون استعجال إطلاق غير ناضج.
 
@@ -23,9 +23,9 @@
 
 الخلفية `backend/` هي أقوى جزء في المشروع حالياً. هي مبنية بـ Laravel وFilament، وتستخدم Actions وسياسات وصلاحيات وقيود قاعدة بيانات واختبارات جيدة. الفحص العملي أثبت أن backend test suite يمر بنجاح: `154 passed (629 assertions)`.
 
-الواجهة `storefront/` جيدة كبداية فعلية: صفحات متجر، منتجات، تصنيفات، بحث، سلة، checkout، تتبع طلب، SEO، robots، sitemap، وJSON-LD. تم تثبيت مسار Docker موحد لتشغيل install/typecheck/build/e2e، وتم إصلاح تغطية sitemap عبر pagination، لكنها ما زالت تحتاج نضجاً في pagination UI، caching/revalidation، accessibility، وصقل تجربة checkout على الهاتف.
+الواجهة `storefront/` جيدة كبداية فعلية: صفحات متجر، منتجات، تصنيفات، بحث، سلة، checkout، تتبع طلب، SEO، robots، sitemap، وJSON-LD. تم توحيد الاعتماد الفعلي على `storefront/pnpm-lock.yaml`، وتم إغلاق بوابة أمان الواجهة في 2026-05-12 بتحديث Next إلى `15.5.18`. التحقق المحلي الحالي يثبت `pnpm audit --audit-level moderate`, `pnpm build`, `pnpm typecheck`, و`pnpm test:e2e` بنجاح.
 
-الجاهزية للإنتاج غير مكتملة. توجد Dockerfiles، health/readiness، runbooks، CI baseline، backup/proxy/monitoring docs، وأساس أمني، لكن لا يوجد بعد دليل كاف على staging deployment، required CI gates، image promotion، restore drill منفذ، monitoring/alerting فعلي، error tracking، أو security hardening كامل.
+الجاهزية للإنتاج غير مكتملة. توجد Dockerfiles، health/readiness، runbooks، CI baseline، backup/proxy/monitoring docs، وأساس أمني. تم في 2026-05-12 إثبات Quality Gates داخل GitHub Actions على PR #1 / run `25743248405` وتفعيلها كـ required checks على `main`. لا يوجد بعد دليل كاف على GHCR image promotion، staging deployment، restore drill منفذ، monitoring/alerting فعلي، error tracking، أو security hardening كامل.
 
 الهدف بعيد المدى ليس إطلاق متجر واحد، بل بناء منصة SaaS تجارية واسعة شبيهة بـ Shopify ومناسبة للجزائر. لذلك لا ينصح بالإطلاق قبل إغلاق التشغيل، الأمان، العزل بين المستأجرين، موثوقية CI، النسخ الاحتياطي، والمراقبة.
 
@@ -351,7 +351,7 @@
 
 ---
 
-## 5. نتائج التحقق العملي بتاريخ 2026-05-09
+## 5. نتائج التحقق العملي بتاريخ 2026-05-12
 
 تم تشغيل الأوامر التالية بنجاح محلياً في `backend/`:
 
@@ -361,14 +361,22 @@
 | `composer audit --no-interaction` | no advisories |
 | `php vendor/bin/pint --test` | passed |
 | `php artisan test` | `154 passed (629 assertions)` |
-| `php artisan system:health --scope=live --format=json` | ok |
 | `php artisan system:health --scope=ready --format=json` | ok، ويتضمن اتصال PostgreSQL وMeilisearch في البيئة المحلية |
-| `php artisan route:list` | `135 routes` |
-| `php artisan schedule:list` | `billing:process` و`checkout-idempotency:prune` |
-| `docker buildx build --check` للـ backend/storefront | passed |
-| `docker buildx build --load` للـ backend/storefront | passed |
+| `scripts/security/secret-hygiene.sh` | passed |
+| `scripts/release/clean-export-check.sh` | passed، archive size: `1.8M` |
 
-حدود هذا التحقق: لم يتم في هذه الجولة تشغيل `migrate:status` أو `queue:failed` أو `checkout-idempotency:prune --dry-run`، ولم يتم إثبات GitHub required checks أو GHCR image publishing أو staging deployment أو restore drill. أمر `php artisan route:list --compact` غير مدعوم في إصدار Laravel الحالي، لذلك يستخدم الفحص `php artisan route:list` مباشرة.
+تم تشغيل الأوامر التالية في `storefront/`:
+
+| الأمر | النتيجة |
+|---|---|
+| `pnpm audit --audit-level moderate` | passed، no known vulnerabilities |
+| `pnpm build` | passed على `Next.js 15.5.18` |
+| `pnpm typecheck` | passed عند تشغيله متسلسلاً بعد البناء |
+| `pnpm test:e2e` | `6 passed` |
+
+ملاحظة تحقق مهمة: تشغيل `pnpm typecheck` بالتوازي مع `pnpm build` فشل مرة بسبب إعادة توليد `.next/types` أثناء فحص TypeScript. هذا يؤكد قاعدة موجودة في `TESTING_STRATEGY.md`: لا تشغل typecheck وbuild بالتوازي على نفس checkout. التشغيل المتسلسل بعد build نجح.
+
+حدود هذا التحقق: لم يتم في هذه الجولة تشغيل `migrate:status` أو `queue:failed` أو `checkout-idempotency:prune --dry-run`. تم تشغيل مسار Docker الكامل للواجهة وDockerfile checks وimage build smoke للـ backend/storefront في 2026-05-12، وتم إثبات GitHub required checks عبر PR #1 / run `25743248405`. لم يتم بعد إثبات GHCR image publishing أو staging deployment أو restore drill.
 
 ### تحقق الواجهة
 
@@ -378,7 +386,7 @@
 ./storefront/scripts/verify-docker.sh all
 ```
 
-نتيجة التحقق بتاريخ 2026-05-09:
+نتيجة التحقق المحدثة بتاريخ 2026-05-12:
 
 - Docker image للـ install/typecheck/build: `node:24-bookworm`.
 - Docker image للـ e2e: `mcr.microsoft.com/playwright:v1.59.1-noble`.
@@ -386,10 +394,12 @@
 - pnpm داخل Docker: `10.33.2`.
 - `pnpm install --frozen-lockfile`: نجح.
 - `pnpm typecheck`: نجح.
-- `pnpm build`: نجح.
-- `pnpm test:e2e`: نجح، `6 passed`.
+- `pnpm build`: نجح على `Next.js 15.5.18`.
+- `pnpm test:e2e`: نجح، `6 passed (26.7s)`.
 - لا يتم خلط Windows `node_modules` مع WSL `node_modules`.
 - pnpm store مضبوط داخل الحاوية تحت `/tmp/pnpm-store` حتى لا يولد `.pnpm-store` داخل المشروع.
+
+تحديث 2026-05-12: لا توجد الآن lockfiles غير مناسبة في root أو `storefront/`; الملفات المقفلة الفعلية هي `backend/composer.lock`, `backend/package-lock.json`, و`storefront/pnpm-lock.yaml`. هذا يغلق تحذير Next السابق عن اختيار root بسبب `package-lock.json` في جذر المستودع. تم تحديث `next` إلى `15.5.18` وإعادة تمرير `pnpm audit --audit-level moderate` بنجاح.
 
 ملاحظات التنفيذ من تثبيت مسار Docker:
 
@@ -458,11 +468,11 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 | الخطر | التفسير | المطلوب |
 |---|---|---|
 | Production readiness غير مكتمل | توجد runbooks وأساس، وأضيف skeleton للـ staging في `deploy/staging/`، لكن لا يوجد إثبات staging كامل. | تشغيل staging deployment، TLS/proxy، queues/scheduler، health، monitoring، rollback. |
-| Frontend verification path | تم إغلاقه كمسار Docker موحد وتحقق مجدداً في 2026-05-09: install/typecheck/build/e2e نجحت. | يبقى ربط المسار بالـ CI required gates ومراقبة استقراره. |
-| CI required gates غير مثبتة | workflow تقوى بإضافة repository hygiene وclean export rehearsal وaudits وPint وE2E required وDocker image build smoke، وأسماء required checks موثقة، لكنه ليس مثبتاً بعد كحاجز merge إلزامي داخل GitHub. | تفعيل GitHub required checks: `Repository Hygiene`, `Backend`, `Storefront`, `Dockerfile Checks`, `Storefront E2E` ومراقبة أول run حقيقي. |
+| Frontend verification path | الفحص المحلي 2026-05-12 أثبت `audit/build/typecheck/e2e`، ومسار Docker الكامل للواجهة أثبت `install/typecheck/build/e2e`. | ربط نفس العقد بالـ CI required gates وعدم قبول merge إذا انكسر أحدها. |
+| CI required gates | تم إثبات Quality Gates داخل GitHub Actions في PR #1 / run `25743248405`، وتفعيل required checks على `main` مع strict status checks وadmin enforcement. | إبقاء هذه البوابة مطلوبة عند أي تعديل للـ workflow، ومراقبة تنبيهات GitHub الخاصة بانتقال Actions runtime من Node 20 إلى Node 24. |
 | Clean deployment proof غير موجود | Dockerfiles موجودة وتم إثبات build smoke محلياً للـ backend/storefront، وأضيف workflow لنشر الصور إلى GHCR وstaging compose skeleton، لكن GHCR/staging لم يثبتا بعد بتشغيل فعلي. | تشغيل GHCR publish، ثم جعل staging يستهلك tag/digest مثبتاً وتشغيل smoke فعلي. |
 | Monitoring/alerting/backups/restore | docs موجودة لكن لا يوجد تشغيل فعلي مثبت. | uptime، failed jobs، queue/scheduler، restore drill، alerts. |
-| Security hardening | CSP واسع، لا 2FA، لا session/device management، وdependency audits أضيفت للـ CI لكنها لا تغني عن review workflow. | 2FA، CSP tightening، secrets rotation، vulnerability review workflow. |
+| Security hardening | CSP واسع، لا 2FA، لا session/device management، وdependency audits صارت تمر محلياً بعد تحديث Next. | تثبيت audit الأخضر داخل CI، ثم 2FA، CSP tightening، secrets rotation، vulnerability review workflow. |
 | Store tenant scoping review | تم في 2026-05-09 توثيق `Store` كاستثناء من `BelongsToTenant`، وجعل `forTenant(null)` fail-closed، وإزالة `tenant_id` من `Storefront/StoreResource` العام. | يبقى audit لاحق لأي query جديد على `Store` وتوسيع platform/admin tests عند إضافة flows جديدة. |
 | catalog pagination/sitemap 48-limit | تم إصلاحه في 2026-05-09: sitemap صار يجمع المنتجات عبر pagination ويثبت ذلك E2E، والـ backend test يؤكد cap الصفحة الثانية. | يبقى sitemap index لاحقاً للمتاجر التي تتجاوز حد URL الآمن لكل sitemap. |
 | cart duplicate item quantity normalization | تم إصلاحه في 2026-05-09: request validation و`CreateQuickOrder` يرفضان تكرار `product_id` في نفس checkout. | يبقى تحسين metrics للـ abuse/idempotency لاحقاً. |
@@ -508,12 +518,12 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 |---|---:|---|
 | Backend maturity | 7.5/10 | منظم، مختبر، وفيه domains كثيرة. يحتاج نضج revenue ops وstock/variants وبعض operational proof. |
 | Tenancy/security model | 7/10 | أساس قوي متعدد الطبقات. يحتاج مراجعة `Store`, أي `withoutGlobalScope`, 2FA, CSP, scans. |
-| Storefront maturity | 6.5/10 | جيد كبداية customer-facing، وتم تثبيت build/e2e عبر Docker وإصلاح sitemap pagination. يحتاج pagination UI، caching، UX polish، وa11y. |
+| Storefront maturity | 6.5/10 | جيد كبداية customer-facing، وaudit/build/typecheck/e2e تمر محلياً، وتم إصلاح sitemap pagination. يحتاج pagination UI، caching، UX polish، وa11y، وإثبات نفس العقد داخل CI. |
 | Production readiness | 4/10 | runbooks وhealth موجودة، لكن التشغيل الفعلي غير مثبت. |
 | Commercial SaaS readiness | 5/10 | foundation قوي، لكن onboarding/revenue dashboards/billing ops/support ops ناقصة. |
-| DevOps maturity | 4.5/10 | Docker/CI baseline موجود، لكن gates/deploy/monitoring/restore proof ناقصة. |
+| DevOps maturity | 5/10 | Docker/CI baseline موجود، GitHub required gates مثبتة، ومسار الواجهة الأخضر ثبت محلياً وداخل CI. ما زالت deploy/monitoring/restore proof ناقصة. |
 | Documentation maturity | 7/10 | docs كثيرة وصريحة. تحتاج إبقاءها متزامنة مع الفحص الحالي. |
-| Testing maturity | 7/10 | backend جيد، وfrontend install/typecheck/build/e2e مثبتة عبر Docker. CI gating ما زال غير مثبت. |
+| Testing maturity | 7.5/10 | backend جيد، وfrontend audit/build/typecheck/e2e يمر عند التشغيل المتسلسل، كما مر Docker storefront verification وGitHub Actions Quality Gates. المتبقي توسيع الاختبارات عند إضافة flows تجارية أكبر. |
 
 التقييم العام: foundation قوي، pre-production، وليس production-ready.
 
@@ -527,10 +537,14 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 - `مكتمل محلياً 2026-05-09`: repository hygiene.
 - `مكتمل محلياً 2026-05-09`: clean clone/export rehearsal.
-- `مكتمل ومتحقق مجدداً 2026-05-09`: بيئة frontend موحدة عبر Docker.
-- `مكتمل ومتحقق مجدداً 2026-05-09`: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm build`, و`pnpm test:e2e` موثوقة عبر `./storefront/scripts/verify-docker.sh all`.
+- `مكتمل 2026-05-09 ومتحقق مجدداً 2026-05-12`: بيئة frontend موحدة عبر Docker.
+- `مكتمل محلياً 2026-05-12`: تحديث Next إلى `15.5.18` وإغلاق `pnpm audit --audit-level moderate`.
+- `مكتمل محلياً 2026-05-12`: `pnpm build`, `pnpm typecheck`, و`pnpm test:e2e` تمر محلياً عند التشغيل المتسلسل، وآخر e2e أعطى `6 passed`.
+- `مكتمل محلياً 2026-05-12`: `./storefront/scripts/verify-docker.sh all` مر بالكامل، بما فيه Playwright `6 passed`.
+- `مكتمل محلياً 2026-05-12`: Dockerfile checks وDocker image build smoke للـ backend/storefront عبر `docker buildx build --check` و`docker buildx build --load`.
 - `مكتمل جزئياً`: تقوية workflow بإضافة Composer audit، Pint، pnpm audit، E2E required، وDocker image build smoke.
-- CI required gates داخل GitHub branch protection.
+- `مكتمل 2026-05-12`: إثبات `.github/workflows/quality.yml` داخل GitHub Actions على PR #1 / run `25743248405`.
+- `مكتمل 2026-05-12`: تفعيل required checks على `main`: `Repository Hygiene`, `Backend`, `Storefront`, `Dockerfile Checks`, `Storefront E2E`.
 - `مكتمل جزئياً`: staging deployment skeleton في `deploy/staging/`، والمتبقي تشغيله على بيئة staging حقيقية.
 - `مكتمل جزئياً`: Docker image push/promotion عبر GHCR workflow، والمتبقي تشغيله فعلياً وربطه بالـ staging.
 - monitoring.
@@ -753,9 +767,9 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 ### 11.10 Storefront
 
 - الحالة الحالية: صفحات عامة وسلة وcheckout وSEO foundation.
-- المطلوب: caching/revalidation، pagination UI، image optimization، accessibility، better empty/error states.
+- المطلوب: الحفاظ على dependency audit أخضر داخل CI، ثم caching/revalidation، pagination UI، image optimization، accessibility، better empty/error states.
 - الأولوية: P1.
-- معايير القبول: `pnpm typecheck/build` وe2e أو smoke موثوق، ولا تعتمد الواجهة على totals موثوقة.
+- معايير القبول: `pnpm audit`, `pnpm build`, `pnpm typecheck`, وe2e تمر، ولا تعتمد الواجهة على totals موثوقة.
 
 ### 11.11 SEO
 
@@ -794,8 +808,8 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 ### 11.16 Security
 
-- الحالة الحالية: policies، tenancy، headers، throttles، readiness safeguards، dependency audits، وsecret hygiene check.
-- المطلوب: 2FA، CSP tightening، image/dependency vulnerability review workflow، session/device management، secrets rotation.
+- الحالة الحالية: policies، tenancy، headers، throttles، readiness safeguards، dependency audits خضراء محلياً بعد تحديث Next، وsecret hygiene check.
+- المطلوب: تثبيت dependency audits كحاجز CI، ثم 2FA، CSP tightening، image/dependency vulnerability review workflow، session/device management، secrets rotation.
 - الأولوية: P0.
 - معايير القبول: tests، docs، CI scans، وproduction/staging validation.
 
@@ -829,7 +843,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 ### 11.21 Testing
 
-- الحالة الحالية: backend جيد، وfrontend Docker verification مثبتة: install/typecheck/build/e2e نجحت.
+- الحالة الحالية: backend جيد، وfrontend audit/build/typecheck/e2e تمر محلياً، ومسار Docker الكامل للواجهة مر في 2026-05-12.
 - المطلوب: CI required، security scans، وإبقاء e2e مستقراً داخل CI.
 - الأولوية: P0.
 - معايير القبول: tests تعمل من clean clone/CI، والأرقام محدثة في docs.
@@ -1044,16 +1058,16 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 ## 16. الأولويات العشر القادمة
 
-1. `مكتمل ومتحقق مجدداً 2026-05-09`: توحيد بيئة frontend عبر Docker وتشغيل `pnpm install --frozen-lockfile/typecheck/build/test:e2e`.
-2. `مكتمل جزئياً`: تقوية CI داخل المستودع بإضافة repository hygiene وclean export rehearsal وaudits وPint وE2E required وDocker image build smoke وتوثيق أسماء required checks؛ المتبقي تفعيلها في GitHub branch protection.
-3. تشغيل `container-images` workflow فعلياً إلى GHCR وربط `deploy/staging/` بصورة immutable tag/digest وتشغيل smoke.
-4. تفعيل monitoring/alerting/error tracking.
-5. نشر backup schedule وتنفيذ restore drill مسجل.
-6. `مكتمل 2026-05-09`: مراجعة tenant scoping الأساسية لـ `Store`، مع إبقائه exception موثقاً وfail-closed عند `forTenant(null)`.
-7. `مكتمل 2026-05-09`: إصلاح catalog pagination وsitemap حتى لا تختفي المنتجات بعد أول 48 منتج.
-8. security hardening: 2FA، CSP، vulnerability review workflow، secrets rotation. تم إضافة secret hygiene وclean export baseline في 2026-05-09.
-9. merchant onboarding + store readiness.
-10. product variants + stock movements.
+1. `مكتمل 2026-05-12`: تحديث `next` إلى `15.5.18` وإعادة توليد `storefront/pnpm-lock.yaml` وتمرير `pnpm audit --audit-level moderate`.
+2. `مكتمل 2026-05-12`: إعادة تشغيل التحقق الكامل للواجهة: `pnpm build`, `pnpm typecheck`, `pnpm test:e2e`، ثم `./storefront/scripts/verify-docker.sh all`.
+3. `مكتمل 2026-05-12`: تمرير `.github/workflows/quality.yml` داخل GitHub Actions وتفعيلها في branch protection كـ required checks.
+4. `الخطوة التالية الدقيقة`: تشغيل `container-images` workflow فعلياً إلى GHCR وربط `deploy/staging/` بصورة immutable tag/digest وتشغيل smoke.
+5. تفعيل monitoring/alerting/error tracking.
+6. نشر backup schedule وتنفيذ restore drill مسجل.
+7. `مكتمل 2026-05-09`: مراجعة tenant scoping الأساسية لـ `Store`، مع إبقائه exception موثقاً وfail-closed عند `forTenant(null)`.
+8. `مكتمل 2026-05-09`: إصلاح catalog pagination وsitemap حتى لا تختفي المنتجات بعد أول 48 منتج.
+9. security hardening: 2FA، CSP، vulnerability review workflow، secrets rotation. تم إضافة secret hygiene وclean export baseline في 2026-05-09.
+10. merchant onboarding + store readiness، ثم product variants + stock movements.
 
 هذا الترتيب يبدأ بالبنية والموثوقية قبل الميزات؛ لأن المشروع سيكبر عبر Codex، وأي ضعف في CI أو العزل أو التشغيل سيصبح مكلفاً لاحقاً.
 
@@ -1103,13 +1117,15 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 ## 18. الفجوات والتناقضات التي تحتاج تحققاً أو معالجة لاحقة
 
-1. تم تصحيح حالة الواجهة: لم تعد تعتمد على `npm run typecheck/build` أو Windows Node. الحالة المثبتة والمتحققة مجدداً بتاريخ 2026-05-09 هي Docker verification عبر `pnpm`، وقد نجحت install/typecheck/build/e2e.
-2. تم إغلاق مراجعة `Store` الأساسية: يبقى exception من `BelongsToTenant` لحلّ المتجر/الدومين، لكن `scopeForTenant(null)` صار fail-closed، وتم توثيق ذلك.
-3. تم إزالة `tenant_id` من `Storefront/StoreResource` العام، مع اختبار يمنع رجوعه في `resolve` و`home`.
-4. تم إصلاح sitemap 48-limit: `storefront/src/lib/api.ts` صار يقرأ pagination meta، و`storefront/src/app/sitemap.ts` يجمع كل صفحات المنتجات المتاحة.
-5. تم إصلاح تكرار `product_id` في cart checkout عبر validation وداخل `CreateQuickOrder`.
-6. docs الإنتاج والأمن صريحة في أن monitoring/backup/restore/proxy موجودة كrunbooks لا كدليل تشغيل production.
-7. تم التحقق محلياً من Dockerfile checks وimage build smoke للـ backend/storefront، لكن لم يتم إثبات GitHub required checks أو GHCR publish.
+1. تم تصحيح حالة lockfiles: لا يوجد الآن `package-lock.json` في الجذر أو داخل `storefront/`، وبقيت الواجهة تعتمد على `storefront/pnpm-lock.yaml`.
+2. تم تحديث الواجهة إلى `next@15.5.18`، و`pnpm audit --audit-level moderate` صار يمر بدون ثغرات معروفة، وتم إثبات ذلك داخل GitHub Actions.
+3. تم تأكيد أن `pnpm typecheck` لا يجب أن يعمل بالتوازي مع `pnpm build` لأن `.next/types` قد تكون في حالة توليد جزئية. التشغيل المتسلسل في 2026-05-12 نجح.
+4. تم إغلاق مراجعة `Store` الأساسية: يبقى exception من `BelongsToTenant` لحلّ المتجر/الدومين، لكن `scopeForTenant(null)` صار fail-closed، وتم توثيق ذلك.
+5. تم إزالة `tenant_id` من `Storefront/StoreResource` العام، مع اختبار يمنع رجوعه في `resolve` و`home`.
+6. تم إصلاح sitemap 48-limit: `storefront/src/lib/api.ts` صار يقرأ pagination meta، و`storefront/src/app/sitemap.ts` يجمع كل صفحات المنتجات المتاحة.
+7. تم إصلاح تكرار `product_id` في cart checkout عبر validation وداخل `CreateQuickOrder`.
+8. docs الإنتاج والأمن صريحة في أن monitoring/backup/restore/proxy موجودة كrunbooks لا كدليل تشغيل production.
+9. تم التحقق محلياً من Dockerfile checks وimage build smoke للـ backend/storefront بتاريخ 2026-05-12، وتم إثبات GitHub required checks. لم يتم بعد إثبات GHCR publish.
 
 ---
 
@@ -1129,7 +1145,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 ## 20. خلاصة العمل القادم
 
-المشروع جيد بما يكفي ليستحق البناء الطويل، وليس جيداً بما يكفي للإطلاق المتسرع. تم إغلاق أول بند من Phase 0، وأفضل قرار الآن هو متابعة Phase 0 بصرامة: CI gates، staging، monitoring، backups، restore drill، security hardening، ومراجعة tenant scoping.
+المشروع جيد بما يكفي ليستحق البناء الطويل، وليس جيداً بما يكفي للإطلاق المتسرع. نحن ما زلنا داخل Phase 0، لكن بوابة أمان الواجهة أُغلقت محلياً وداخل GitHub Actions، وتم تفعيل required gates على `main`. الخطوة التالية الدقيقة الآن هي GHCR image publish ثم staging smoke، وبعدها monitoring/backup/restore/security hardening.
 
 بعد ذلك يمكن الانتقال بثقة إلى SaaS usability، ثم commerce expansion، ثم shipping/COD الجزائري، ثم billing/revenue ops، ثم growth/integrations/scale.
 
