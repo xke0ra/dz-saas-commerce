@@ -1,0 +1,84 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dz_saas_staging
+      POSTGRES_USER: dz_user
+      POSTGRES_PASSWORD: dz_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dz_user -d dz_saas_staging"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --requirepass dz_redis_password
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "dz_redis_password", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.12
+    restart: unless-stopped
+    environment:
+      MEILI_ENV: development
+      MEILI_MASTER_KEY: dz_meili_master_key
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: dz_minio
+      MINIO_ROOT_PASSWORD: dz_minio_password
+
+  minio-create-bucket:
+    image: minio/mc:latest
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_started
+    entrypoint: >
+      /bin/sh -lc "until mc alias set local http://minio:9000 dz_minio dz_minio_password; do sleep 2; done;
+      mc mb -p local/dz-saas-commerce-staging || true"
+
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+
+  backend:
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_started
+      minio-create-bucket:
+        condition: service_completed_successfully
+
+  backend-queue:
+    depends_on:
+      backend:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+  backend-scheduler:
+    depends_on:
+      backend:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+  edge:
+    networks:
+      default:
+        aliases:
+          - api.staging.internal
+          - staging.internal

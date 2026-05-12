@@ -34,6 +34,7 @@ Currently present:
 - backend security headers middleware
 - storefront security headers through Next.js `headers()`
 - container image vulnerability scanning in CI for fixed `HIGH` and `CRITICAL` OS/library vulnerabilities
+- backend production dependencies include the Laravel Flysystem S3 adapter required for S3-backed storage readiness
 - readiness fails in production when `APP_DEBUG=true` or `APP_KEY` is missing
 - trusted proxy config through `TRUSTED_PROXIES`
 - test coverage for forwarded HTTPS only from configured proxies
@@ -205,6 +206,8 @@ Before launch, document:
 - The GitHub `staging` environment exists but currently has no secrets or variables configured; staging smoke is blocked until that contract is populated.
 - Trivy `0.70.0` image scanning runs in `Dockerfile Checks` for backend and storefront CI images, failing on fixed `HIGH` and `CRITICAL` OS/library vulnerabilities.
 - The GHCR publish workflow uses the same scan policy before pushing image tags.
+- A local ephemeral staging smoke with disposable PostgreSQL, Redis, Meilisearch, MinIO, and Mailpit exposed a missing production S3 dependency; adding `league/flysystem-aws-s3-v3` made Laravel storage readiness pass against S3/MinIO.
+- The locally rebuilt backend image `ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-localtest` passed Trivy `0.70.0` with 0 OS and 0 Composer-vendor vulnerabilities.
 
 ## Audit Logging
 

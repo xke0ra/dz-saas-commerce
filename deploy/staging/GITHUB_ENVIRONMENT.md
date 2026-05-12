@@ -1,6 +1,9 @@
 # GitHub Staging Environment Contract
 
-The manual `.github/workflows/staging-smoke.yml` workflow renders ignored staging env files from the GitHub `staging` environment, then runs `deploy/staging/staging-smoke.sh`.
+The manual `.github/workflows/staging-smoke.yml` workflow can run either:
+
+- `target=environment`: render ignored staging env files from the GitHub `staging` environment, then run `deploy/staging/staging-smoke.sh`.
+- `target=ephemeral`: run `deploy/staging/staging-ephemeral-smoke.sh` with disposable PostgreSQL, Redis, Meilisearch, MinIO, and Mailpit services on the selected runner.
 
 Use this workflow for repeatable validation once real staging backing services exist. It is not a production deployment workflow.
 
@@ -62,9 +65,12 @@ Run **Staging Smoke** manually from GitHub Actions.
 
 Recommended first dispatch:
 
+- `target`: `ephemeral`
 - `mode`: `validate`
-- `backend_image`: `ghcr.io/xke0ra/dz-saas-commerce/backend:staging-20260512-a1e913d`
+- `backend_image`: a scanned backend image tag built after S3 filesystem support was added
 - `storefront_image`: `ghcr.io/xke0ra/dz-saas-commerce/storefront:staging-20260512-a1e913d`
 - `runner`: `ubuntu-latest`, unless staging services are private-network only
 
-Use `mode=all` only when the runner can reach PostgreSQL, Redis, Meilisearch, object storage, SMTP, and any hostnames used by the edge smoke checks.
+Use `target=environment` with `mode=all` only when the runner can reach PostgreSQL, Redis, Meilisearch, object storage, SMTP, and any hostnames used by the edge smoke checks.
+
+Use `target=ephemeral` with `mode=all` to prove the selected images and process topology before the environment secret contract is fully populated. It still requires a backend image built from a commit that includes `league/flysystem-aws-s3-v3`; older backend images fail the S3 storage readiness check.

@@ -45,7 +45,8 @@ http {
     # mounted at /var/www/html/public while PHP executes in the backend:9000 FPM container.
     server {
         listen 8080;
-        server_name api.example.com admin.example.com support.example.com;
+        server_name api.example.com admin.example.com support.example.com
+                    api.staging.internal admin.staging.internal support.staging.internal;
 
         root /var/www/html/public;
         index index.php;
@@ -90,7 +91,7 @@ http {
     # Host header so it can resolve subdomains and future verified custom domains.
     server {
         listen 8080 default_server;
-        server_name example.com *.example.com _;
+        server_name example.com *.example.com staging.internal *.staging.internal _;
 
         location /_next/static/ {
             proxy_pass http://storefront;

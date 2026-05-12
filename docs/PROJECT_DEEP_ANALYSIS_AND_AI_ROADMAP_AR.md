@@ -25,7 +25,7 @@
 
 الواجهة `storefront/` جيدة كبداية فعلية: صفحات متجر، منتجات، تصنيفات، بحث، سلة، checkout، تتبع طلب، SEO، robots، sitemap، وJSON-LD. تم توحيد الاعتماد الفعلي على `storefront/pnpm-lock.yaml`، وتم إغلاق بوابة أمان الواجهة في 2026-05-12 بتحديث Next إلى `15.5.18`. التحقق المحلي الحالي يثبت `pnpm audit --audit-level moderate`, `pnpm build`, `pnpm typecheck`, و`pnpm test:e2e` بنجاح.
 
-الجاهزية للإنتاج غير مكتملة. توجد Dockerfiles، health/readiness، runbooks، CI baseline، backup/proxy/monitoring docs، وأساس أمني. تم في 2026-05-12 إثبات Quality Gates داخل GitHub Actions على PR #1 / run `25743248405` وبعد الدمج على `main` / run `25744282999`، وتفعيلها كـ required checks على `main`. وتم أيضاً إثبات GHCR staging image publish بعد Trivy scan عبر run `25751543062`. لا يوجد بعد دليل كاف على staging deployment حقيقي، restore drill منفذ، monitoring/alerting فعلي، error tracking، أو security hardening كامل.
+الجاهزية للإنتاج غير مكتملة. توجد Dockerfiles، health/readiness، runbooks، CI baseline، backup/proxy/monitoring docs، وأساس أمني. تم في 2026-05-12 إثبات Quality Gates داخل GitHub Actions على PR #1 / run `25743248405` وبعد الدمج على `main` / run `25744282999`، وتفعيلها كـ required checks على `main`. وتم أيضاً إثبات GHCR staging image publish بعد Trivy scan عبر run `25751543062`. بعد ذلك أثبت smoke مؤقت محلي كامل أن topology الخاص بالـ backend/storefront/queue/scheduler/edge يعمل مع PostgreSQL وRedis وMeilisearch وS3/MinIO وSMTP/Mailpit، وكشف نقص اعتماد S3 في backend ثم أُغلق بإضافة `league/flysystem-aws-s3-v3`. لا يوجد بعد دليل كاف على staging deployment خارجي حقيقي، TLS/custom domains، restore drill منفذ، monitoring/alerting فعلي، error tracking، أو security hardening كامل.
 
 الهدف بعيد المدى ليس إطلاق متجر واحد، بل بناء منصة SaaS تجارية واسعة شبيهة بـ Shopify ومناسبة للجزائر. لذلك لا ينصح بالإطلاق قبل إغلاق التشغيل، الأمان، العزل بين المستأجرين، موثوقية CI، النسخ الاحتياطي، والمراقبة.
 
@@ -376,7 +376,7 @@
 
 ملاحظة تحقق مهمة: تشغيل `pnpm typecheck` بالتوازي مع `pnpm build` فشل مرة بسبب إعادة توليد `.next/types` أثناء فحص TypeScript. هذا يؤكد قاعدة موجودة في `TESTING_STRATEGY.md`: لا تشغل typecheck وbuild بالتوازي على نفس checkout. التشغيل المتسلسل بعد build نجح.
 
-حدود هذا التحقق: لم يتم في هذه الجولة تشغيل `migrate:status` أو `queue:failed` أو `checkout-idempotency:prune --dry-run`. تم تشغيل مسار Docker الكامل للواجهة وDockerfile checks وimage build smoke للـ backend/storefront في 2026-05-12، وتم إثبات GitHub required checks عبر PR #1 / run `25743248405` وبعد الدمج على `main` / run `25744282999`. تم إثبات GHCR image publishing بعد Trivy scan عبر `container-images` run `25751543062`. لم يتم بعد إثبات staging deployment حقيقي أو restore drill.
+حدود هذا التحقق: لم يتم في هذه الجولة تشغيل `migrate:status` أو `checkout-idempotency:prune --dry-run`. تم تشغيل مسار Docker الكامل للواجهة وDockerfile checks وimage build smoke للـ backend/storefront في 2026-05-12، وتم إثبات GitHub required checks عبر PR #1 / run `25743248405` وبعد الدمج على `main` / run `25744282999`. تم إثبات GHCR image publishing بعد Trivy scan عبر `container-images` run `25751543062`. تم أيضاً تشغيل smoke مؤقت كامل محلياً على صورة backend مبنية من الكود الحالي، مع migrations و`StorefrontDemoSeeder` و`queue:failed` وreadiness تشمل S3 storage. لم يتم بعد إثبات staging deployment خارجي حقيقي أو restore drill.
 
 ### تحقق الواجهة
 
@@ -467,10 +467,10 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 | الخطر | التفسير | المطلوب |
 |---|---|---|
-| Production readiness غير مكتمل | توجد runbooks وأساس، وأضيف skeleton للـ staging في `deploy/staging/`، لكن لا يوجد إثبات staging كامل. | تشغيل staging deployment، TLS/proxy، queues/scheduler، health، monitoring، rollback. |
+| Production readiness غير مكتمل | توجد runbooks وأساس، وأضيف skeleton للـ staging في `deploy/staging/`. تم إثبات smoke مؤقت كامل محلياً مع خدمات disposable، لكنه ليس staging خارجي حقيقي. | نشر صورة backend جديدة بعد إصلاح S3، تشغيل staging deployment خارجي، TLS/proxy، queues/scheduler، health، monitoring، rollback. |
 | Frontend verification path | الفحص المحلي 2026-05-12 أثبت `audit/build/typecheck/e2e`، ومسار Docker الكامل للواجهة أثبت `install/typecheck/build/e2e`. | ربط نفس العقد بالـ CI required gates وعدم قبول merge إذا انكسر أحدها. |
 | CI required gates | تم إثبات Quality Gates داخل GitHub Actions في PR #1 / run `25743248405`، وتفعيل required checks على `main` مع strict status checks وadmin enforcement. | إبقاء هذه البوابة مطلوبة عند أي تعديل للـ workflow، ومراقبة تنبيهات GitHub الخاصة بانتقال Actions runtime من Node 20 إلى Node 24. |
-| Clean deployment proof غير مكتمل | Dockerfiles موجودة، وتم إثبات build smoke محلياً وGHCR staging publish بعد Trivy scan عبر run `25751543062`. كما أضيف `deploy/staging/staging-smoke.sh` ليمنع placeholders وmutable channel tags قبل التشغيل. | تشغيل staging حقيقي يستهلك tag/digest مثبتاً، ثم `deploy/staging/staging-smoke.sh all` على edge/backend/storefront/queue/scheduler. |
+| Clean deployment proof غير مكتمل | Dockerfiles موجودة، وتم إثبات build smoke محلياً وGHCR staging publish بعد Trivy scan عبر run `25751543062`. كما أضيف `deploy/staging/staging-smoke.sh` و`staging-ephemeral-smoke.sh`. المسار المؤقت كشف نقص S3 ثم أصبح يمر محلياً بعد إضافة اعتماد الإنتاج. | نشر tag/digest جديد للـ backend بعد الإصلاح، تشغيل `target=ephemeral` في GitHub Actions، ثم تشغيل staging حقيقي يستهلك tag/digest مثبتاً عبر `target=environment`. |
 | Monitoring/alerting/backups/restore | docs موجودة لكن لا يوجد تشغيل فعلي مثبت. | uptime، failed jobs، queue/scheduler، restore drill، alerts. |
 | Security hardening | CSP واسع، لا 2FA، لا session/device management، وdependency audits صارت تمر محلياً وداخل CI، وأضيف image vulnerability scan إلى Dockerfile Checks وpublish workflow. | إبقاء scans خضراء، ثم 2FA، CSP tightening، secrets rotation، vulnerability review workflow أوسع. |
 | Store tenant scoping review | تم في 2026-05-09 توثيق `Store` كاستثناء من `BelongsToTenant`، وجعل `forTenant(null)` fail-closed، وإزالة `tenant_id` من `Storefront/StoreResource` العام. | يبقى audit لاحق لأي query جديد على `Store` وتوسيع platform/admin tests عند إضافة flows جديدة. |
@@ -519,9 +519,9 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 | Backend maturity | 7.5/10 | منظم، مختبر، وفيه domains كثيرة. يحتاج نضج revenue ops وstock/variants وبعض operational proof. |
 | Tenancy/security model | 7/10 | أساس قوي متعدد الطبقات. يحتاج مراجعة `Store`, أي `withoutGlobalScope`, 2FA, CSP, scans. |
 | Storefront maturity | 6.5/10 | جيد كبداية customer-facing، وaudit/build/typecheck/e2e تمر محلياً، وتم إصلاح sitemap pagination. يحتاج pagination UI، caching، UX polish، وa11y، وإثبات نفس العقد داخل CI. |
-| Production readiness | 4/10 | runbooks وhealth موجودة، لكن التشغيل الفعلي غير مثبت. |
+| Production readiness | 4.5/10 | runbooks وhealth وsmoke مؤقت كامل موجودة، لكن staging خارجي وTLS/restore/monitoring غير مثبتة. |
 | Commercial SaaS readiness | 5/10 | foundation قوي، لكن onboarding/revenue dashboards/billing ops/support ops ناقصة. |
-| DevOps maturity | 5.5/10 | Docker/CI baseline موجود، GitHub required gates مثبتة، ومسار الواجهة الأخضر ثبت محلياً وداخل CI، وأضيف workflow يدوي للـ staging smoke. ما زالت أسرار staging وmonitoring/restore proof ناقصة. |
+| DevOps maturity | 6/10 | Docker/CI baseline موجود، GitHub required gates مثبتة، مسار الواجهة الأخضر ثبت محلياً وداخل CI، وأضيف workflow يدوي للـ staging smoke مع target مؤقت كامل. ما زالت صورة backend الجديدة بعد S3، أسرار staging، وmonitoring/restore proof ناقصة. |
 | Documentation maturity | 7/10 | docs كثيرة وصريحة. تحتاج إبقاءها متزامنة مع الفحص الحالي. |
 | Testing maturity | 7.5/10 | backend جيد، وfrontend audit/build/typecheck/e2e يمر عند التشغيل المتسلسل، كما مر Docker storefront verification وGitHub Actions Quality Gates. المتبقي توسيع الاختبارات عند إضافة flows تجارية أكبر. |
 
@@ -546,8 +546,10 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 - `مكتمل جزئياً`: تقوية workflow بإضافة Composer audit، Pint، pnpm audit، E2E required، وDocker image build smoke.
 - `مكتمل 2026-05-12`: إثبات `.github/workflows/quality.yml` داخل GitHub Actions على PR #1 / run `25743248405`.
 - `مكتمل 2026-05-12`: تفعيل required checks على `main`: `Repository Hygiene`, `Backend`, `Storefront`, `Dockerfile Checks`, `Storefront E2E`.
-- `مكتمل جزئياً`: staging deployment skeleton في `deploy/staging/`، ونجح `docker compose config` مع tags المنشورة، وأضيف smoke runner fail-closed وworkflow يدوي `.github/workflows/staging-smoke.yml`؛ المتبقي تعبئة GitHub environment `staging` وتشغيله على بيئة staging حقيقية.
+- `مكتمل جزئياً`: staging deployment skeleton في `deploy/staging/`، ونجح `docker compose config` مع tags المنشورة، وأضيف smoke runner fail-closed وworkflow يدوي `.github/workflows/staging-smoke.yml`.
+- `مكتمل محلياً 2026-05-12`: smoke مؤقت كامل عبر `deploy/staging/staging-ephemeral-smoke.sh all` مر على صورة backend محلية بعد إضافة `league/flysystem-aws-s3-v3`، وشمل migrations و`StorefrontDemoSeeder` وreadiness لكل من database/cache/queue/storage/redis/search.
 - `مكتمل 2026-05-12`: Docker image push/promotion عبر GHCR workflow للـ staging channel في run `25751543062` بعد Trivy image scan.
+- `التالي مباشرة`: دمج إصلاح S3 + smoke المؤقت، نشر صورة backend/storefront جديدة عبر `container-images`, ثم تشغيل **Staging Smoke** بـ `target=ephemeral` و`mode=all` على الوسوم الجديدة. بعد ذلك ينتقل العمل إلى تعبئة GitHub environment `staging` وتشغيل `target=environment` على خدمات staging حقيقية.
 - monitoring.
 - backup schedule.
 - restore drill.
