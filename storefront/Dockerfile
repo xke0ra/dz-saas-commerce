@@ -36,7 +36,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PNPM_HOME=/pnpm
 ENV PATH=${PNPM_HOME}:${PATH}
 
-RUN corepack enable && corepack prepare pnpm@10.33.2 --activate
+RUN npm install -g npm@11.14.1 \
+    && corepack enable \
+    && corepack prepare pnpm@10.33.2 --activate
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
 COPY package.json pnpm-lock.yaml ./

@@ -73,11 +73,12 @@ The baseline workflow is:
 
 Current status:
 
-- The workflow defines repository hygiene, backend, storefront, Docker image check/build, and storefront e2e jobs.
+- The workflow defines repository hygiene, backend, storefront, Docker image check/build/scan, and storefront e2e jobs.
 - Repository hygiene blocks tracked local env files, private keys, generated artifacts, and high-confidence secret patterns.
 - Backend CI includes Composer audit and Pint.
 - Storefront CI includes pnpm audit at `moderate` or higher.
-- Container image publishing builds and pushes backend/storefront images to GHCR on manual dispatch or version tags.
+- Dockerfile Checks builds backend/storefront images and runs Trivy image vulnerability scans for fixed `HIGH` and `CRITICAL` OS/library vulnerabilities.
+- Container image publishing builds, scans, and pushes backend/storefront images to GHCR on manual dispatch or version tags.
 - Staging smoke is a manual workflow that renders ignored staging env files from the GitHub `staging` environment and delegates to `deploy/staging/staging-smoke.sh`.
 - The workflow was proven green in GitHub Actions on PR #1 / run `25743248405`.
 - As of 2026-05-12, main branch protection requires `Repository Hygiene`, `Backend`, `Storefront`, `Dockerfile Checks`, and `Storefront E2E` with strict status checks and admin enforcement enabled.
@@ -99,6 +100,7 @@ Run repository hygiene locally when env, deployment, CI, ignore rules, or releas
 
 ```bash
 scripts/security/secret-hygiene.sh
+scripts/security/container-image-scan.sh dz-saas-commerce-backend:ci
 scripts/release/clean-export-check.sh
 ```
 

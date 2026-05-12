@@ -139,6 +139,8 @@ jobs:
   docker-check:
     name: Dockerfile Checks
     runs-on: ubuntu-latest
+    env:
+      TRIVY_IMAGE: aquasec/trivy:0.70.0
 
     steps:
       - name: Checkout
@@ -153,11 +155,17 @@ jobs:
       - name: Build Backend Image
         run: docker buildx build --load -f backend/Dockerfile -t dz-saas-commerce-backend:ci backend
 
+      - name: Scan Backend Image
+        run: scripts/security/container-image-scan.sh dz-saas-commerce-backend:ci
+
       - name: Check Storefront Dockerfile
         run: docker buildx build --check -f storefront/Dockerfile storefront
 
       - name: Build Storefront Image
         run: docker buildx build --load -f storefront/Dockerfile -t dz-saas-commerce-storefront:ci storefront
+
+      - name: Scan Storefront Image
+        run: scripts/security/container-image-scan.sh dz-saas-commerce-storefront:ci
 
   e2e:
     name: Storefront E2E

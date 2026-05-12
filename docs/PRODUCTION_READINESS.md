@@ -20,6 +20,7 @@ Implemented in this foundation pass:
 - `.github/workflows/container-images.yml` GHCR image publish baseline
 - `.github/workflows/staging-smoke.yml` manual staging smoke baseline
 - repository secret hygiene check through `scripts/security/secret-hygiene.sh`
+- shared container image scan policy through `scripts/security/container-image-scan.sh`
 - backend liveness/readiness endpoints
 - `php artisan system:health`
 - backend Docker `HEALTHCHECK` using liveness scope
@@ -40,7 +41,7 @@ Still required:
 
 - Populate the GitHub `staging` environment secret/variable contract
 - Execute the staging compose skeleton against real staging services through the manual staging smoke workflow or a staging host
-- image vulnerability scanning
+- keep container image vulnerability scans green as base images and advisories change
 - reverse proxy deployment in staging and TLS/custom-domain validation
 - deploy automated backup schedules and execute restore drill
 - queue and scheduler supervision deployment in staging/production
@@ -62,7 +63,9 @@ Latest local smoke verification: 2026-05-12.
 - Container image publishing to GHCR passed on `main` / run `25744615858` for both backend and storefront, using the `staging` channel and `staging-20260512-b8ef243` tag.
 - Staging compose config validation passed locally with the published GHCR tags.
 - The GitHub `staging` environment currently exists, but it has no configured secrets or variables as of 2026-05-12.
-- This verification does not prove a real staging deployment against live PostgreSQL/Redis/Meilisearch/S3/SMTP services, image vulnerability scanning, TLS/custom-domain routing, or restore drills.
+- Local Trivy `0.70.0` scan passed for the backend CI image with `--scanners vuln --ignore-unfixed --pkg-types os,library --severity CRITICAL,HIGH`.
+- Local Trivy `0.70.0` scan passed for the storefront CI image after updating the runtime image's bundled npm to `11.14.1`.
+- This verification does not prove a real staging deployment against live PostgreSQL/Redis/Meilisearch/S3/SMTP services, TLS/custom-domain routing, restore drills, or retroactive vulnerability scanning of the already-published GHCR staging tags.
 
 ## Image Build Commands
 
@@ -82,7 +85,7 @@ docker build -f storefront/Dockerfile -t dz-saas-commerce-storefront:local store
 
 The publish workflow is `.github/workflows/container-images.yml`.
 
-It builds and pushes both images to GHCR:
+It builds, scans, and pushes both images to GHCR:
 
 - `ghcr.io/<owner>/<repo>/backend`
 - `ghcr.io/<owner>/<repo>/storefront`
@@ -106,6 +109,8 @@ Each image receives:
 - channel tag: `staging`, `production`, or `release`
 
 Do not treat mutable channel tags as rollback anchors. Staging and production deployment records should capture the exact immutable SHA tag or image digest used.
+
+The workflow scans the locally built image before pushing any tag. A fixed `HIGH` or `CRITICAL` OS/library vulnerability blocks publication.
 
 ## Runtime Topology
 
@@ -183,12 +188,13 @@ It currently checks:
 - storefront dependency install, pnpm audit at `moderate` or higher, typecheck, and production build
 - Dockerfile syntax/build-plan checks via `docker buildx build --check`
 - backend and storefront Docker image build smoke checks without pushing images
+- backend and storefront container image vulnerability scans through `scripts/security/container-image-scan.sh`, using Trivy `0.70.0` and failing on fixed `HIGH` or `CRITICAL` OS/library vulnerabilities
 - required Playwright e2e with artifact upload on failure
 
 Limitations:
 
 - The Quality Gates workflow is proven and required, and GHCR image publishing is proven for the staging channel. Downstream staging consumption still needs a real environment smoke.
-- It does not yet run container image vulnerability scanning.
+- The image scan currently gates CI-built images and publication candidates. It does not yet attach SARIF/SBOM artifacts to the GitHub Security tab.
 - The latest GitHub Actions run emitted Node.js 20 action runtime deprecation annotations for `actions/checkout@v4`, `actions/cache@v4`, and `actions/setup-node@v4`; this is not a current failure, but it should be watched before GitHub's Node 24 runner enforcement dates.
 
 Required branch protection checks for `.github/workflows/quality.yml`:
