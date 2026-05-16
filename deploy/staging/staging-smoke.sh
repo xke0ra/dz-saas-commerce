@@ -44,8 +44,23 @@ load_images_env() {
 
 check_no_placeholders() {
   local file="$1"
-  if grep -En "${PLACEHOLDER_PATTERN}" "${file}" >/tmp/staging-smoke-placeholders.txt; then
-    cat /tmp/staging-smoke-placeholders.txt >&2
+
+  if grep -Eq "${PLACEHOLDER_PATTERN}" "${file}"; then
+    local line
+    local content
+    local key
+
+    while IFS=: read -r line content; do
+      key="${content%%=*}"
+      key="${key#"${key%%[![:space:]]*}"}"
+
+      if [[ "${key}" == "${content}" || -z "${key}" ]]; then
+        key="redacted"
+      fi
+
+      echo "staging-smoke: placeholder in ${file}:${line} (${key})" >&2
+    done < <(grep -En "${PLACEHOLDER_PATTERN}" "${file}")
+
     die "${file} still contains placeholder values"
   fi
 }
@@ -84,6 +99,29 @@ compose_cmd() {
     --env-file "${IMAGES_ENV}" \
     "${compose_file_args[@]}" \
     "$@"
+}
+
+curl_smoke() {
+  local output="$1"
+  shift
+
+  curl \
+    --connect-timeout 5 \
+    --max-time 20 \
+    "$@" \
+    > "${output}"
+}
+
+check_failed_jobs() {
+  local output="/tmp/dz-saas-staging-failed-jobs.txt"
+
+  compose_cmd exec -T backend php artisan queue:failed > "${output}"
+
+  if ! grep -q "No failed jobs found" "${output}"; then
+    die "failed jobs were reported; inspect ${output} on the runner"
+  fi
+
+  echo "staging-smoke: failed-job check saved to ${output}"
 }
 
 validate() {
@@ -141,11 +179,11 @@ verify_stack() {
 
   compose_cmd ps
   compose_cmd exec -T backend php artisan system:health --scope=ready --format=json
-  compose_cmd exec -T backend php artisan queue:failed
+  check_failed_jobs
 
-  curl -fsSIL -H "Host: ${storefront_host}" "${edge_url}/" >/tmp/dz-saas-staging-storefront.headers
-  curl -fsS -H "Host: ${backend_host}" "${edge_url}/api/system/health/live" >/tmp/dz-saas-staging-live.json
-  curl -fsS -H "Host: ${backend_host}" "${edge_url}/api/system/health/ready" >/tmp/dz-saas-staging-ready.json
+  curl_smoke /tmp/dz-saas-staging-storefront.headers -fsSIL -H "Host: ${storefront_host}" "${edge_url}/"
+  curl_smoke /tmp/dz-saas-staging-live.json -fsS -H "Host: ${backend_host}" "${edge_url}/api/system/health/live"
+  curl_smoke /tmp/dz-saas-staging-ready.json -fsS -H "Host: ${backend_host}" "${edge_url}/api/system/health/ready"
 
   echo "staging-smoke: storefront headers saved to /tmp/dz-saas-staging-storefront.headers"
   echo "staging-smoke: backend health saved to /tmp/dz-saas-staging-live.json and /tmp/dz-saas-staging-ready.json"
@@ -170,6 +208,9 @@ case "${ACTION}" in
     verify_stack
     ;;
   down)
+    require_command docker
+    require_file "${IMAGES_ENV}"
+    load_images_env
     compose_cmd down
     ;;
   *)

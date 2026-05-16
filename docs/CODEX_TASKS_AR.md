@@ -75,18 +75,25 @@ pnpm test:e2e
 
 ## Backlog أولي مرتب
 
-1. إصلاح موثوقية Storefront E2E.
-2. توحيد نسخة pnpm بين `packageManager` وCI/scripts/docs.
-3. Store readiness foundation.
-4. Audit matrix.
-5. Stock movement ledger foundation.
-6. 2FA policy.
-7. CSP report-only.
-8. Backup restore drill.
-9. Observability baseline.
-10. Storefront caching ADR implementation.
-11. Product variants design ADR.
-12. COD reconciliation foundation.
+Completed foundation:
+
+- إصلاح موثوقية Storefront E2E.
+- توحيد نسخة pnpm بين `packageManager` وCI/scripts/docs.
+- Store readiness foundation.
+- Audit matrix.
+- Operations readiness docs/checklists محدثة: staging readiness checklist, restore drill evidence template, monitoring baseline matrix.
+
+Next backlog:
+
+1. تنفيذ real staging فعلياً باستخدام checklist، بدون أسرار في repo.
+2. تنفيذ backup restore drill فعلي وتسجيل evidence.
+3. 2FA policy للـ admin/vendor/support.
+4. Stock movement ledger foundation.
+5. Product variants ADR/design.
+6. CSP report-only.
+7. Observability provider selection and integration.
+8. Storefront caching ADR implementation.
+9. COD reconciliation foundation.
 
 ## Definition Of Done
 

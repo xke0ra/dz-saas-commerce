@@ -14,6 +14,8 @@ GitHub Actions can run the same smoke contract through `.github/workflows/stagin
 
 The folder also includes an ephemeral overlay for runner-local proof before managed staging services exist. That path starts disposable PostgreSQL, Redis, Meilisearch, MinIO, and Mailpit services, generates temporary staging env files, runs migrations and `StorefrontDemoSeeder`, then executes the same readiness and edge checks.
 
+Before running a real environment smoke, use `docs/STAGING_READINESS_CHECKLIST_AR.md` as the short operational gate. It links back to this folder and the longer reverse proxy, queue/scheduler, and production readiness runbooks.
+
 ## Prepare
 
 Copy the examples and replace every placeholder with staging-only values:
@@ -102,6 +104,6 @@ deploy/staging/staging-smoke.sh up
 deploy/staging/staging-smoke.sh verify
 ```
 
-`verify` checks Compose process state, Laravel readiness, failed jobs, the storefront edge response, and backend live/ready HTTP health through the edge proxy. Use `deploy/staging/staging-smoke.sh all` for validate + pull + up + verify, and `deploy/staging/staging-smoke.sh down` to stop the stack.
+`verify` checks Compose process state, Laravel readiness, absence of failed jobs, the storefront edge response, and backend live/ready HTTP health through the edge proxy. HTTP checks use bounded curl timeouts. Use `deploy/staging/staging-smoke.sh all` for validate + pull + up + verify, and `deploy/staging/staging-smoke.sh down` to stop the stack.
 
 For a real staging environment, route TLS/load-balancer traffic to the edge service and run the reverse proxy checks in `docs/REVERSE_PROXY_RUNBOOK.md`.

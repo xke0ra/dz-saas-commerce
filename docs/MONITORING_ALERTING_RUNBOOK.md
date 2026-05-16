@@ -6,6 +6,8 @@ This runbook defines the first monitoring, alerting, logging, and error tracking
 
 It documents what can be monitored with the current codebase and what still requires an external monitoring stack. It does not claim that production monitoring is already implemented.
 
+Use `docs/MONITORING_BASELINE_MATRIX_AR.md` as the implementation matrix for current source, status, first thresholds, severity, and action when a check fails.
+
 ## Current Status
 
 Implemented or available in the repository:
