@@ -22,7 +22,7 @@ Repository strategy:
 - PHP 8.3+
 - Composer
 - Node.js compatible with Next.js 15
-- pnpm 10.33.2
+- pnpm 11.1.2
 - Docker and Docker Compose
 - PostgreSQL client tools are useful for debugging
 
@@ -30,13 +30,13 @@ If `pnpm` is not available, enable it with Corepack:
 
 ```bash
 corepack enable
-corepack prepare pnpm@10.33.2 --activate
+corepack prepare pnpm@11.1.2 --activate
 ```
 
 Temporary fallback:
 
 ```bash
-npx --yes pnpm@10.33.2 --version
+npx --yes pnpm@11.1.2 --version
 ```
 
 ## Local Services
@@ -115,7 +115,7 @@ This uses Docker with:
 
 - `node:24-bookworm` for install, typecheck, and build
 - `mcr.microsoft.com/playwright:v1.59.1-noble` for e2e
-- `pnpm@10.33.2` through Corepack
+- `pnpm@11.1.2` through Corepack
 
 The script mounts only `storefront/`, keeps pnpm's store inside the container under `/tmp/pnpm-store`, and avoids mixing Windows `node_modules` with WSL `node_modules`. The first Playwright run may take several minutes while Docker pulls the browser image.
 
@@ -161,7 +161,7 @@ pnpm test:e2e
 
 If Chromium fails to launch with missing shared libraries in native WSL, install Playwright system dependencies for the host OS. The Docker verification path avoids this by using the official Playwright image.
 
-As of the 2026-05-12 verification pass, native storefront `pnpm audit --audit-level moderate`, `pnpm build`, sequential `pnpm typecheck`, and `pnpm test:e2e` passed with Playwright reporting `6 passed`. The Docker path also passed fully on 2026-05-12 with Node `v24.15.0`, pnpm `10.33.2`, Next.js `15.5.18`, and Playwright `6 passed`.
+As of the 2026-05-12 verification pass, native storefront `pnpm audit --audit-level moderate`, `pnpm build`, sequential `pnpm typecheck`, and `pnpm test:e2e` passed with Playwright reporting `6 passed`. The Docker path also passed fully on 2026-05-12 with Node `v24.15.0`, pnpm `11.1.2`, Next.js `15.5.18`, and Playwright `6 passed`.
 
 Repository hygiene and clean export checks:
 

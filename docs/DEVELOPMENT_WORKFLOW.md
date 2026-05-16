@@ -125,19 +125,19 @@ Use liveness for process/container boot checks. Use readiness for dependency che
 
 ## Package Manager Rule
 
-The storefront declares `pnpm@10.33.2` in `storefront/package.json`.
+The storefront declares `pnpm@11.1.2` in `storefront/package.json`. Treat `packageManager` there as the source of truth for CI, scripts, and docs.
 
 Before running storefront commands, make `pnpm` available:
 
 ```bash
 corepack enable
-corepack prepare pnpm@10.33.2 --activate
+corepack prepare pnpm@11.1.2 --activate
 ```
 
 Temporary fallback when Corepack is unavailable:
 
 ```bash
-npx --yes pnpm@10.33.2 --version
+npx --yes pnpm@11.1.2 --version
 ```
 
 ## Backend Changes
@@ -190,7 +190,7 @@ Run after storefront changes:
 ./storefront/scripts/verify-docker.sh all
 ```
 
-This is the preferred clean-clone path when the checkout is inside WSL but Node/pnpm are not installed in WSL. It uses Docker, Node 24, pnpm 10.33.2, and the official Playwright image.
+This is the preferred clean-clone path when the checkout is inside WSL but Node/pnpm are not installed in WSL. It uses Docker, Node 24, pnpm 11.1.2, and the official Playwright image.
 
 Native WSL/Linux commands are also acceptable when Node and pnpm are installed in the same environment as the checkout:
 
