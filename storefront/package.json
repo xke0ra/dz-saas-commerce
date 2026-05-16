@@ -2,7 +2,7 @@
   "name": "dz-saas-commerce-storefront",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@10.33.2",
+  "packageManager": "pnpm@11.1.2+sha512.415a1cc25974731e75455c1468371be74c5aa5fb7621b50d4056d222451609f11412f23fd602e6169f1e060466641f798597e1be961a10688836a67b16569499",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -28,13 +28,15 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.49",
+    "postcss": "8.5.14",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.0"
   },
   "pnpm": {
     "overrides": {
-      "postcss": "8.5.10"
+      "postcss": "8.5.14",
+      "next>postcss": "8.5.14",
+      "next@15.5.18>postcss": "8.5.14"
     }
   }
 }
