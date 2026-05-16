@@ -158,7 +158,7 @@ Native WSL or Linux verification when Node/pnpm are installed in the same enviro
 ```bash
 cd storefront
 corepack enable
-corepack prepare pnpm@10.33.2 --activate
+corepack prepare pnpm@11.1.2 --activate
 pnpm audit --audit-level moderate
 pnpm build
 pnpm typecheck
@@ -306,6 +306,7 @@ Later dashboard e2e tests may be added for high-value merchant workflows.
 Current distinction:
 
 - Mocked storefront e2e specs exist in `storefront/tests/e2e` and pass through `./storefront/scripts/verify-docker.sh e2e`.
+- `pnpm test:e2e` runs a production build first with the mock-backend storefront env, then Playwright starts the storefront with `pnpm exec next start` against the same mock backend. This avoids relying on Next.js dev cold compilation during CI/Docker e2e.
 - Real integration e2e against a live Laravel backend is not yet established.
 - Native Playwright browser system dependencies are still a local setup concern. The Docker path and CI job use the official Playwright/browser installation path and are the preferred quality-gate path.
 

@@ -1,0 +1,21 @@
+# Audit Matrix
+
+Status is conservative. `implemented` means the code or tests showed a concrete audit path. `partial` means some related path exists but coverage is incomplete. `unknown` means no claim is made yet.
+
+| Domain | Operation | Actor | Audit required? | Current status | Metadata required | Suggested test |
+|---|---|---:|---|---|---|---|
+| Tenancy | Tenant creation/update | Platform admin/system | yes | partial: creation and status changes are audited; general profile updates are unknown | tenant_id, owner_id, old/new status, changed fields | create tenant, update status, update non-status field and assert expected audit policy |
+| Staff/RBAC | Staff invitation/role/permission changes | Tenant owner/admin | yes | implemented for invitation and membership role/permission changes | invited email hash or masked email, role, permissions, inviter, accepted user | invite staff, accept invitation, change role, change permissions |
+| Billing | Subscription plan changes | Platform admin/billing action | yes | implemented for subscription start/replacement | old plan, new plan, status, period dates, actor | start plan, replace plan, assert audit logs |
+| Billing | Invoice/payment proof acceptance/rejection | Platform admin/billing admin | yes | partial: subscription payment confirmation/rejection and invoice paid are audited; full proof lifecycle needs review | payment id, invoice id, method, amount, reference, proof metadata, rejection reason | submit proof, confirm, reject, assert audit and notification |
+| Store | Store publish/unpublish | Tenant owner/admin/platform admin | yes | partial: store status changes are audited; explicit publish/unpublish workflow is not present | store_id, old status, new status, reason | change draft/active/suspended states and assert audit event names |
+| Domains | Domain verification/activation/removal | Tenant owner/admin/system job | yes | missing: verification changes status but no AuditLogger path was verified | domain id, hostname, old/new status, verification method, DNS result, actor/job id | verify success/failure/removal and assert audit logs |
+| Catalog | Product create/update/delete | Tenant owner/admin | yes | partial: delete is audited; create/update are not verified | product id, sku, slug, status, changed commercial fields | create/update/delete product and assert audit coverage |
+| Inventory | Inventory adjustment | Tenant owner/admin/system | yes | missing: no stock movement ledger foundation yet | product id, sku, quantity delta, reserved delta, reason, related order/return | adjust stock and assert movement plus audit |
+| Checkout | Checkout/order creation | Customer/storefront | yes | partial: order status history is created; AuditLog for order creation is not verified | store id, order id, item count, total_minor, idempotency key/hash, phone hash | create checkout and assert order snapshot, idempotency, and audit decision |
+| Orders | Order status changes | Tenant staff/admin | yes | implemented | order id, old status, new status, actor, comment | transition order and assert status history plus audit |
+| Payments | Payment status changes | Tenant staff/admin/system | yes | implemented | payment id, order id, old/new status, amount, paid_at, reference | confirm/fail/refund payment and assert audit |
+| Shipping | Shipping status changes | Tenant staff/admin/system | yes | partial: shipment status history exists; AuditLog path was not verified | shipment id, old/new status, tracking number, company, failure reason | transition shipment and assert history plus audit |
+| Returns | Return/refund/restock | Tenant staff/admin | yes | unknown: return actions exist, audit path not verified in this pass | return id, order id, refund amount, restock flag, resolution note | request/receive/refund/restock return and assert audit |
+| Support | Ticket assignment/status | Support agent/platform admin | yes | implemented for create, status change, assignment | ticket id, old/new status, old/new assignee, priority | create ticket, assign, resolve/close and assert audit |
+| Security | Security-sensitive admin actions | Platform super admin | yes | unknown | actor, target, action, IP hash if logged, user agent hash, reason | change roles, disable tenant/store, rotate sensitive config and assert audit |

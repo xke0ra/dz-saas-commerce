@@ -6,7 +6,7 @@ APP_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 NODE_IMAGE="${STOREFRONT_NODE_IMAGE:-node:24-bookworm}"
 PLAYWRIGHT_IMAGE="${STOREFRONT_PLAYWRIGHT_IMAGE:-mcr.microsoft.com/playwright:v1.59.1-noble}"
-PNPM_VERSION="${STOREFRONT_PNPM_VERSION:-10.33.2}"
+PNPM_VERSION="${STOREFRONT_PNPM_VERSION:-11.1.2}"
 
 DOCKER_USER_ARGS=()
 if command -v id >/dev/null 2>&1; then

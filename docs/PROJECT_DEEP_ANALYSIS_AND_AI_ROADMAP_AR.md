@@ -391,7 +391,7 @@
 - Docker image للـ install/typecheck/build: `node:24-bookworm`.
 - Docker image للـ e2e: `mcr.microsoft.com/playwright:v1.59.1-noble`.
 - Node داخل Docker: `v24.15.0`.
-- pnpm داخل Docker: `10.33.2`.
+- pnpm داخل Docker: `11.1.2`، موحد مع `storefront/package.json`.
 - `pnpm install --frozen-lockfile`: نجح.
 - `pnpm typecheck`: نجح.
 - `pnpm build`: نجح على `Next.js 15.5.18`.
@@ -404,7 +404,7 @@
 ملاحظات التنفيذ من تثبيت مسار Docker:
 
 - تم تعديل script `typecheck` إلى `tsc --noEmit --incremental false` حتى لا يفشل بسبب cache قديم داخل `.next/tsconfig.tsbuildinfo`.
-- تم ضبط Playwright ليستخدم `pnpm next dev` بدل `npx pnpm`، مع تثبيت `STOREFRONT_BASE_URL` على `http://127.0.0.1:3100` أثناء e2e.
+- تم تحديث Playwright لاحقاً ليستخدم مسار production build: `pnpm build` ثم `next start` عبر `pnpm exec`، مع تثبيت `STOREFRONT_BASE_URL` على `http://127.0.0.1:3100` أثناء e2e.
 - تم تشغيل e2e داخل official Playwright image لتفادي مشاكل مكتبات Chromium الناقصة في WSL.
 
 ---

@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit --incremental false",
-    "test:e2e": "playwright test"
+    "test:e2e": "export NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://127.0.0.1:3101}; export NEXT_PUBLIC_ASSET_BASE_URL=${NEXT_PUBLIC_ASSET_BASE_URL:-http://127.0.0.1:3101}; export NEXT_PUBLIC_DEFAULT_STORE=${NEXT_PUBLIC_DEFAULT_STORE:-demo-store}; export DEFAULT_STORE_IDENTIFIER=${DEFAULT_STORE_IDENTIFIER:-demo-store}; export NEXT_PUBLIC_STOREFRONT_BASE_URL=${NEXT_PUBLIC_STOREFRONT_BASE_URL:-http://127.0.0.1:3100}; export STOREFRONT_BASE_URL=${STOREFRONT_BASE_URL:-http://127.0.0.1:3100}; pnpm build && playwright test"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
