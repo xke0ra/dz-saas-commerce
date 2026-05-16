@@ -235,6 +235,8 @@ Run this before beta and then on a recurring operational schedule.
     - RTO observed
     - RPO observed
 
+Use `docs/BACKUP_RESTORE_DRILL_EVIDENCE_TEMPLATE.md` to record the first real drill. The template is intentionally separate so it can be copied into an issue, incident record, or operations log without duplicating this runbook.
+
 ## Pre-Migration Backup Gate
 
 Before production migrations:

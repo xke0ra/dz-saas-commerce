@@ -7,6 +7,7 @@
 الهدف: إثبات staging حقيقي يشبه production بدون إطلاق عام.
 
 - أنشئ GitHub environment باسم `staging` مع variables/secrets الحقيقية المطلوبة.
+- استخدم `STAGING_READINESS_CHECKLIST_AR.md` كبوابة قصيرة قبل تشغيل smoke حقيقي.
 - استخدم PostgreSQL, Redis, Meilisearch, object storage, وSMTP منفصلة عن local/dev.
 - شغل backend, queue worker, scheduler, storefront, وreverse proxy بنفس topology الموثق.
 - فعّل TLS وhost routing للدومينات التجريبية.
@@ -33,6 +34,7 @@
 - شغل health checks ضد البيئة المستعادة.
 - شغل smoke checkout محدود بعد restore إن كانت البيانات تسمح.
 - وثق RPO وRTO بالأرقام بعد أول drill.
+- سجل الدليل في `BACKUP_RESTORE_DRILL_EVIDENCE_TEMPLATE.md` أو نسخة منه داخل issue/operations log.
 - وثق owner وتكرار drill الشهري أو قبل تغييرات كبيرة.
 
 معيار القبول:
@@ -58,6 +60,7 @@
 - backup age.
 - error tracking مع PII redaction.
 - dashboard مختصر يعرض الحالة التشغيلية بدون كشف أسرار.
+- استخدم `MONITORING_BASELINE_MATRIX_AR.md` لتحديد source/status/threshold/action لكل alert قبل اختيار provider.
 
 معيار القبول:
 

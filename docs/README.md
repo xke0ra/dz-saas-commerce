@@ -44,8 +44,11 @@
 
 - `PRODUCTION_READINESS.md`: حالة الجاهزية وما ينقص قبل beta/production.
 - `OPERATIONS_NEXT_STEPS_AR.md`: خطة real staging ثم restore drill ثم monitoring.
+- `STAGING_READINESS_CHECKLIST_AR.md`: checklist مختصرة قبل تشغيل real staging smoke.
 - `BACKUP_RESTORE_RUNBOOK.md`: backup/restore/runbook.
+- `BACKUP_RESTORE_DRILL_EVIDENCE_TEMPLATE.md`: قالب تسجيل evidence بعد restore drill حقيقي.
 - `MONITORING_ALERTING_RUNBOOK.md`: observability والalerts.
+- `MONITORING_BASELINE_MATRIX_AR.md`: matrix status/threshold/action للـ monitoring baseline.
 - `QUEUE_SCHEDULER_RUNBOOK.md`: queue/scheduler supervision.
 - `REVERSE_PROXY_RUNBOOK.md`: TLS/proxy/routing.
 
@@ -67,7 +70,7 @@
 - Inventory: `DOMAIN_CONTRACTS_AR.md`, `TENANCY_RULES.md`, `TESTING_STRATEGY.md`.
 - Tenancy: `TENANCY_RULES.md`, `SECURITY_BASELINE.md`, `adr/0002-shared-database-tenancy.md`.
 - Storefront: `STOREFRONT_CART.md`, `STOREFRONT_SEO.md`, `STOREFRONT_THEME.md`, `LOCAL_DEVELOPMENT.md`.
-- Deployment: `PRODUCTION_READINESS.md`, `OPERATIONS_NEXT_STEPS_AR.md`, `REVERSE_PROXY_RUNBOOK.md`, `QUEUE_SCHEDULER_RUNBOOK.md`.
+- Deployment: `PRODUCTION_READINESS.md`, `OPERATIONS_NEXT_STEPS_AR.md`, `STAGING_READINESS_CHECKLIST_AR.md`, `REVERSE_PROXY_RUNBOOK.md`, `QUEUE_SCHEDULER_RUNBOOK.md`.
 - Security: `SECURITY_BASELINE.md`, `AUDIT_MATRIX.md`, `TENANCY_RULES.md`.
 
 ## Documentation Rule
