@@ -42,13 +42,19 @@ Backend/Admin/API hosts:
 - `api.example.com`
 - `admin.example.com`
 - `support.example.com`
+- `api.staging.example.com`
+- `admin.staging.example.com`
+- `support.staging.example.com`
 
 These route to Laravel through FastCGI. The Nginx container must have Laravel public files mounted at `/var/www/html/public`, while PHP executes in the backend FPM container.
+For a real staging domain that does not match the example names, update the deployed `server_name` entries before running staging smoke with `STAGING_BACKEND_HOST`.
 
 Storefront hosts:
 
 - `example.com`
 - `*.example.com`
+- `staging.example.com`
+- `*.staging.example.com`
 - verified custom domains
 
 These route to the Next.js storefront and preserve the original `Host` header.

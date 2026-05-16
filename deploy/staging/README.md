@@ -57,7 +57,9 @@ The manual **Staging Smoke** workflow has two targets:
 - `target=environment`: renders ignored staging env files from the GitHub `staging` environment, logs into GHCR, and calls `deploy/staging/staging-smoke.sh`.
 - `target=ephemeral`: uses `deploy/staging/staging-ephemeral-smoke.sh` and the disposable service overlay.
 
-Use `mode=validate` first to prove the selected contract and Compose rendering. Use `mode=all` for `target=environment` only when the selected runner can reach all staging backing services. If the services are private-network only, dispatch the workflow against a self-hosted runner with the required network access.
+Use `mode=validate` first to prove the selected contract and Compose rendering. Use `mode=all` for `target=environment` only when the selected runner can reach all staging backing services and the staging database has already been migrated for the selected images. If the services are private-network only, dispatch the workflow against a self-hosted runner with the required network access.
+
+For a real external URL smoke, set `STAGING_EDGE_URL` in the GitHub `staging` environment to the staging edge or load balancer URL reachable by the runner. If it is unset, the smoke runner verifies the local published edge port with `http://127.0.0.1:${EDGE_PORT}`.
 
 ## Ephemeral Smoke
 
@@ -97,6 +99,18 @@ deploy/staging/staging-smoke.sh validate
 deploy/staging/staging-smoke.sh pull
 deploy/staging/staging-smoke.sh up
 ```
+
+For a fresh or changed staging database, run the approved migration step after `up` and before `verify`:
+
+```bash
+docker compose \
+  --project-name dz-saas-staging \
+  --env-file deploy/staging/images.env \
+  -f deploy/staging/docker-compose.staging.example.yml \
+  exec -T backend php artisan migrate --force
+```
+
+Run any smoke-only seeder only when it is explicitly approved for staging and does not use production data.
 
 ## Verify
 
