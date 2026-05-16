@@ -55,7 +55,7 @@ These have workflow defaults when unset:
 - `STAGING_AWS_USE_PATH_STYLE_ENDPOINT`: defaults to `false`
 - `STAGING_SCOUT_PREFIX`: defaults to `staging_`
 - `STAGING_DEFAULT_STORE_IDENTIFIER`: defaults to empty
-- `STAGING_EDGE_URL`: defaults in the smoke runner to `http://127.0.0.1:${EDGE_PORT}`
+- `STAGING_EDGE_URL`: defaults in the smoke runner to `http://127.0.0.1:${EDGE_PORT}`. Set it explicitly for a real external URL smoke, for example the staging load balancer or edge URL reachable by the selected runner.
 - `STAGING_AWS_URL`: defaults to empty
 - `STAGING_AWS_ENDPOINT`: defaults to empty
 
@@ -74,3 +74,13 @@ Recommended first dispatch:
 Use `target=environment` with `mode=all` only when the runner can reach PostgreSQL, Redis, Meilisearch, object storage, SMTP, and any hostnames used by the edge smoke checks.
 
 Use `target=ephemeral` with `mode=all` to prove the selected images and process topology before the environment secret contract is fully populated. Run `25756545567` passed with the `staging-20260512-096bc05` images.
+
+For real staging, run the environment target in this order:
+
+1. `target=environment`, `mode=validate`.
+2. `target=environment`, `mode=pull`.
+3. `target=environment`, `mode=up`.
+4. Run the migration/seed command approved for the staging window; do not run production data seeders.
+5. `target=environment`, `mode=verify`.
+
+Use `mode=all` only after the same migration/seed preconditions are already satisfied for the target staging database.

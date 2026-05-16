@@ -46,6 +46,7 @@ http {
     server {
         listen 8080;
         server_name api.example.com admin.example.com support.example.com
+                    api.staging.example.com admin.staging.example.com support.staging.example.com
                     api.staging.internal admin.staging.internal support.staging.internal;
 
         root /var/www/html/public;
@@ -91,7 +92,8 @@ http {
     # Host header so it can resolve subdomains and future verified custom domains.
     server {
         listen 8080 default_server;
-        server_name example.com *.example.com staging.internal *.staging.internal _;
+        server_name example.com *.example.com staging.example.com *.staging.example.com
+                    staging.internal *.staging.internal _;
 
         location /_next/static/ {
             proxy_pass http://storefront;
