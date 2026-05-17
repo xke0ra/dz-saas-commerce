@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-Last updated: 2026-05-07
+Last updated: 2026-05-17
 
 This directory records architecture decisions that should not be changed casually by humans or AI agents.
 
@@ -25,3 +25,4 @@ Current ADRs:
 10. `0010-algerian-shipping-strategy.md`
 11. `0011-storefront-caching-revalidation.md`
 12. `0012-production-deployment-topology.md`
+13. `0013-product-variants-inventory-design.md`

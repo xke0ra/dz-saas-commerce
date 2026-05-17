@@ -219,7 +219,7 @@
 - تخزين المال بوحدات صغيرة.
 - جدول checkout idempotency.
 
-المرحلة القادمة يجب أن تصمم product variants قبل التنفيذ، وتثبت real staging فعلياً قبل توسيع واجهات المخزون.
+تم توثيق تصميم product variants/options في ADR مقترح. المرحلة القادمة تقنياً هي schema foundation صغيرة، مع استمرار real staging كمسار جاهزية مستقل.
 
 ### 4.9 tenancy
 
@@ -483,7 +483,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 - caching/revalidation للـ storefront.
 - merchant onboarding wizard.
 - store readiness/publish gate.
-- product variants/options.
+- product variants schema foundation.
 - manual inventory adjustment UI/API design.
 - product import/export.
 - bulk order operations.
@@ -581,7 +581,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 الهدف: دعم متاجر حقيقية بكتالوج ومخزون وطلبات أكثر تعقيداً.
 
-- product variants/options.
+- product variants schema foundation.
 - manual inventory adjustment UI/API design.
 - product import/export.
 - bulk order operations.
@@ -745,7 +745,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 ### 11.6 Inventory
 
 - الحالة الحالية: inventory item لكل منتج، reservation/release/settle، وأساس stock movement ledger، وquick checkout reservation يكتب `reserved` movements، وrelease يكتب `released` movements، وsettlement يكتب `settled` movements، وreturn restock يكتب `restocked` movements، وmanual adjustment action يكتب `manual_adjustment`/`correction` movements مع AuditLog.
-- المطلوب: manual inventory adjustment UI/API design، low stock alerts، variant inventory.
+- المطلوب: product variants schema foundation، manual inventory adjustment UI/API design، low stock alerts.
 - الأولوية: P1.
 - معايير القبول: كل حركة مخزون قابلة للتدقيق، checkout يستخدم locks، ولا يوجد تعديل مخزون غير مفسر.
 
