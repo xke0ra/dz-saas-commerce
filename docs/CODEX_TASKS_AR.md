@@ -88,12 +88,13 @@ Completed foundation:
 - Checkout reservation integration: quick checkout reservations تسجل `reserved` stock movements داخل نفس transaction.
 - Order cancellation/release integration: `ReleaseOrderInventoryReservations` يسجل `released` stock movements عند تحرير الحجز فعلياً.
 - Order settlement integration: `SettleOrderInventory` يسجل `settled` stock movements عند تسوية المخزون فعلياً.
+- Return restock integration: `RestockOrderReturn` يسجل `restocked` stock movements عند زيادة المخزون فعلياً.
 
 Next backlog:
 
-1. تنفيذ real staging فعلياً باستخدام checklist، بدون أسرار في repo.
-2. تنفيذ backup restore drill فعلي وتسجيل evidence.
-3. Integrate return restock with stock movements.
+1. Add manual inventory adjustment action with AuditLog.
+2. تنفيذ real staging فعلياً باستخدام checklist، بدون أسرار في repo.
+3. تنفيذ backup restore drill فعلي وتسجيل evidence.
 4. Product variants ADR/design.
 5. Store readiness publish gate.
 6. CSP report-only.

@@ -32,6 +32,7 @@
 - storefront لا يكتب `stock movement` ولا يقرر مخزوناً موثوقاً.
 - `ReleaseOrderInventoryReservations` يسجل `released` stock movement عند تحرير الحجز فعلياً.
 - `SettleOrderInventory` يسجل `settled` stock movement عند تسوية المخزون فعلياً.
+- `RestockOrderReturn` يسجل `restocked` stock movement عند زيادة المخزون فعلياً بسبب return restock.
 - `reserved_quantity` يعني كمية محجوزة لطلبات لم تُسوَّ نهائياً.
 - `available` يجب أن يعني `quantity - reserved_quantity` عندما `track_quantity=true`.
 - backorders يجب أن تكون قراراً صريحاً محفوظاً على inventory item أو policy واضحة.

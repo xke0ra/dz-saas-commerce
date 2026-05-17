@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Inventory\ReleaseOrderInventoryReservations;
+use App\Actions\Inventory\RestockOrderReturn;
 use App\Actions\Inventory\SettleOrderInventory;
 use App\Actions\Orders\CancelOrder;
 use App\Actions\Orders\MarkOrderDelivered;
@@ -109,16 +110,112 @@ it('settles delivered inventory and restocks it once when a return is received',
     $inventoryItem->refresh();
     $orderReturn->refresh();
     $order->refresh();
+    $restockMovement = StockMovement::query()
+        ->withoutGlobalScope('current_tenant')
+        ->where('order_return_id', $orderReturn->id)
+        ->where('type', StockMovementType::Restocked->value)
+        ->firstOrFail();
+    $restockMetadata = $restockMovement->metadata;
 
     expect($orderReturn->status)->toBe(OrderReturnStatus::Received)
         ->and($orderReturn->metadata['restocked_at'])->not->toBeNull()
         ->and($order->status)->toBe(OrderStatus::Returned)
         ->and($inventoryItem->quantity)->toBe(10)
-        ->and($inventoryItem->reserved_quantity)->toBe(0);
+        ->and($inventoryItem->reserved_quantity)->toBe(0)
+        ->and($restockMovement->tenant_id)->toBe($tenant->id)
+        ->and($restockMovement->product_id)->toBe($orderItem->product_id)
+        ->and($restockMovement->inventory_item_id)->toBe($inventoryItem->id)
+        ->and($restockMovement->order_id)->toBe($order->id)
+        ->and($restockMovement->order_item_id)->toBe($orderItem->id)
+        ->and($restockMovement->order_return_id)->toBe($orderReturn->id)
+        ->and($restockMovement->actor_id)->toBeNull()
+        ->and($restockMovement->type)->toBe(StockMovementType::Restocked)
+        ->and($restockMovement->quantity_delta)->toBe(2)
+        ->and($restockMovement->reserved_delta)->toBe(0)
+        ->and($restockMovement->balance_quantity_after)->toBe(10)
+        ->and($restockMovement->balance_reserved_after)->toBe(0)
+        ->and($restockMovement->reason)->toBe('order_return_restock')
+        ->and($restockMetadata)->toMatchArray([
+            'source' => 'restock_order_return',
+            'order_id' => $order->id,
+            'order_number' => $order->order_number,
+            'order_return_id' => $orderReturn->id,
+            'product_id' => $orderItem->product_id,
+            'order_item_id' => $orderItem->id,
+        ])
+        ->and(json_encode($restockMetadata))->not->toContain($order->customer()->value('phone'));
 
     app(ReceiveOrderReturn::class)->handle($orderReturn, restock: true);
 
-    expect($inventoryItem->refresh()->quantity)->toBe(10);
+    expect($inventoryItem->refresh()->quantity)->toBe(10)
+        ->and(StockMovement::query()
+            ->withoutGlobalScope('current_tenant')
+            ->where('order_return_id', $orderReturn->id)
+            ->where('type', StockMovementType::Restocked->value)
+            ->count())->toBe(1);
+});
+
+it('does not restock or record stock movement when return inventory is already restocked', function (): void {
+    $tenant = Tenant::factory()->create();
+    [$order, $inventoryItem] = createReturnWorkflowOrderWithInventory(
+        tenant: $tenant,
+        wilayaId: $this->wilaya->id,
+        communeId: $this->commune->id,
+        status: OrderStatus::Returned,
+    );
+    $orderReturn = OrderReturn::factory()->forOrder($order)->create([
+        'status' => OrderReturnStatus::Received,
+        'metadata' => [
+            'restocked_at' => now()->toISOString(),
+        ],
+    ]);
+
+    app(RestockOrderReturn::class)->handle($orderReturn);
+
+    expect($inventoryItem->refresh()->quantity)->toBe(10)
+        ->and($inventoryItem->reserved_quantity)->toBe(2)
+        ->and(StockMovement::query()
+            ->withoutGlobalScope('current_tenant')
+            ->where('order_return_id', $orderReturn->id)
+            ->where('type', StockMovementType::Restocked->value)
+            ->count())->toBe(0);
+});
+
+it('does not record restock movements when inventory is missing or not tracked', function (): void {
+    $tenant = Tenant::factory()->create();
+    [$orderWithoutInventory, $deletedInventory] = createReturnWorkflowOrderWithInventory(
+        tenant: $tenant,
+        wilayaId: $this->wilaya->id,
+        communeId: $this->commune->id,
+        status: OrderStatus::Returned,
+    );
+    $deletedInventory->delete();
+    $returnWithoutInventory = OrderReturn::factory()->forOrder($orderWithoutInventory)->create([
+        'status' => OrderReturnStatus::Received,
+    ]);
+    [$orderWithUntrackedInventory, $untrackedInventory] = createReturnWorkflowOrderWithInventory(
+        tenant: $tenant,
+        wilayaId: $this->wilaya->id,
+        communeId: $this->commune->id,
+        status: OrderStatus::Returned,
+        trackQuantity: false,
+    );
+    $returnWithUntrackedInventory = OrderReturn::factory()->forOrder($orderWithUntrackedInventory)->create([
+        'status' => OrderReturnStatus::Received,
+    ]);
+
+    app(RestockOrderReturn::class)->handle($returnWithoutInventory);
+    app(RestockOrderReturn::class)->handle($returnWithUntrackedInventory);
+
+    expect($untrackedInventory->refresh()->quantity)->toBe(10)
+        ->and($untrackedInventory->reserved_quantity)->toBe(2)
+        ->and($returnWithoutInventory->refresh()->metadata['restocked_at'])->not->toBeNull()
+        ->and($returnWithUntrackedInventory->refresh()->metadata['restocked_at'])->not->toBeNull()
+        ->and(StockMovement::query()
+            ->withoutGlobalScope('current_tenant')
+            ->whereIn('order_return_id', [$returnWithoutInventory->id, $returnWithUntrackedInventory->id])
+            ->where('type', StockMovementType::Restocked->value)
+            ->count())->toBe(0);
 });
 
 it('does not settle or record stock movement when order inventory is already settled', function (): void {
