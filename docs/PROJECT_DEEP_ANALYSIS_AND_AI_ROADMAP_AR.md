@@ -1,6 +1,6 @@
 # التحليل العميق وخارطة الطريق الاستراتيجية لمنصة dz-saas-commerce
 
-آخر تحديث: 2026-05-12
+آخر تحديث: 2026-05-17
 
 نوع الوثيقة: مرجع استراتيجي أعلى + تحليل معماري + خارطة طريق تنفيذية طويلة المدى لعمل الإنسان وCodex على المشروع.
 
@@ -219,7 +219,7 @@
 - تخزين المال بوحدات صغيرة.
 - جدول checkout idempotency.
 
-تم توثيق تصميم product variants/options في ADR مقترح. المرحلة القادمة تقنياً هي schema foundation صغيرة، مع استمرار real staging كمسار جاهزية مستقل.
+تم قبول تصميم product variants/options في ADR 0013 وتنفيذ schema foundation للجداول والأعمدة nullable والقيود وtenant integrity tests. لا يوجد بعد model أو UI أو API أو checkout/storefront behavior للـ variants، ومع استمرار real staging كمسار جاهزية مستقل.
 
 ### 4.9 tenancy
 
@@ -483,7 +483,8 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 - caching/revalidation للـ storefront.
 - merchant onboarding wizard.
 - store readiness/publish gate.
-- product variants schema foundation.
+- product variant models/factories/relationships.
+- vendor variant management foundation.
 - manual inventory adjustment UI/API design.
 - product import/export.
 - bulk order operations.
@@ -581,7 +582,8 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 الهدف: دعم متاجر حقيقية بكتالوج ومخزون وطلبات أكثر تعقيداً.
 
-- product variants schema foundation.
+- product variant models/factories/relationships.
+- vendor variant management foundation.
 - manual inventory adjustment UI/API design.
 - product import/export.
 - bulk order operations.
@@ -737,15 +739,15 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 ### 11.5 Catalog
 
-- الحالة الحالية: products/categories/images/search foundation.
-- المطلوب: variants/options، filters، product SEO fields، import/export.
+- الحالة الحالية: products/categories/images/search foundation، وschema foundation للـ variants/options موجود بدون behavior.
+- المطلوب: models/relationships/factories للـ variants، ثم vendor management، filters، product SEO fields، import/export.
 - الأولوية: P1.
 - معايير القبول: variants لا تكسر checkout/inventory، والـ API paginated، والاختبارات تغطي tenant isolation.
 
 ### 11.6 Inventory
 
-- الحالة الحالية: inventory item لكل منتج، reservation/release/settle، وأساس stock movement ledger، وquick checkout reservation يكتب `reserved` movements، وrelease يكتب `released` movements، وsettlement يكتب `settled` movements، وreturn restock يكتب `restocked` movements، وmanual adjustment action يكتب `manual_adjustment`/`correction` movements مع AuditLog.
-- المطلوب: product variants schema foundation، manual inventory adjustment UI/API design، low stock alerts.
+- الحالة الحالية: inventory item لكل منتج، reservation/release/settle، وأساس stock movement ledger، وquick checkout reservation يكتب `reserved` movements، وrelease يكتب `released` movements، وsettlement يكتب `settled` movements، وreturn restock يكتب `restocked` movements، وmanual adjustment action يكتب `manual_adjustment`/`correction` movements مع AuditLog. توجد أعمدة `product_variant_id` nullable في inventory/order/stock movement tables، لكنها غير مستخدمة سلوكياً بعد.
+- المطلوب: product variant models/relationships ثم تفعيل variant-level inventory لاحقاً، manual inventory adjustment UI/API design، low stock alerts.
 - الأولوية: P1.
 - معايير القبول: كل حركة مخزون قابلة للتدقيق، checkout يستخدم locks، ولا يوجد تعديل مخزون غير مفسر.
 
@@ -947,8 +949,9 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 ```text
 المهمة: صمم ونفذ product variants/options.
-القيود: لا تكسر checkout أو inventory.
-الاختبارات: variant selection، pricing server-side، inventory tenant isolation.
+الحالة: schema foundation مكتمل؛ المرحلة التالية models/factories/relationships ثم vendor management.
+القيود: لا تكسر checkout أو inventory، ولا تفعّل `product_variant_id` في checkout قبل PR مخصص.
+الاختبارات: tenant isolation، relationships، ثم لاحقاً variant selection وpricing server-side.
 ```
 
 #### Stock movements
@@ -1058,7 +1061,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 - لا الاعتماد على duplicate checkout best-effort فقط في الحالات الحساسة.
 - لا integrations خارجية قبل abstraction وlogging وretry/idempotency.
 - لا بناء analytics dashboards ثقيلة مباشرة فوق transactional tables.
-- لا إضافة variants قبل تثبيت أثرها على checkout/inventory/order items.
+- لا تفعيل variants في checkout/storefront قبل تثبيت أثرها على checkout/inventory/order items باختبارات واضحة.
 
 ---
 
@@ -1073,7 +1076,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 7. `مكتمل 2026-05-09`: مراجعة tenant scoping الأساسية لـ `Store`، مع إبقائه exception موثقاً وfail-closed عند `forTenant(null)`.
 8. `مكتمل 2026-05-09`: إصلاح catalog pagination وsitemap حتى لا تختفي المنتجات بعد أول 48 منتج.
 9. security hardening: أضيف 2FA للوحات Filament الحساسة في 2026-05-16؛ المتبقي emergency reset، CSP، vulnerability review workflow، secrets rotation. تم إضافة secret hygiene وclean export baseline في 2026-05-09، وأضيف image vulnerability scanning إلى CI وpublish workflow في 2026-05-12.
-10. merchant onboarding + store readiness، ثم product variants + stock movements.
+10. merchant onboarding + store readiness، ثم product variant models/vendor management، ثم checkout/storefront variants.
 
 هذا الترتيب يبدأ بالبنية والموثوقية قبل الميزات؛ لأن المشروع سيكبر عبر Codex، وأي ضعف في CI أو العزل أو التشغيل سيصبح مكلفاً لاحقاً.
 

@@ -2,9 +2,9 @@
 
 Date: 2026-05-17
 
-Status: Proposed
+Status: Accepted - schema foundation complete
 
-هذه جولة design فقط. لا يوجد في هذا القرار أي migration أو model أو تغيير checkout/storefront منفذ الآن.
+تم تنفيذ schema foundation للجداول والقيود والأعمدة nullable الخاصة بالـ variants/options. لا يوجد في هذا القرار بعد أي model أو factory أو تغيير checkout/storefront منفذ.
 
 ## Context
 
@@ -116,7 +116,7 @@ Status: Proposed
 
 ## Proposed Schema Overview
 
-هذا schema مقترح لمراحل لاحقة فقط، وليس migration في هذه الجولة.
+هذا schema هو التصميم المرجعي. تم تنفيذ foundation للجداول والأعمدة nullable في جولة schema foundation، بينما تبقى قواعد السلوك وتكامل checkout/storefront والمخزون التفصيلي لمراحل لاحقة.
 
 ### `products`
 
@@ -197,18 +197,16 @@ Pivot مقترح لتطبيع علاقة variant بالقيم المختارة:
 - `id` ULID primary key أو composite primary key.
 - `tenant_id` required.
 - `product_variant_id` required.
-- `product_option_id` required.
 - `product_option_value_id` required.
 - timestamps.
 
 قيود مقترحة:
 
 - composite FKs لكل علاقة tenant-scoped.
-- unique `[tenant_id, product_variant_id, product_option_id]`.
 - unique `[tenant_id, product_variant_id, product_option_value_id]`.
 - يجب أن تنتمي option/value لنفس product الخاص بالvariant.
 
-ملاحظة: `option_signature` يبقى normalized key سريعاً لل uniqueness والقراءة، بينما pivot يخدم العلاقات والاستعلامات.
+ملاحظة: تنفيذ schema foundation استخدم pivot الأدنى بـ `product_variant_id` و`product_option_value_id`. يبقى `option_signature` normalized key سريعاً لل uniqueness والقراءة، بينما pivot يخدم العلاقات والاستعلامات. منع اختيار قيمة من option تابع لمنتج آخر داخل نفس tenant يحتاج قيداً إضافياً أو validation في مرحلة models/management.
 
 ### `inventory_items`
 
@@ -335,7 +333,7 @@ Snapshots مطلوبة:
 
 ## Phased Implementation Plan
 
-### PR 1: Schema foundation فقط
+### PR 1: Schema foundation فقط - مكتمل 2026-05-17
 
 النطاق:
 
@@ -345,6 +343,7 @@ Snapshots مطلوبة:
 - إضافة `product_variant_id` nullable في `inventory_items`, `order_items`, `stock_movements`.
 - إضافة constraints/indexes/tenant integrity tests فقط.
 - لا checkout behavior change.
+- بقي unique الحالي على `inventory_items [tenant_id, product_id]` كما هو. سيتم تفكيكه لاحقاً عند تفعيل variant-level inventory فعلياً.
 
 Rollback:
 
@@ -439,4 +438,4 @@ Rollback:
 - product-level inventory يبقى صالحاً فقط للـ simple products.
 - variant-level inventory هو القاعدة للـ variable products.
 - stock movement ledger يجب أن يبقى append-only ويعكس sellable unit بدقة.
-- هذا ADR يبقى `Proposed` حتى تثبت PRs التنفيذية schema/tests وسلوك checkout/storefront.
+- هذا ADR أصبح `Accepted` بعد تثبيت schema foundation وtenant integrity tests. تبقى مراحل checkout/storefront/inventory behavior معلقة حتى PRs لاحقة.
