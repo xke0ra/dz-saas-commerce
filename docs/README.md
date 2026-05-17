@@ -62,6 +62,7 @@
 ## ADRs
 
 - `adr/README.md`: فهرس قرارات البنية.
+- `adr/0013-product-variants-inventory-design.md`: تصميم مقترح لدعم product variants/options وتأثيره على inventory/checkout/stock movements.
 - اقرأ ADR قبل أي تغيير يلمس المعمارية، tenancy، المال، storefront caching، deployment، marketplace، أو shipping.
 
 ## اقرأ قبل التعديل

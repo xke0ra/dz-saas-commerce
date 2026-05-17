@@ -90,10 +90,11 @@ Completed foundation:
 - Order settlement integration: `SettleOrderInventory` يسجل `settled` stock movements عند تسوية المخزون فعلياً.
 - Return restock integration: `RestockOrderReturn` يسجل `restocked` stock movements عند زيادة المخزون فعلياً.
 - Manual inventory adjustment action with AuditLog: `AdjustInventoryManually` يسجل `manual_adjustment`/`correction` stock movements و`inventory_manual_adjustment` AuditLog بدون UI/API.
+- Product Variants ADR/design: `docs/adr/0013-product-variants-inventory-design.md` يحدد تصميم variants/options وتأثيره على inventory/checkout/order items/stock movements/storefront.
 
 Next backlog:
 
-1. Product variants ADR/design.
+1. Product variants schema foundation.
 2. تنفيذ real staging فعلياً باستخدام checklist، بدون أسرار في repo.
 3. Store readiness publish gate.
 4. COD reconciliation foundation.

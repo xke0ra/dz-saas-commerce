@@ -39,6 +39,8 @@
 - `available` يجب أن يعني `quantity - reserved_quantity` عندما `track_quantity=true`.
 - backorders يجب أن تكون قراراً صريحاً محفوظاً على inventory item أو policy واضحة.
 - checkout لا يخصم `quantity` مباشرة؛ يحجز أولاً ثم settle/release حسب حالة الطلب.
+- variants يجب أن تعامل كـ sellable unit عند تنفيذها: المخزون يكون على `product` للمنتج simple وعلى `product_variant` للمنتج variable.
+- لا يجوز checkout على parent variable product بدون `product_variant_id`.
 
 ## 4. Billing Contract
 
