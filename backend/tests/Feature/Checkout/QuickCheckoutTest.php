@@ -9,6 +9,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\PlanFeatureKey;
 use App\Enums\ProductStatus;
+use App\Enums\StockMovementType;
 use App\Enums\TenantRole;
 use App\Models\CheckoutIdempotencyRecord;
 use App\Models\Commune;
@@ -21,6 +22,7 @@ use App\Models\Plan;
 use App\Models\PlanFeature;
 use App\Models\Product;
 use App\Models\ShippingRate;
+use App\Models\StockMovement;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\User;
@@ -106,6 +108,107 @@ it('creates a quick order from the storefront and reserves inventory', function 
     expect($product->inventoryItem()->first()->reserved_quantity)->toBe(3);
 });
 
+it('records reserved stock movements for quick checkout order items', function (): void {
+    $tenant = Tenant::factory()->create();
+    startCheckoutSubscription($tenant);
+    $store = Store::factory()->for($tenant)->create(['subdomain' => 'stock-ledger-checkout']);
+    $firstProduct = Product::factory()->create([
+        'tenant_id' => $tenant->id,
+        'status' => ProductStatus::Active,
+        'price_minor' => 100000,
+    ]);
+    $secondProduct = Product::factory()->create([
+        'tenant_id' => $tenant->id,
+        'status' => ProductStatus::Active,
+        'price_minor' => 200000,
+    ]);
+    $firstInventory = InventoryItem::factory()->forProduct($firstProduct)->create([
+        'quantity' => 10,
+        'reserved_quantity' => 1,
+    ]);
+    $secondInventory = InventoryItem::factory()->forProduct($secondProduct)->create([
+        'quantity' => 8,
+        'reserved_quantity' => 0,
+    ]);
+
+    ShippingRate::factory()->create([
+        'tenant_id' => $tenant->id,
+        'wilaya_id' => $this->wilaya->id,
+        'commune_id' => $this->commune->id,
+        'delivery_type' => DeliveryType::Home,
+        'price_minor' => 50000,
+    ]);
+    PaymentMethod::factory()->create(['tenant_id' => $tenant->id]);
+
+    $payload = checkoutPayload($firstProduct, $this->wilaya, $this->commune);
+    unset($payload['product_id'], $payload['quantity']);
+    $payload['items'] = [
+        ['product_id' => $firstProduct->id, 'quantity' => 2],
+        ['product_id' => $secondProduct->id, 'quantity' => 3],
+    ];
+    $rawKey = 'quick-order-ledger-token';
+
+    $response = $this->withHeader('Idempotency-Key', $rawKey)
+        ->postJson("/api/storefront/{$store->subdomain}/checkout", $payload);
+
+    $response->assertCreated();
+
+    $order = Order::query()
+        ->withoutGlobalScope('current_tenant')
+        ->with('items')
+        ->findOrFail($response->json('data.id'));
+    $movements = StockMovement::query()
+        ->withoutGlobalScope('current_tenant')
+        ->where('order_id', $order->id)
+        ->get()
+        ->keyBy('order_item_id');
+
+    expect($movements)->toHaveCount(2);
+
+    $expected = [
+        $firstProduct->id => [
+            'inventory' => $firstInventory->refresh(),
+            'reserved_delta' => 2,
+            'balance_reserved_after' => 3,
+        ],
+        $secondProduct->id => [
+            'inventory' => $secondInventory->refresh(),
+            'reserved_delta' => 3,
+            'balance_reserved_after' => 3,
+        ],
+    ];
+
+    foreach ($order->items as $orderItem) {
+        $movement = $movements->get($orderItem->id);
+        $inventory = $expected[$orderItem->product_id]['inventory'];
+        $metadata = $movement->metadata;
+
+        expect($movement)->not->toBeNull()
+            ->and($movement->tenant_id)->toBe($tenant->id)
+            ->and($movement->product_id)->toBe($orderItem->product_id)
+            ->and($movement->inventory_item_id)->toBe($inventory->id)
+            ->and($movement->order_id)->toBe($order->id)
+            ->and($movement->order_item_id)->toBe($orderItem->id)
+            ->and($movement->order_return_id)->toBeNull()
+            ->and($movement->actor_id)->toBeNull()
+            ->and($movement->type)->toBe(StockMovementType::Reserved)
+            ->and($movement->quantity_delta)->toBe(0)
+            ->and($movement->reserved_delta)->toBe($expected[$orderItem->product_id]['reserved_delta'])
+            ->and($movement->balance_quantity_after)->toBe($inventory->quantity)
+            ->and($movement->balance_reserved_after)->toBe($expected[$orderItem->product_id]['balance_reserved_after'])
+            ->and($movement->reason)->toBe('quick_checkout_reservation')
+            ->and($metadata)->toMatchArray([
+                'source' => 'quick_checkout',
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'product_id' => $orderItem->product_id,
+                'order_item_id' => $orderItem->id,
+            ])
+            ->and(json_encode($metadata))->not->toContain($payload['phone'])
+            ->and(json_encode($metadata))->not->toContain($rawKey);
+    }
+});
+
 it('replays a checkout response for the same idempotency key without creating a second order', function (): void {
     [$tenant, $store, $product] = checkoutScenario($this->wilaya, $this->commune, 'idempotent-repeat');
     $payload = checkoutPayload($product, $this->wilaya, $this->commune);
@@ -131,7 +234,8 @@ it('replays a checkout response for the same idempotency key without creating a 
         'response_status' => 201,
     ]);
 
-    expect($product->inventoryItem()->first()->reserved_quantity)->toBe(1);
+    expect($product->inventoryItem()->first()->reserved_quantity)->toBe(1)
+        ->and(StockMovement::query()->withoutGlobalScope('current_tenant')->count())->toBe(1);
 });
 
 it('rejects an idempotency key reused with a different checkout payload', function (): void {
@@ -158,7 +262,8 @@ it('rejects an idempotency key reused with a different checkout payload', functi
         'idempotency_key' => $key,
     ]);
 
-    expect($product->inventoryItem()->first()->reserved_quantity)->toBe(1);
+    expect($product->inventoryItem()->first()->reserved_quantity)->toBe(1)
+        ->and(StockMovement::query()->withoutGlobalScope('current_tenant')->count())->toBe(1);
 });
 
 it('keeps checkout idempotency keys isolated by tenant and store', function (): void {
@@ -238,7 +343,11 @@ it('returns the existing order for a duplicate checkout submitted inside the dup
         'idempotency_key' => null,
     ]);
 
-    expect($product->inventoryItem()->first()->reserved_quantity)->toBe(1);
+    expect($product->inventoryItem()->first()->reserved_quantity)->toBe(1)
+        ->and(StockMovement::query()
+            ->withoutGlobalScope('current_tenant')
+            ->where('order_id', $firstResponse->json('data.id'))
+            ->count())->toBe(1);
 });
 
 it('applies an enabled coupon during quick checkout', function (): void {
@@ -397,6 +506,43 @@ it('allows checkout to reserve beyond stock when backorders are enabled', functi
     expect($product->inventoryItem()->first()->reserved_quantity)->toBe(3);
 });
 
+it('does not record stock movements when checkout fails for insufficient stock', function (): void {
+    $tenant = Tenant::factory()->create();
+    startCheckoutSubscription($tenant);
+    $store = Store::factory()->for($tenant)->create(['subdomain' => 'insufficient-stock']);
+    $product = Product::factory()->create([
+        'tenant_id' => $tenant->id,
+        'status' => ProductStatus::Active,
+        'price_minor' => 100000,
+    ]);
+    $inventoryItem = InventoryItem::factory()->forProduct($product)->create([
+        'quantity' => 1,
+        'reserved_quantity' => 0,
+    ]);
+
+    ShippingRate::factory()->create([
+        'tenant_id' => $tenant->id,
+        'wilaya_id' => $this->wilaya->id,
+        'commune_id' => $this->commune->id,
+        'delivery_type' => DeliveryType::Home,
+        'price_minor' => 50000,
+    ]);
+    PaymentMethod::factory()->create(['tenant_id' => $tenant->id]);
+
+    $response = $this->postJson(
+        "/api/storefront/{$store->subdomain}/checkout",
+        checkoutPayload($product, $this->wilaya, $this->commune, quantity: 2),
+    );
+
+    $response
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('items');
+
+    $this->assertDatabaseCount('orders', 0);
+    expect($inventoryItem->refresh()->reserved_quantity)->toBe(0)
+        ->and(StockMovement::query()->withoutGlobalScope('current_tenant')->count())->toBe(0);
+});
+
 it('rejects checkout when the monthly order limit is reached', function (): void {
     $tenant = Tenant::factory()->create();
     startCheckoutSubscription($tenant, maxOrdersPerMonth: 0);
@@ -468,6 +614,7 @@ it('rejects checkout when the product belongs to another tenant', function (): v
         ->assertJsonValidationErrors('items');
 
     $this->assertDatabaseCount('orders', 0);
+    expect(StockMovement::query()->withoutGlobalScope('current_tenant')->count())->toBe(0);
 });
 
 it('rejects checkout when shipping is unavailable for the commune and delivery type', function (): void {
@@ -497,6 +644,7 @@ it('rejects checkout when shipping is unavailable for the commune and delivery t
         ->assertJsonValidationErrors('delivery_type');
 
     $this->assertDatabaseCount('orders', 0);
+    expect(StockMovement::query()->withoutGlobalScope('current_tenant')->count())->toBe(0);
 });
 
 it('tracks an order by order number and customer phone', function (): void {

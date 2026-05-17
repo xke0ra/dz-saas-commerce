@@ -85,12 +85,13 @@ Completed foundation:
 - 2FA للـ super admin/platform support/tenant owner داخل لوحات Filament، مع recovery codes وaudit coverage.
 - Emergency admin 2FA reset procedure عبر Artisan command، مع reason إلزامي وaudit صريح.
 - Stock Movement Ledger foundation: migration/model/enum/factory/relationships/tests/docs، بدون ربط checkout أو returns بعد.
+- Checkout reservation integration: quick checkout reservations تسجل `reserved` stock movements داخل نفس transaction.
 
 Next backlog:
 
 1. تنفيذ real staging فعلياً باستخدام checklist، بدون أسرار في repo.
 2. تنفيذ backup restore drill فعلي وتسجيل evidence.
-3. Integrate checkout reservations with stock movements.
+3. Integrate order cancellation/release with stock movements.
 4. Product variants ADR/design.
 5. Store readiness publish gate.
 6. CSP report-only.

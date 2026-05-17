@@ -18,6 +18,7 @@
 - backend يحسب prices, discounts, shipping fees, totals, currency, payment status, and inventory reservation.
 - الواجهة لا تفرض `subtotal`, `discount`, `shipping_fee`, أو `total`.
 - inventory reservation يتم داخل transaction وبقفل عند الحاجة.
+- quick checkout reservation يسجل `reserved` stock movement داخل نفس transaction عند إنشاء order جديد.
 - checkout يجب أن يستخدم idempotency key أو duplicate window fallback واضح.
 - order items تحفظ snapshots: product name, SKU, unit price, quantity, line total.
 - أي checkout failure يجب أن يرجع validation آمن بدون تسريب tenant data أو internal ids غير ضرورية.
