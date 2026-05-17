@@ -472,7 +472,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 | CI required gates | تم إثبات Quality Gates داخل GitHub Actions في PR #1 / run `25743248405`، وتفعيل required checks على `main` مع strict status checks وadmin enforcement. | إبقاء هذه البوابة مطلوبة عند أي تعديل للـ workflow، ومراقبة تنبيهات GitHub الخاصة بانتقال Actions runtime من Node 20 إلى Node 24. |
 | Clean deployment proof غير مكتمل | Dockerfiles موجودة، وتم إثبات build smoke محلياً وGHCR staging publish بعد Trivy scan عبر run `25751543062`. كما أضيف `deploy/staging/staging-smoke.sh` و`staging-ephemeral-smoke.sh`. المسار المؤقت كشف نقص S3 ثم أصبح يمر محلياً بعد إضافة اعتماد الإنتاج. | نشر tag/digest جديد للـ backend بعد الإصلاح، تشغيل `target=ephemeral` في GitHub Actions، ثم تشغيل staging حقيقي يستهلك tag/digest مثبتاً عبر `target=environment`. |
 | Monitoring/alerting/backups/restore | docs موجودة لكن لا يوجد تشغيل فعلي مثبت. | uptime، failed jobs، queue/scheduler، restore drill، alerts. |
-| Security hardening | CSP واسع، لا 2FA، لا session/device management، وdependency audits صارت تمر محلياً وداخل CI، وأضيف image vulnerability scan إلى Dockerfile Checks وpublish workflow. | إبقاء scans خضراء، ثم 2FA، CSP tightening، secrets rotation، vulnerability review workflow أوسع. |
+| Security hardening | CSP واسع، 2FA أصبح موجوداً للـ admin/support/tenant owner داخل Filament، لا emergency reset ولا session/device management كامل، وdependency audits صارت تمر محلياً وداخل CI، وأضيف image vulnerability scan إلى Dockerfile Checks وpublish workflow. | إبقاء scans خضراء، ثم emergency 2FA reset، CSP tightening، secrets rotation، vulnerability review workflow أوسع. |
 | Store tenant scoping review | تم في 2026-05-09 توثيق `Store` كاستثناء من `BelongsToTenant`، وجعل `forTenant(null)` fail-closed، وإزالة `tenant_id` من `Storefront/StoreResource` العام. | يبقى audit لاحق لأي query جديد على `Store` وتوسيع platform/admin tests عند إضافة flows جديدة. |
 | catalog pagination/sitemap 48-limit | تم إصلاحه في 2026-05-09: sitemap صار يجمع المنتجات عبر pagination ويثبت ذلك E2E، والـ backend test يؤكد cap الصفحة الثانية. | يبقى sitemap index لاحقاً للمتاجر التي تتجاوز حد URL الآمن لكل sitemap. |
 | cart duplicate item quantity normalization | تم إصلاحه في 2026-05-09: request validation و`CreateQuickOrder` يرفضان تكرار `product_id` في نفس checkout. | يبقى تحسين metrics للـ abuse/idempotency لاحقاً. |
@@ -814,8 +814,8 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 ### 11.16 Security
 
-- الحالة الحالية: policies، tenancy، headers، throttles، readiness safeguards، dependency audits خضراء محلياً بعد تحديث Next، وsecret hygiene check.
-- المطلوب: تثبيت dependency audits كحاجز CI، ثم 2FA، CSP tightening، image/dependency vulnerability review workflow، session/device management، secrets rotation.
+- الحالة الحالية: policies، tenancy، headers، throttles، readiness safeguards، 2FA للوحات الحساسة، dependency audits خضراء محلياً بعد تحديث Next، وsecret hygiene check.
+- المطلوب: إبقاء dependency audits كحاجز CI، ثم emergency admin 2FA reset، CSP tightening، image/dependency vulnerability review workflow، session/device management، secrets rotation.
 - الأولوية: P0.
 - معايير القبول: tests، docs، CI scans، وproduction/staging validation.
 
@@ -987,9 +987,9 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 #### 2FA
 
 ```text
-المهمة: أضف 2FA للـ super admins والtenant owners.
-المطلوب: enrollment، recovery، enforcement policy.
-الاختبارات: auth flows وpanel access.
+الحالة: منفذ للوحات Filament للـ super admins، platform support، وtenant owners، مع recovery codes وaudit.
+المتبقي: emergency admin reset procedure مع audit ومراجعة UX يدوية.
+الاختبارات: schema/model/service/middleware auth flows وpanel access.
 ```
 
 #### webhooks
@@ -1072,7 +1072,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 6. تفعيل monitoring/alerting/error tracking.
 7. `مكتمل 2026-05-09`: مراجعة tenant scoping الأساسية لـ `Store`، مع إبقائه exception موثقاً وfail-closed عند `forTenant(null)`.
 8. `مكتمل 2026-05-09`: إصلاح catalog pagination وsitemap حتى لا تختفي المنتجات بعد أول 48 منتج.
-9. security hardening: 2FA، CSP، vulnerability review workflow، secrets rotation. تم إضافة secret hygiene وclean export baseline في 2026-05-09، وأضيف image vulnerability scanning إلى CI وpublish workflow في 2026-05-12.
+9. security hardening: أضيف 2FA للوحات Filament الحساسة في 2026-05-16؛ المتبقي emergency reset، CSP، vulnerability review workflow، secrets rotation. تم إضافة secret hygiene وclean export baseline في 2026-05-09، وأضيف image vulnerability scanning إلى CI وpublish workflow في 2026-05-12.
 10. merchant onboarding + store readiness، ثم product variants + stock movements.
 
 هذا الترتيب يبدأ بالبنية والموثوقية قبل الميزات؛ لأن المشروع سيكبر عبر Codex، وأي ضعف في CI أو العزل أو التشغيل سيصبح مكلفاً لاحقاً.

@@ -6,9 +6,12 @@ namespace App\Models;
 use App\Enums\PlatformRole;
 use App\Enums\TenantPermission;
 use App\Enums\TenantRole;
+use App\Support\Auth\TwoFactorAuthentication;
 use App\Support\Tenancy\CurrentTenant;
 use App\Support\Tenancy\TenantResolver;
 use Database\Factories\UserFactory;
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -20,8 +23,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 #[Fillable(['name', 'email', 'password', 'platform_role'])]
-#[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable implements FilamentUser
+#[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
+class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
@@ -37,6 +40,12 @@ class User extends Authenticatable implements FilamentUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'platform_role' => PlatformRole::class,
+            'two_factor_secret' => 'encrypted',
+            'two_factor_recovery_codes' => 'encrypted:array',
+            'two_factor_confirmed_at' => 'datetime',
+            'two_factor_enabled_at' => 'datetime',
+            'two_factor_disabled_at' => 'datetime',
+            'two_factor_last_challenged_at' => 'datetime',
         ];
     }
 
@@ -48,6 +57,93 @@ class User extends Authenticatable implements FilamentUser
             'support' => $this->isSuperAdmin() || $this->isPlatformSupport(),
             default => false,
         };
+    }
+
+    public function hasTwoFactorAuthenticationEnabled(): bool
+    {
+        return filled($this->two_factor_secret) && $this->two_factor_confirmed_at !== null;
+    }
+
+    public function requiresTwoFactorAuthenticationForPanel(?string $panelId): bool
+    {
+        return app(TwoFactorAuthentication::class)->isRequiredForPanel($this, $panelId);
+    }
+
+    public function getAppAuthenticationSecret(): ?string
+    {
+        return $this->two_factor_secret;
+    }
+
+    public function saveAppAuthenticationSecret(?string $secret): void
+    {
+        $wasEnabled = $this->hasTwoFactorAuthenticationEnabled();
+        $timestamp = now();
+
+        $this->forceFill($secret === null ? [
+            'two_factor_secret' => null,
+            'two_factor_recovery_codes' => null,
+            'two_factor_confirmed_at' => null,
+            'two_factor_enabled_at' => null,
+            'two_factor_disabled_at' => $timestamp,
+            'two_factor_last_challenged_at' => null,
+        ] : [
+            'two_factor_secret' => $secret,
+            'two_factor_confirmed_at' => $timestamp,
+            'two_factor_enabled_at' => $this->two_factor_enabled_at ?? $timestamp,
+            'two_factor_disabled_at' => null,
+            'two_factor_last_challenged_at' => $timestamp,
+        ])->save();
+
+        $twoFactor = app(TwoFactorAuthentication::class);
+
+        if ($secret === null) {
+            $twoFactor->forgetSession(request());
+
+            if ($wasEnabled) {
+                $twoFactor->recordDisabled($this);
+            }
+
+            return;
+        }
+
+        $twoFactor->confirmSession(request(), $this);
+
+        if (! $wasEnabled) {
+            $twoFactor->recordEnabled($this);
+        }
+    }
+
+    public function getAppAuthenticationHolderName(): string
+    {
+        return $this->email;
+    }
+
+    /**
+     * @return ?array<string>
+     */
+    public function getAppAuthenticationRecoveryCodes(): ?array
+    {
+        return is_array($this->two_factor_recovery_codes)
+            ? $this->two_factor_recovery_codes
+            : null;
+    }
+
+    /**
+     * @param  ?array<string>  $codes
+     */
+    public function saveAppAuthenticationRecoveryCodes(?array $codes): void
+    {
+        $previousCodes = $this->getAppAuthenticationRecoveryCodes();
+
+        $this->forceFill([
+            'two_factor_recovery_codes' => $codes,
+        ])->save();
+
+        app(TwoFactorAuthentication::class)->recordRecoveryCodesRegeneratedIfNeeded(
+            user: $this,
+            previousCodes: $previousCodes,
+            newCodes: $codes,
+        );
     }
 
     public function isSuperAdmin(): bool

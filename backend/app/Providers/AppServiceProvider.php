@@ -55,7 +55,10 @@ use App\Policies\TenantInvitationPolicy;
 use App\Policies\TenantPolicy;
 use App\Policies\TenantUserPolicy;
 use App\Policies\ThemeSettingPolicy;
+use App\Support\Auth\TwoFactorAuthentication;
 use App\Support\Tenancy\CurrentTenant;
+use Illuminate\Auth\Events\Logout;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -116,6 +119,10 @@ class AppServiceProvider extends ServiceProvider
             }
 
             return true;
+        });
+
+        Event::listen(Logout::class, function (): void {
+            app(TwoFactorAuthentication::class)->forgetSession(request());
         });
     }
 }

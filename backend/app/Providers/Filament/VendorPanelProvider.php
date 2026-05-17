@@ -2,7 +2,11 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\TwoFactorAuthenticationPage;
+use App\Filament\Pages\TwoFactorChallengePage;
+use App\Http\Middleware\EnsurePanelTwoFactor;
 use App\Http\Middleware\ResolveTenantFromRequest;
+use App\Support\Auth\PanelAppAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -28,6 +32,7 @@ class VendorPanelProvider extends PanelProvider
             ->id('vendor')
             ->path('vendor')
             ->login()
+            ->multiFactorAuthentication(PanelAppAuthentication::make()->recoverable())
             ->colors([
                 'primary' => Color::Amber,
             ])
@@ -35,6 +40,8 @@ class VendorPanelProvider extends PanelProvider
             ->discoverPages(in: app_path('Filament/Vendor/Pages'), for: 'App\Filament\Vendor\Pages')
             ->pages([
                 Dashboard::class,
+                TwoFactorAuthenticationPage::class,
+                TwoFactorChallengePage::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Vendor/Widgets'), for: 'App\Filament\Vendor\Widgets')
             ->widgets([
@@ -55,6 +62,7 @@ class VendorPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
                 ResolveTenantFromRequest::class,
+                EnsurePanelTwoFactor::class,
             ]);
     }
 }

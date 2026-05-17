@@ -2,6 +2,10 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\TwoFactorAuthenticationPage;
+use App\Filament\Pages\TwoFactorChallengePage;
+use App\Http\Middleware\EnsurePanelTwoFactor;
+use App\Support\Auth\PanelAppAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -26,12 +30,15 @@ class SupportPanelProvider extends PanelProvider
             ->id('support')
             ->path('support')
             ->login()
+            ->multiFactorAuthentication(PanelAppAuthentication::make()->recoverable())
             ->colors([
                 'primary' => Color::Amber,
             ])
             ->discoverResources(in: app_path('Filament/Support/Resources'), for: 'App\Filament\Support\Resources')
             ->pages([
                 Dashboard::class,
+                TwoFactorAuthenticationPage::class,
+                TwoFactorChallengePage::class,
             ])
             ->widgets([
                 AccountWidget::class,
@@ -49,6 +56,7 @@ class SupportPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                EnsurePanelTwoFactor::class,
             ]);
     }
 }
