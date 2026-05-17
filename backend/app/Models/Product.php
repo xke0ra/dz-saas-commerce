@@ -92,6 +92,14 @@ class Product extends Model
     }
 
     /**
+     * @return HasMany<StockMovement, $this>
+     */
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class);
+    }
+
+    /**
      * @param  Builder<Product>  $query
      * @return Builder<Product>
      */
