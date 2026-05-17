@@ -64,8 +64,8 @@ it('resolves the vendor tenant from the persisted session', function (): void {
     $firstTenant = Tenant::factory()->create();
     $secondTenant = Tenant::factory()->create();
 
-    attachTenantSwitcherUser($user, $firstTenant);
-    attachTenantSwitcherUser($user, $secondTenant);
+    attachTenantSwitcherUser($user, $firstTenant, TenantRole::StoreStaff);
+    attachTenantSwitcherUser($user, $secondTenant, TenantRole::StoreStaff);
 
     $request = Request::create('/vendor', 'GET');
     $request->setUserResolver(fn (): User => $user);
@@ -85,8 +85,8 @@ it('renders only available tenants on the vendor switcher page', function (): vo
     $secondTenant = Tenant::factory()->create(['name' => 'Second Tenant']);
     $otherTenant = Tenant::factory()->create(['name' => 'Hidden Tenant']);
 
-    attachTenantSwitcherUser($user, $firstTenant);
-    attachTenantSwitcherUser($user, $secondTenant);
+    attachTenantSwitcherUser($user, $firstTenant, TenantRole::StoreStaff);
+    attachTenantSwitcherUser($user, $secondTenant, TenantRole::StoreStaff);
 
     $response = $this->actingAs($user)
         ->withSession([TenantSwitcher::SESSION_KEY => $firstTenant->id])

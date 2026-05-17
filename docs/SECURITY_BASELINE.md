@@ -40,10 +40,11 @@ Currently present:
 - test coverage for forwarded HTTPS only from configured proxies
 - cross-tenant database constraints for important relationships
 - audit log domain foundation
+- Filament app-based 2FA for admin/support and tenant owners, using encrypted user fields and recovery codes
 
 Current important gaps:
 
-- no documented 2FA setup
+- no emergency admin 2FA reset procedure with audit
 - no full session/device management
 - CSP baseline is intentionally broad for Filament/Livewire/storefront compatibility and still needs production tightening after browser/e2e validation
 - backup/restore runbook and automation examples exist, but no deployed backup schedule or executed staging restore drill is recorded yet
@@ -57,8 +58,9 @@ Current important gaps:
 
 Required before production:
 
-- 2FA for super admins
-- 2FA for tenant owners where practical
+- 2FA for super admins: implemented for Filament admin/support access
+- 2FA for support users: implemented for platform support
+- 2FA for tenant owners where practical: implemented for vendor panel when tenant owner context is resolved
 - clear password reset configuration
 - session timeout policy for admin/vendor panels
 - device/session visibility or revocation for sensitive accounts
@@ -224,6 +226,7 @@ Actions that require audit logs:
 - staff invited or permissions changed
 - support ticket status/assignee changed
 - custom domain verified or removed
+- 2FA enabled, disabled, recovery codes regenerated, and successful 2FA challenges
 
 Audit logs should include:
 

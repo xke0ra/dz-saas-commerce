@@ -31,6 +31,7 @@
 
 - `TENANCY_RULES.md`: قواعد tenant isolation و`withoutGlobalScope`.
 - `SECURITY_BASELINE.md`: مبادئ الأمان، الأسرار، headers، audit، وPII.
+- `TWO_FACTOR_AUTH_AR.md`: سياسة 2FA الحالية للوحات admin/vendor/support، recovery codes، وحدود enforcement.
 - `DOMAIN_CONTRACTS_AR.md`: عقود tenancy/security لكل تعديل حساس.
 
 ## Storefront
