@@ -21,6 +21,7 @@
 - quick checkout reservation يسجل `reserved` stock movement داخل نفس transaction عند إنشاء order جديد.
 - checkout يجب أن يستخدم idempotency key أو duplicate window fallback واضح.
 - order items تحفظ snapshots: product name, SKU, unit price, quantity, line total.
+- schema foundation للـ product variants موجود، لكن checkout الحالي لا يستخدمه بعد. في هذه المرحلة quick checkout يبقى product-level ويرسل/يحفظ `product_id` فقط.
 - أي checkout failure يجب أن يرجع validation آمن بدون تسريب tenant data أو internal ids غير ضرورية.
 
 ## 3. Inventory Contract
@@ -39,8 +40,10 @@
 - `available` يجب أن يعني `quantity - reserved_quantity` عندما `track_quantity=true`.
 - backorders يجب أن تكون قراراً صريحاً محفوظاً على inventory item أو policy واضحة.
 - checkout لا يخصم `quantity` مباشرة؛ يحجز أولاً ثم settle/release حسب حالة الطلب.
-- variants يجب أن تعامل كـ sellable unit عند تنفيذها: المخزون يكون على `product` للمنتج simple وعلى `product_variant` للمنتج variable.
-- لا يجوز checkout على parent variable product بدون `product_variant_id`.
+- schema foundation للـ variants يضيف `product_variant_id` nullable إلى inventory/order/stock movement tables مع tenant-scoped constraints، لكنه لا يغير سلوك المخزون الحالي.
+- في هذه المرحلة يبقى unique الحالي على `inventory_items [tenant_id, product_id]` قائماً، والمخزون العملي ما زال product-level حتى PR تفعيل variants.
+- variants يجب أن تعامل كـ sellable unit عند تنفيذها سلوكياً: المخزون يكون على `product` للمنتج simple وعلى `product_variant` للمنتج variable.
+- لا يجوز checkout على parent variable product بدون `product_variant_id` بعد تفعيل سلوك variable products.
 
 ## 4. Billing Contract
 

@@ -91,18 +91,20 @@ Completed foundation:
 - Return restock integration: `RestockOrderReturn` يسجل `restocked` stock movements عند زيادة المخزون فعلياً.
 - Manual inventory adjustment action with AuditLog: `AdjustInventoryManually` يسجل `manual_adjustment`/`correction` stock movements و`inventory_manual_adjustment` AuditLog بدون UI/API.
 - Product Variants ADR/design: `docs/adr/0013-product-variants-inventory-design.md` يحدد تصميم variants/options وتأثيره على inventory/checkout/order items/stock movements/storefront.
+- Product variants schema foundation: migrations للجداول والأعمدة nullable، constraints، وtenant integrity tests بدون تغيير checkout/storefront/models/actions.
 
 Next backlog:
 
-1. Product variants schema foundation.
-2. تنفيذ real staging فعلياً باستخدام checklist، بدون أسرار في repo.
-3. Store readiness publish gate.
-4. COD reconciliation foundation.
-5. Manual inventory adjustment UI/API design.
-6. تنفيذ backup restore drill فعلي وتسجيل evidence.
-7. CSP report-only.
-8. Observability provider selection and integration.
-9. Storefront caching ADR implementation.
+1. Product variant models/factories/relationships.
+2. Vendor variant management foundation.
+3. تنفيذ real staging فعلياً باستخدام checklist، بدون أسرار في repo.
+4. Store readiness publish gate.
+5. COD reconciliation foundation.
+6. Manual inventory adjustment UI/API design.
+7. تنفيذ backup restore drill فعلي وتسجيل evidence.
+8. CSP report-only.
+9. Observability provider selection and integration.
+10. Storefront caching ADR implementation.
 
 ## Definition Of Done
 
