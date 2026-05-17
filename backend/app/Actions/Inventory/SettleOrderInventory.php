@@ -2,8 +2,11 @@
 
 namespace App\Actions\Inventory;
 
+use App\Enums\StockMovementType;
 use App\Models\InventoryItem;
 use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\StockMovement;
 use Illuminate\Support\Facades\DB;
 
 class SettleOrderInventory
@@ -39,10 +42,21 @@ class SettleOrderInventory
                     continue;
                 }
 
+                $previousQuantity = $inventoryItem->quantity;
+                $previousReserved = $inventoryItem->reserved_quantity;
+                $newQuantity = max(0, $previousQuantity - $item->quantity);
+                $newReserved = max(0, $previousReserved - $item->quantity);
+                $settledQuantity = $previousQuantity - $newQuantity;
+                $settledReserved = $previousReserved - $newReserved;
+
                 $inventoryItem->update([
-                    'quantity' => max(0, $inventoryItem->quantity - $item->quantity),
-                    'reserved_quantity' => max(0, $inventoryItem->reserved_quantity - $item->quantity),
+                    'quantity' => $newQuantity,
+                    'reserved_quantity' => $newReserved,
                 ]);
+
+                if ($settledQuantity > 0 || $settledReserved > 0) {
+                    $this->recordStockSettlement($inventoryItem, $lockedOrder, $item, $settledQuantity, $settledReserved);
+                }
             }
 
             $lockedOrder->update([
@@ -53,5 +67,38 @@ class SettleOrderInventory
 
             return $lockedOrder->refresh();
         });
+    }
+
+    private function recordStockSettlement(
+        InventoryItem $inventoryItem,
+        Order $order,
+        OrderItem $orderItem,
+        int $settledQuantity,
+        int $settledReserved,
+    ): void {
+        StockMovement::query()
+            ->withoutGlobalScope('current_tenant')
+            ->create([
+                'tenant_id' => $order->tenant_id,
+                'product_id' => $orderItem->product_id,
+                'inventory_item_id' => $inventoryItem->id,
+                'order_id' => $order->id,
+                'order_item_id' => $orderItem->id,
+                'order_return_id' => null,
+                'actor_id' => null,
+                'type' => StockMovementType::Settled,
+                'quantity_delta' => -$settledQuantity,
+                'reserved_delta' => -$settledReserved,
+                'balance_quantity_after' => $inventoryItem->quantity,
+                'balance_reserved_after' => $inventoryItem->reserved_quantity,
+                'reason' => 'order_inventory_settlement',
+                'metadata' => [
+                    'source' => 'settle_order_inventory',
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'product_id' => $orderItem->product_id,
+                    'order_item_id' => $orderItem->id,
+                ],
+            ]);
     }
 }
