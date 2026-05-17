@@ -8,12 +8,15 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentMethodType;
 use App\Enums\PaymentStatus;
 use App\Enums\PlanFeatureKey;
+use App\Enums\StockMovementType;
 use App\Models\Customer;
 use App\Models\InventoryItem;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ShippingRate;
+use App\Models\StockMovement;
 use App\Models\Store;
 use App\Support\Billing\SubscriptionFeatureGate;
 use Illuminate\Database\Eloquent\Collection;
@@ -46,12 +49,17 @@ class CreateQuickOrder
             $shippingRate = $this->findShippingRate($tenantId, $data);
             $paymentMethod = $this->findPaymentMethod($tenantId);
             $subtotal = 0;
+            $reservedInventoryItems = [];
 
             foreach ($products as $product) {
                 $quantity = $items[$product->id];
                 $subtotal += $product->price_minor * $quantity;
 
-                $this->reserveInventory($tenantId, $product, $quantity);
+                $inventoryItem = $this->reserveInventory($tenantId, $product, $quantity);
+
+                if ($inventoryItem !== null) {
+                    $reservedInventoryItems[$product->id] = $inventoryItem;
+                }
             }
 
             $customer = Customer::query()
@@ -102,7 +110,7 @@ class CreateQuickOrder
             foreach ($products as $product) {
                 $quantity = $items[$product->id];
 
-                $order->items()->create([
+                $orderItem = $order->items()->create([
                     'tenant_id' => $tenantId,
                     'product_id' => $product->id,
                     'product_name' => $product->name,
@@ -112,6 +120,16 @@ class CreateQuickOrder
                     'total_minor' => $product->price_minor * $quantity,
                     'metadata' => [],
                 ]);
+
+                if (isset($reservedInventoryItems[$product->id])) {
+                    $this->recordStockReservation(
+                        inventoryItem: $reservedInventoryItems[$product->id],
+                        product: $product,
+                        order: $order,
+                        orderItem: $orderItem,
+                        quantity: $quantity,
+                    );
+                }
             }
 
             $order->statusHistories()->create([
@@ -229,7 +247,7 @@ class CreateQuickOrder
         return $paymentMethod;
     }
 
-    private function reserveInventory(string $tenantId, Product $product, int $quantity): void
+    private function reserveInventory(string $tenantId, Product $product, int $quantity): ?InventoryItem
     {
         $inventoryItem = InventoryItem::query()
             ->withoutGlobalScope('current_tenant')
@@ -239,7 +257,7 @@ class CreateQuickOrder
             ->first();
 
         if ($inventoryItem === null || ! $inventoryItem->track_quantity) {
-            return;
+            return null;
         }
 
         if (! $inventoryItem->allow_backorders && $inventoryItem->availableQuantity() < $quantity) {
@@ -249,6 +267,41 @@ class CreateQuickOrder
         }
 
         $inventoryItem->increment('reserved_quantity', $quantity);
+
+        return $inventoryItem->refresh();
+    }
+
+    private function recordStockReservation(
+        InventoryItem $inventoryItem,
+        Product $product,
+        Order $order,
+        OrderItem $orderItem,
+        int $quantity,
+    ): void {
+        StockMovement::query()
+            ->withoutGlobalScope('current_tenant')
+            ->create([
+                'tenant_id' => $order->tenant_id,
+                'product_id' => $product->id,
+                'inventory_item_id' => $inventoryItem->id,
+                'order_id' => $order->id,
+                'order_item_id' => $orderItem->id,
+                'order_return_id' => null,
+                'actor_id' => null,
+                'type' => StockMovementType::Reserved,
+                'quantity_delta' => 0,
+                'reserved_delta' => $quantity,
+                'balance_quantity_after' => $inventoryItem->quantity,
+                'balance_reserved_after' => $inventoryItem->reserved_quantity,
+                'reason' => 'quick_checkout_reservation',
+                'metadata' => [
+                    'source' => 'quick_checkout',
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'product_id' => $product->id,
+                    'order_item_id' => $orderItem->id,
+                ],
+            ]);
     }
 
     private function generateOrderNumber(string $tenantId): string
