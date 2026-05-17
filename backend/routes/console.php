@@ -3,6 +3,8 @@
 use App\Actions\Billing\ProcessBillingLifecycle;
 use App\Actions\Checkout\PruneCheckoutIdempotencyRecords;
 use App\Jobs\Billing\ProcessBillingLifecycleJob;
+use App\Models\User;
+use App\Support\Auth\TwoFactorAuthentication;
 use App\Support\System\SystemHealthChecker;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -44,6 +46,95 @@ Artisan::command('checkout-idempotency:prune {--dry-run : Count expired records 
 
     return Command::SUCCESS;
 })->purpose('Prune expired checkout idempotency records');
+
+Artisan::command('security:reset-two-factor
+    {--user-id= : Target user ID}
+    {--email= : Target user email}
+    {--reason= : Required operator reason}
+    {--actor-id= : Operator user ID}
+    {--actor-email= : Operator user email}
+    {--dry-run : Show what would happen without changing data}
+    {--confirm : Confirm the emergency 2FA reset}', function (): int {
+    $reason = trim((string) $this->option('reason'));
+    $userId = trim((string) $this->option('user-id'));
+    $email = trim((string) $this->option('email'));
+    $actorId = trim((string) $this->option('actor-id'));
+    $actorEmail = trim((string) $this->option('actor-email'));
+
+    if (! $this->option('confirm')) {
+        $this->error('Refusing to reset two-factor authentication without --confirm.');
+
+        return Command::INVALID;
+    }
+
+    if ($reason === '') {
+        $this->error('A non-empty --reason is required.');
+
+        return Command::INVALID;
+    }
+
+    if (($userId === '') === ($email === '')) {
+        $this->error('Provide exactly one target identifier: --user-id or --email.');
+
+        return Command::INVALID;
+    }
+
+    if ($actorId !== '' && $actorEmail !== '') {
+        $this->error('Provide at most one actor identifier: --actor-id or --actor-email.');
+
+        return Command::INVALID;
+    }
+
+    $target = $userId !== ''
+        ? User::query()->whereKey($userId)->first()
+        : User::query()->where('email', $email)->first();
+
+    if (! $target instanceof User) {
+        $this->error('Target user was not found.');
+
+        return Command::FAILURE;
+    }
+
+    $actor = null;
+
+    if ($actorId !== '' || $actorEmail !== '') {
+        $actor = $actorId !== ''
+            ? User::query()->whereKey($actorId)->first()
+            : User::query()->where('email', $actorEmail)->first();
+
+        if (! $actor instanceof User) {
+            $this->error('Actor user was not found.');
+
+            return Command::FAILURE;
+        }
+    }
+
+    if (! $target->hasTwoFactorAuthenticationEnabled()) {
+        $this->info('No reset performed: target user does not have two-factor authentication enabled.');
+
+        return Command::SUCCESS;
+    }
+
+    $this->warn('This will clear the target user two-factor secret and recovery codes.');
+    $this->warn('If their panel role requires 2FA, they will be redirected to setup on next panel access.');
+
+    if ($this->option('dry-run')) {
+        $this->info("Dry run only: 2FA would be reset for user ID {$target->id}.");
+
+        return Command::SUCCESS;
+    }
+
+    app(TwoFactorAuthentication::class)->resetForUser(
+        target: $target,
+        actor: $actor,
+        reason: $reason,
+        source: 'artisan',
+    );
+
+    $this->info("2FA reset completed for user ID {$target->id}.");
+
+    return Command::SUCCESS;
+})->purpose('Emergency reset app-based two-factor authentication for a specific user');
 
 Artisan::command('system:health {--scope=ready : Health scope: live or ready} {--format=table : Output format: table or json}', function (): int {
     $scope = strtolower((string) $this->option('scope'));

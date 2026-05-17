@@ -1,6 +1,6 @@
 # Security Baseline
 
-Last updated: 2026-05-12
+Last updated: 2026-05-17
 
 This document defines the minimum security posture expected as the platform moves toward commercial launch.
 
@@ -41,11 +41,12 @@ Currently present:
 - cross-tenant database constraints for important relationships
 - audit log domain foundation
 - Filament app-based 2FA for admin/support and tenant owners, using encrypted user fields and recovery codes
+- emergency 2FA reset command for verified operator use, with required reason and audit logging
 
 Current important gaps:
 
-- no emergency admin 2FA reset procedure with audit
 - no full session/device management
+- emergency 2FA reset does not revoke already active sessions; required users are forced back to setup on next panel access
 - CSP baseline is intentionally broad for Filament/Livewire/storefront compatibility and still needs production tightening after browser/e2e validation
 - backup/restore runbook and automation examples exist, but no deployed backup schedule or executed staging restore drill is recorded yet
 - no completed secrets rotation procedure
@@ -61,6 +62,7 @@ Required before production:
 - 2FA for super admins: implemented for Filament admin/support access
 - 2FA for support users: implemented for platform support
 - 2FA for tenant owners where practical: implemented for vendor panel when tenant owner context is resolved
+- emergency admin/support/tenant-owner 2FA reset procedure: implemented through `php artisan security:reset-two-factor`
 - clear password reset configuration
 - session timeout policy for admin/vendor panels
 - device/session visibility or revocation for sensitive accounts
@@ -226,7 +228,7 @@ Actions that require audit logs:
 - staff invited or permissions changed
 - support ticket status/assignee changed
 - custom domain verified or removed
-- 2FA enabled, disabled, recovery codes regenerated, and successful 2FA challenges
+- 2FA enabled, disabled, recovery codes regenerated, successful 2FA challenges, and emergency operator resets
 
 Audit logs should include:
 
