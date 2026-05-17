@@ -2,8 +2,11 @@
 
 namespace App\Actions\Inventory;
 
+use App\Enums\StockMovementType;
 use App\Models\InventoryItem;
 use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\StockMovement;
 use Illuminate\Support\Facades\DB;
 
 class ReleaseOrderInventoryReservations
@@ -47,9 +50,17 @@ class ReleaseOrderInventoryReservations
                     continue;
                 }
 
+                $previousReserved = $inventoryItem->reserved_quantity;
+                $newReserved = max(0, $previousReserved - $item->quantity);
+                $releasedQuantity = $previousReserved - $newReserved;
+
                 $inventoryItem->update([
-                    'reserved_quantity' => max(0, $inventoryItem->reserved_quantity - $item->quantity),
+                    'reserved_quantity' => $newReserved,
                 ]);
+
+                if ($releasedQuantity > 0) {
+                    $this->recordStockRelease($inventoryItem, $lockedOrder, $item, $releasedQuantity);
+                }
             }
 
             $lockedOrder->update([
@@ -60,5 +71,37 @@ class ReleaseOrderInventoryReservations
 
             return $lockedOrder->refresh();
         });
+    }
+
+    private function recordStockRelease(
+        InventoryItem $inventoryItem,
+        Order $order,
+        OrderItem $orderItem,
+        int $releasedQuantity,
+    ): void {
+        StockMovement::query()
+            ->withoutGlobalScope('current_tenant')
+            ->create([
+                'tenant_id' => $order->tenant_id,
+                'product_id' => $orderItem->product_id,
+                'inventory_item_id' => $inventoryItem->id,
+                'order_id' => $order->id,
+                'order_item_id' => $orderItem->id,
+                'order_return_id' => null,
+                'actor_id' => null,
+                'type' => StockMovementType::Released,
+                'quantity_delta' => 0,
+                'reserved_delta' => -$releasedQuantity,
+                'balance_quantity_after' => $inventoryItem->quantity,
+                'balance_reserved_after' => $inventoryItem->reserved_quantity,
+                'reason' => 'order_inventory_release',
+                'metadata' => [
+                    'source' => 'release_order_inventory_reservations',
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'product_id' => $orderItem->product_id,
+                    'order_item_id' => $orderItem->id,
+                ],
+            ]);
     }
 }

@@ -219,7 +219,7 @@
 - تخزين المال بوحدات صغيرة.
 - جدول checkout idempotency.
 
-المرحلة القادمة يجب أن تكمل ربط stock movement ledger بالـ release/settle/returns بحذر، وأن تصمم product variants قبل التنفيذ، لأنهما سيؤثران على checkout والمخزون والطلبات.
+المرحلة القادمة يجب أن تكمل ربط stock movement ledger بالـ settle/restock/returns بحذر، وأن تصمم product variants قبل التنفيذ، لأنهما سيؤثران على checkout والمخزون والطلبات.
 
 ### 4.9 tenancy
 
@@ -484,7 +484,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 - merchant onboarding wizard.
 - store readiness/publish gate.
 - product variants/options.
-- stock movement ledger release/settle/returns integrations.
+- stock movement ledger settle/restock/returns integrations.
 - product import/export.
 - bulk order operations.
 - order timeline غني.
@@ -582,7 +582,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 الهدف: دعم متاجر حقيقية بكتالوج ومخزون وطلبات أكثر تعقيداً.
 
 - product variants/options.
-- stock movements ledger release/settle/returns integrations.
+- stock movements ledger settle/restock/returns integrations.
 - product import/export.
 - bulk order operations.
 - order timeline.
@@ -744,8 +744,8 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 ### 11.6 Inventory
 
-- الحالة الحالية: inventory item لكل منتج، reservation/release/settle، وأساس stock movement ledger، وquick checkout reservation يكتب `reserved` movements.
-- المطلوب: ربط cancellation/release/settle/returns بالـ stock movements، low stock alerts، variant inventory.
+- الحالة الحالية: inventory item لكل منتج، reservation/release/settle، وأساس stock movement ledger، وquick checkout reservation يكتب `reserved` movements، وrelease يكتب `released` movements.
+- المطلوب: ربط settle/restock/returns بالـ stock movements، low stock alerts، variant inventory.
 - الأولوية: P1.
 - معايير القبول: كل حركة مخزون قابلة للتدقيق، checkout يستخدم locks، ولا يوجد تعديل مخزون غير مفسر.
 
