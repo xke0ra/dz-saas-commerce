@@ -83,14 +83,15 @@ Completed foundation:
 - Audit matrix.
 - Operations readiness docs/checklists محدثة: staging readiness checklist, restore drill evidence template, monitoring baseline matrix.
 - 2FA للـ super admin/platform support/tenant owner داخل لوحات Filament، مع recovery codes وaudit coverage.
+- Emergency admin 2FA reset procedure عبر Artisan command، مع reason إلزامي وaudit صريح.
 
 Next backlog:
 
 1. تنفيذ real staging فعلياً باستخدام checklist، بدون أسرار في repo.
 2. تنفيذ backup restore drill فعلي وتسجيل evidence.
-3. Emergency admin 2FA reset procedure مع audit صريح.
-4. Stock movement ledger foundation.
-5. Product variants ADR/design.
+3. Stock movement ledger foundation.
+4. Product variants ADR/design.
+5. Store readiness publish gate.
 6. CSP report-only.
 7. Observability provider selection and integration.
 8. Storefront caching ADR implementation.

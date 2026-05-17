@@ -134,6 +134,34 @@ class TwoFactorAuthentication
         );
     }
 
+    public function resetForUser(User $target, ?User $actor, string $reason, string $source = 'artisan'): void
+    {
+        $resetAt = now();
+
+        $target->forceFill([
+            'two_factor_secret' => null,
+            'two_factor_recovery_codes' => null,
+            'two_factor_confirmed_at' => null,
+            'two_factor_enabled_at' => null,
+            'two_factor_disabled_at' => $resetAt,
+            'two_factor_last_challenged_at' => null,
+        ])->save();
+
+        $this->auditLogger->record(
+            event: 'two_factor_reset_by_operator',
+            auditable: $target,
+            actor: $actor,
+            metadata: [
+                'target_user_id' => $target->getKey(),
+                'target_email' => $this->maskEmail($target->email),
+                'actor_user_id' => $actor?->getKey(),
+                'reason' => $reason,
+                'source' => $source,
+                'reset_at' => $resetAt->toISOString(),
+            ],
+        );
+    }
+
     public function recordEnabled(User $user): void
     {
         $this->auditLogger->record(
@@ -196,5 +224,17 @@ class TwoFactorAuthentication
         }
 
         return $user->tenantRole($tenant) === TenantRole::Owner;
+    }
+
+    private function maskEmail(string $email): string
+    {
+        if (! str_contains($email, '@')) {
+            return '[masked]';
+        }
+
+        [$localPart, $domain] = explode('@', $email, 2);
+        $prefix = substr($localPart, 0, 1) ?: '*';
+
+        return $prefix.'***@'.$domain;
     }
 }
