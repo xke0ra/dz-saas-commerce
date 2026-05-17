@@ -219,7 +219,7 @@
 - تخزين المال بوحدات صغيرة.
 - جدول checkout idempotency.
 
-المرحلة القادمة يجب أن تضيف stock movement ledger وproduct variants بحذر، لأنهما سيؤثران على checkout والمخزون والطلبات.
+المرحلة القادمة يجب أن تربط stock movement ledger بالـ checkout/returns بحذر، وأن تصمم product variants قبل التنفيذ، لأنهما سيؤثران على checkout والمخزون والطلبات.
 
 ### 4.9 tenancy
 
@@ -484,7 +484,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 - merchant onboarding wizard.
 - store readiness/publish gate.
 - product variants/options.
-- stock movement ledger.
+- stock movement ledger integrations.
 - product import/export.
 - bulk order operations.
 - order timeline غني.
@@ -582,7 +582,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 الهدف: دعم متاجر حقيقية بكتالوج ومخزون وطلبات أكثر تعقيداً.
 
 - product variants/options.
-- stock movements ledger.
+- stock movements ledger integrations.
 - product import/export.
 - bulk order operations.
 - order timeline.
@@ -744,8 +744,8 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 ### 11.6 Inventory
 
-- الحالة الحالية: inventory item لكل منتج، reservation/release/settle.
-- المطلوب: stock movement ledger، low stock alerts، variant inventory.
+- الحالة الحالية: inventory item لكل منتج، reservation/release/settle، وأساس stock movement ledger بدون ربط flows.
+- المطلوب: ربط checkout/returns بالـ stock movements، low stock alerts، variant inventory.
 - الأولوية: P1.
 - معايير القبول: كل حركة مخزون قابلة للتدقيق، checkout يستخدم locks، ولا يوجد تعديل مخزون غير مفسر.
 

@@ -25,7 +25,10 @@
 ## 3. Inventory Contract
 
 - المخزون لا يعدل عشوائياً من controllers أو UI callbacks.
-- أي تعديل مستقبلي على الكمية يجب أن ينتج stock movement ledger.
+- أي تعديل مستقبلي على `quantity` أو `reserved_quantity` يجب أن يسجل `stock movement`.
+- `stock_movements` سجل تشغيلي append-only للمخزون، وليس بديلاً عن `AuditLog`.
+- Laravel backend هو مصدر الحقيقة الوحيد لحركات المخزون.
+- storefront لا يكتب `stock movement` ولا يقرر مخزوناً موثوقاً.
 - `reserved_quantity` يعني كمية محجوزة لطلبات لم تُسوَّ نهائياً.
 - `available` يجب أن يعني `quantity - reserved_quantity` عندما `track_quantity=true`.
 - backorders يجب أن تكون قراراً صريحاً محفوظاً على inventory item أو policy واضحة.
