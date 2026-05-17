@@ -89,18 +89,19 @@ Completed foundation:
 - Order cancellation/release integration: `ReleaseOrderInventoryReservations` يسجل `released` stock movements عند تحرير الحجز فعلياً.
 - Order settlement integration: `SettleOrderInventory` يسجل `settled` stock movements عند تسوية المخزون فعلياً.
 - Return restock integration: `RestockOrderReturn` يسجل `restocked` stock movements عند زيادة المخزون فعلياً.
+- Manual inventory adjustment action with AuditLog: `AdjustInventoryManually` يسجل `manual_adjustment`/`correction` stock movements و`inventory_manual_adjustment` AuditLog بدون UI/API.
 
 Next backlog:
 
-1. Add manual inventory adjustment action with AuditLog.
+1. Product variants ADR/design.
 2. تنفيذ real staging فعلياً باستخدام checklist، بدون أسرار في repo.
-3. تنفيذ backup restore drill فعلي وتسجيل evidence.
-4. Product variants ADR/design.
-5. Store readiness publish gate.
-6. CSP report-only.
-7. Observability provider selection and integration.
-8. Storefront caching ADR implementation.
-9. COD reconciliation foundation.
+3. Store readiness publish gate.
+4. COD reconciliation foundation.
+5. Manual inventory adjustment UI/API design.
+6. تنفيذ backup restore drill فعلي وتسجيل evidence.
+7. CSP report-only.
+8. Observability provider selection and integration.
+9. Storefront caching ADR implementation.
 
 ## Definition Of Done
 
