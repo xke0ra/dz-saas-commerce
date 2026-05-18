@@ -97,18 +97,18 @@ Completed foundation:
 - Product variant option-values UX refinement: فلترة/validation تمنع ربط variant بقيمة option من منتج آخر داخل نفس tenant، مع تحسين محدود لتوضيح `option_signature`.
 - Checkout product_variant_id support: quick checkout backend يقبل `product_variant_id` اختيارياً، يتحقق من tenant/product/status، يستخدم سعر ومخزون variant، ويحفظ snapshot وحركة `reserved`.
 - Variant inventory uniqueness/schema activation: تفكيك unique القديم على `inventory_items [tenant_id, product_id]` واستبداله بـ partial unique indexes للـ simple inventory والـ variant inventory.
+- Release/settlement/restock product_variant_id propagation review: lifecycle inventory actions تبحث عن `InventoryItem` حسب sellable unit وتسجل `product_variant_id` في حركات `released`/`settled`/`restocked`.
 
 Next backlog:
 
-1. Release/settlement/restock product_variant_id propagation review.
-2. Storefront variant selection design/implementation.
-3. Product type/simple-vs-variable enforcement.
-4. تنفيذ real staging فعلياً باستخدام checklist، بدون أسرار في repo.
-5. Store readiness publish gate.
-6. COD reconciliation foundation.
-7. تنفيذ backup restore drill فعلي وتسجيل evidence.
-8. CSP report-only.
-9. Observability provider selection and integration.
+1. Storefront variant selection design/implementation.
+2. Product type/simple-vs-variable enforcement.
+3. تنفيذ real staging فعلياً باستخدام checklist، بدون أسرار في repo.
+4. Store readiness publish gate.
+5. COD reconciliation foundation.
+6. تنفيذ backup restore drill فعلي وتسجيل evidence.
+7. CSP report-only.
+8. Observability provider selection and integration.
 9. Storefront caching ADR implementation.
 
 ## Definition Of Done

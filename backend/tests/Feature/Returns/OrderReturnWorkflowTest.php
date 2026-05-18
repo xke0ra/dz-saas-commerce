@@ -23,6 +23,7 @@ use App\Models\OrderReturn;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\StockMovement;
 use App\Models\Store;
 use App\Models\Tenant;
@@ -426,6 +427,52 @@ it('releases reserved inventory when an order is cancelled before delivery', fun
         ->count())->toBe(1);
 });
 
+it('releases variant inventory without touching parent inventory when a variant order is cancelled', function (): void {
+    $tenant = Tenant::factory()->create();
+    [$order, $variantInventoryItem, $parentInventoryItem, $variant] = createReturnWorkflowVariantOrderWithInventory(
+        tenant: $tenant,
+        wilayaId: $this->wilaya->id,
+        communeId: $this->commune->id,
+        status: OrderStatus::Pending,
+    );
+
+    app(CancelOrder::class)->handle($order);
+
+    $order->refresh();
+    $variantInventoryItem->refresh();
+    $parentInventoryItem->refresh();
+    $orderItem = $order->items()->firstOrFail();
+    $movement = StockMovement::query()
+        ->withoutGlobalScope('current_tenant')
+        ->where('order_id', $order->id)
+        ->where('type', StockMovementType::Released->value)
+        ->firstOrFail();
+
+    expect($order->status)->toBe(OrderStatus::Cancelled)
+        ->and($variantInventoryItem->reserved_quantity)->toBe(0)
+        ->and($parentInventoryItem->quantity)->toBe(50)
+        ->and($parentInventoryItem->reserved_quantity)->toBe(7)
+        ->and($orderItem->product_variant_id)->toBe($variant->id)
+        ->and($movement->product_id)->toBe($orderItem->product_id)
+        ->and($movement->product_variant_id)->toBe($variant->id)
+        ->and($movement->inventory_item_id)->toBe($variantInventoryItem->id)
+        ->and($movement->order_item_id)->toBe($orderItem->id)
+        ->and($movement->type)->toBe(StockMovementType::Released)
+        ->and($movement->quantity_delta)->toBe(0)
+        ->and($movement->reserved_delta)->toBe(-2)
+        ->and($movement->balance_quantity_after)->toBe(10)
+        ->and($movement->balance_reserved_after)->toBe(0);
+
+    app(ReleaseOrderInventoryReservations::class)->handle($order->refresh());
+    app(CancelOrder::class)->handle($order->refresh());
+
+    expect(StockMovement::query()
+        ->withoutGlobalScope('current_tenant')
+        ->where('order_id', $order->id)
+        ->where('type', StockMovementType::Released->value)
+        ->count())->toBe(1);
+});
+
 it('does not release or record stock movement when order inventory is already settled', function (): void {
     $tenant = Tenant::factory()->create();
     [$order, $inventoryItem] = createReturnWorkflowOrderWithInventory(
@@ -502,6 +549,151 @@ it('does not record release movements when inventory is missing or not tracked',
             ->withoutGlobalScope('current_tenant')
             ->whereIn('order_id', [$orderWithoutInventory->id, $orderWithUntrackedInventory->id])
             ->where('type', StockMovementType::Released->value)
+            ->count())->toBe(0);
+});
+
+it('settles variant inventory without touching parent inventory when a variant order is delivered', function (): void {
+    $tenant = Tenant::factory()->create();
+    [$order, $variantInventoryItem, $parentInventoryItem, $variant] = createReturnWorkflowVariantOrderWithInventory(
+        tenant: $tenant,
+        wilayaId: $this->wilaya->id,
+        communeId: $this->commune->id,
+        status: OrderStatus::OutForDelivery,
+    );
+
+    app(MarkOrderDelivered::class)->handle($order);
+
+    $order->refresh();
+    $variantInventoryItem->refresh();
+    $parentInventoryItem->refresh();
+    $orderItem = $order->items()->firstOrFail();
+    $movement = StockMovement::query()
+        ->withoutGlobalScope('current_tenant')
+        ->where('order_id', $order->id)
+        ->where('type', StockMovementType::Settled->value)
+        ->firstOrFail();
+
+    expect($order->status)->toBe(OrderStatus::Delivered)
+        ->and($variantInventoryItem->quantity)->toBe(8)
+        ->and($variantInventoryItem->reserved_quantity)->toBe(0)
+        ->and($parentInventoryItem->quantity)->toBe(50)
+        ->and($parentInventoryItem->reserved_quantity)->toBe(7)
+        ->and($orderItem->product_variant_id)->toBe($variant->id)
+        ->and($movement->product_id)->toBe($orderItem->product_id)
+        ->and($movement->product_variant_id)->toBe($variant->id)
+        ->and($movement->inventory_item_id)->toBe($variantInventoryItem->id)
+        ->and($movement->order_item_id)->toBe($orderItem->id)
+        ->and($movement->type)->toBe(StockMovementType::Settled)
+        ->and($movement->quantity_delta)->toBe(-2)
+        ->and($movement->reserved_delta)->toBe(-2)
+        ->and($movement->balance_quantity_after)->toBe(8)
+        ->and($movement->balance_reserved_after)->toBe(0);
+
+    app(SettleOrderInventory::class)->handle($order->refresh());
+    app(MarkOrderDelivered::class)->handle($order->refresh());
+
+    expect(StockMovement::query()
+        ->withoutGlobalScope('current_tenant')
+        ->where('order_id', $order->id)
+        ->where('type', StockMovementType::Settled->value)
+        ->count())->toBe(1);
+});
+
+it('restocks variant inventory without touching parent inventory when a variant return is received', function (): void {
+    $tenant = Tenant::factory()->create();
+    [$order, $variantInventoryItem, $parentInventoryItem, $variant] = createReturnWorkflowVariantOrderWithInventory(
+        tenant: $tenant,
+        wilayaId: $this->wilaya->id,
+        communeId: $this->commune->id,
+        status: OrderStatus::Returned,
+        inventoryQuantity: 8,
+        reservedQuantity: 0,
+    );
+    $orderReturn = OrderReturn::factory()->forOrder($order)->create([
+        'status' => OrderReturnStatus::Approved,
+    ]);
+
+    app(ReceiveOrderReturn::class)->handle($orderReturn, restock: true);
+
+    $orderReturn->refresh();
+    $variantInventoryItem->refresh();
+    $parentInventoryItem->refresh();
+    $orderItem = $order->items()->firstOrFail();
+    $movement = StockMovement::query()
+        ->withoutGlobalScope('current_tenant')
+        ->where('order_return_id', $orderReturn->id)
+        ->where('type', StockMovementType::Restocked->value)
+        ->firstOrFail();
+
+    expect($orderReturn->status)->toBe(OrderReturnStatus::Received)
+        ->and($variantInventoryItem->quantity)->toBe(10)
+        ->and($variantInventoryItem->reserved_quantity)->toBe(0)
+        ->and($parentInventoryItem->quantity)->toBe(50)
+        ->and($parentInventoryItem->reserved_quantity)->toBe(7)
+        ->and($orderItem->product_variant_id)->toBe($variant->id)
+        ->and($movement->product_id)->toBe($orderItem->product_id)
+        ->and($movement->product_variant_id)->toBe($variant->id)
+        ->and($movement->inventory_item_id)->toBe($variantInventoryItem->id)
+        ->and($movement->order_item_id)->toBe($orderItem->id)
+        ->and($movement->order_return_id)->toBe($orderReturn->id)
+        ->and($movement->type)->toBe(StockMovementType::Restocked)
+        ->and($movement->quantity_delta)->toBe(2)
+        ->and($movement->reserved_delta)->toBe(0)
+        ->and($movement->balance_quantity_after)->toBe(10)
+        ->and($movement->balance_reserved_after)->toBe(0);
+
+    app(ReceiveOrderReturn::class)->handle($orderReturn, restock: true);
+
+    expect(StockMovement::query()
+        ->withoutGlobalScope('current_tenant')
+        ->where('order_return_id', $orderReturn->id)
+        ->where('type', StockMovementType::Restocked->value)
+        ->count())->toBe(1);
+});
+
+it('does not fallback to parent inventory when variant lifecycle inventory is missing', function (): void {
+    $tenant = Tenant::factory()->create();
+    [$releaseOrder, , $releaseParentInventory] = createReturnWorkflowVariantOrderWithInventory(
+        tenant: $tenant,
+        wilayaId: $this->wilaya->id,
+        communeId: $this->commune->id,
+        status: OrderStatus::Pending,
+        createVariantInventory: false,
+    );
+    [$settlementOrder, , $settlementParentInventory] = createReturnWorkflowVariantOrderWithInventory(
+        tenant: $tenant,
+        wilayaId: $this->wilaya->id,
+        communeId: $this->commune->id,
+        status: OrderStatus::OutForDelivery,
+        createVariantInventory: false,
+    );
+    [$restockOrder, , $restockParentInventory] = createReturnWorkflowVariantOrderWithInventory(
+        tenant: $tenant,
+        wilayaId: $this->wilaya->id,
+        communeId: $this->commune->id,
+        status: OrderStatus::Returned,
+        createVariantInventory: false,
+    );
+    $orderReturn = OrderReturn::factory()->forOrder($restockOrder)->create([
+        'status' => OrderReturnStatus::Approved,
+    ]);
+
+    app(ReleaseOrderInventoryReservations::class)->handle($releaseOrder);
+    app(SettleOrderInventory::class)->handle($settlementOrder);
+    app(RestockOrderReturn::class)->handle($orderReturn);
+
+    expect($releaseParentInventory->refresh()->quantity)->toBe(50)
+        ->and($releaseParentInventory->reserved_quantity)->toBe(7)
+        ->and($settlementParentInventory->refresh()->quantity)->toBe(50)
+        ->and($settlementParentInventory->reserved_quantity)->toBe(7)
+        ->and($restockParentInventory->refresh()->quantity)->toBe(50)
+        ->and($restockParentInventory->reserved_quantity)->toBe(7)
+        ->and($releaseOrder->refresh()->metadata['inventory_released_at'])->not->toBeNull()
+        ->and($settlementOrder->refresh()->metadata['inventory_settled_at'])->not->toBeNull()
+        ->and($orderReturn->refresh()->metadata['restocked_at'])->not->toBeNull()
+        ->and(StockMovement::query()
+            ->withoutGlobalScope('current_tenant')
+            ->whereIn('order_id', [$releaseOrder->id, $settlementOrder->id, $restockOrder->id])
             ->count())->toBe(0);
 });
 
@@ -594,6 +786,85 @@ function createReturnWorkflowOrderWithInventory(
     ]);
 
     return [$order, $inventoryItem];
+}
+
+/**
+ * @return array{0: Order, 1: ?InventoryItem, 2: InventoryItem, 3: ProductVariant}
+ */
+function createReturnWorkflowVariantOrderWithInventory(
+    Tenant $tenant,
+    int $wilayaId,
+    int $communeId,
+    OrderStatus $status = OrderStatus::Delivered,
+    PaymentStatus $paymentStatus = PaymentStatus::Unpaid,
+    int $inventoryQuantity = 10,
+    int $reservedQuantity = 2,
+    int $itemQuantity = 2,
+    bool $trackQuantity = true,
+    bool $createVariantInventory = true,
+): array {
+    $store = Store::factory()->for($tenant)->create();
+    $customer = Customer::factory()->create([
+        'tenant_id' => $tenant->id,
+        'wilaya_id' => $wilayaId,
+        'commune_id' => $communeId,
+    ]);
+    $product = Product::factory()->create([
+        'tenant_id' => $tenant->id,
+        'price_minor' => 120000,
+    ]);
+    $variant = ProductVariant::factory()->forProduct($product)->create([
+        'sku' => 'RETURN-VARIANT-'.str()->random(8),
+        'option_signature' => 'size=large',
+        'title' => 'Large',
+    ]);
+    $parentInventoryItem = InventoryItem::factory()->forProduct($product)->create([
+        'product_variant_id' => null,
+        'quantity' => 50,
+        'reserved_quantity' => 7,
+        'track_quantity' => true,
+    ]);
+    $variantInventoryItem = $createVariantInventory
+        ? InventoryItem::factory()->forProduct($product)->create([
+            'product_variant_id' => $variant->id,
+            'sku' => $variant->sku,
+            'quantity' => $inventoryQuantity,
+            'reserved_quantity' => $reservedQuantity,
+            'track_quantity' => $trackQuantity,
+        ])
+        : null;
+    $subtotal = 120000 * $itemQuantity;
+    $order = Order::factory()->create([
+        'tenant_id' => $tenant->id,
+        'store_id' => $store->id,
+        'customer_id' => $customer->id,
+        'status' => $status,
+        'payment_status' => $paymentStatus,
+        'wilaya_id' => $wilayaId,
+        'commune_id' => $communeId,
+        'subtotal_minor' => $subtotal,
+        'shipping_fee_minor' => 50000,
+        'discount_minor' => 0,
+        'total_minor' => $subtotal + 50000,
+    ]);
+
+    OrderItem::query()->create([
+        'tenant_id' => $tenant->id,
+        'order_id' => $order->id,
+        'product_id' => $product->id,
+        'product_variant_id' => $variant->id,
+        'product_name' => $product->name,
+        'product_sku' => $product->sku,
+        'variant_title' => $variant->title,
+        'variant_sku' => $variant->sku,
+        'selected_options' => ['Size' => 'Large'],
+        'quantity' => $itemQuantity,
+        'unit_price_minor' => 120000,
+        'total_minor' => $subtotal,
+        'metadata' => [],
+    ]);
+
+    return [$order, $variantInventoryItem, $parentInventoryItem, $variant];
 }
 
 /**
