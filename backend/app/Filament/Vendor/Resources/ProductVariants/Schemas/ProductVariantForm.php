@@ -33,7 +33,9 @@ class ProductVariantForm
                     ->label('SKU')
                     ->maxLength(255),
                 TextInput::make('option_signature')
-                    ->helperText('Internal normalized key for now; it will be generated from option values later.')
+                    ->placeholder('size=large;color=black')
+                    ->helperText('Internal normalized unique key for now, for example: size=large;color=black.')
+                    ->dehydrateStateUsing(fn (?string $state): ?string => $state === null ? null : trim($state))
                     ->maxLength(255)
                     ->required(),
                 TextInput::make('title')

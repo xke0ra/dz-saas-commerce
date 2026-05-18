@@ -219,7 +219,7 @@
 - تخزين المال بوحدات صغيرة.
 - جدول checkout idempotency.
 
-تم قبول تصميم product variants/options في ADR 0013 وتنفيذ schema foundation للجداول والأعمدة nullable والقيود وtenant integrity tests، ثم إضافة طبقة models/factories/relationships، ثم إضافة Vendor Filament management foundation كموارد منفصلة. لا يوجد بعد API أو checkout/storefront behavior للـ variants، ومع استمرار real staging كمسار جاهزية مستقل.
+تم قبول تصميم product variants/options في ADR 0013 وتنفيذ schema foundation للجداول والأعمدة nullable والقيود وtenant integrity tests، ثم إضافة طبقة models/factories/relationships، ثم إضافة Vendor Filament management foundation كموارد منفصلة، ثم refinement يمنع ربط option values بvariants من product مختلف داخل نفس tenant. لا يوجد بعد API أو checkout/storefront behavior للـ variants، ومع استمرار real staging كمسار جاهزية مستقل.
 
 ### 4.9 tenancy
 
@@ -739,8 +739,8 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 ### 11.5 Catalog
 
-- الحالة الحالية: products/categories/images/search foundation، وschema + model/factory foundation للـ variants/options موجودة، مع Vendor Filament resources لإدارة options/values/variants/pivot بدون behavior في checkout/storefront.
-- المطلوب: checkout `product_variant_id` support، ثم storefront variant selection، ثم refinement لتجربة ربط option values بالvariants، filters، product SEO fields، import/export.
+- الحالة الحالية: products/categories/images/search foundation، وschema + model/factory foundation للـ variants/options موجودة، مع Vendor Filament resources لإدارة options/values/variants/pivot وvalidation يمنع ربط option values بvariant من product مختلف.
+- المطلوب: checkout `product_variant_id` support، ثم storefront variant selection، filters، product SEO fields، import/export.
 - الأولوية: P1.
 - معايير القبول: variants لا تكسر checkout/inventory، والـ API paginated، والاختبارات تغطي tenant isolation.
 

@@ -94,19 +94,19 @@ Completed foundation:
 - Product variants schema foundation: migrations للجداول والأعمدة nullable، constraints، وtenant integrity tests بدون تغيير checkout/storefront/models/actions.
 - Product variant models/factories/relationships: طبقة Eloquent فوق schema foundation مع tests، بدون تغيير checkout/storefront/actions/UI/API.
 - Vendor variant management foundation: موارد Filament منفصلة للـ options/values/variants/pivot مع policies واختبارات tenant scoping، بدون checkout/storefront/API/migrations.
+- Product variant option-values UX refinement: فلترة/validation تمنع ربط variant بقيمة option من منتج آخر داخل نفس tenant، مع تحسين محدود لتوضيح `option_signature`.
 
 Next backlog:
 
 1. Checkout product_variant_id support.
 2. Storefront variant selection design/implementation.
-3. Product variant option-values UX refinement.
-4. تنفيذ real staging فعلياً باستخدام checklist، بدون أسرار في repo.
-5. Store readiness publish gate.
-6. COD reconciliation foundation.
-7. تنفيذ backup restore drill فعلي وتسجيل evidence.
-8. CSP report-only.
-9. Observability provider selection and integration.
-10. Storefront caching ADR implementation.
+3. تنفيذ real staging فعلياً باستخدام checklist، بدون أسرار في repo.
+4. Store readiness publish gate.
+5. COD reconciliation foundation.
+6. تنفيذ backup restore drill فعلي وتسجيل evidence.
+7. CSP report-only.
+8. Observability provider selection and integration.
+9. Storefront caching ADR implementation.
 
 ## Definition Of Done
 

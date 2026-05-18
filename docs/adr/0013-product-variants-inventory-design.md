@@ -2,9 +2,9 @@
 
 Date: 2026-05-17
 
-Status: Accepted - schema, model, and vendor management foundation complete
+Status: Accepted - schema, model, vendor management, and option-value UX refinement complete
 
-تم تنفيذ schema foundation للجداول والقيود والأعمدة nullable الخاصة بالـ variants/options، ثم أضيفت طبقة Eloquent models/factories/relationships فوقها، ثم أضيفت Vendor Filament management foundation كموارد منفصلة. لا يوجد في هذا القرار بعد أي تغيير checkout/storefront أو API منفذ.
+تم تنفيذ schema foundation للجداول والقيود والأعمدة nullable الخاصة بالـ variants/options، ثم أضيفت طبقة Eloquent models/factories/relationships فوقها، ثم أضيفت Vendor Filament management foundation كموارد منفصلة، ثم refinement يمنع ربط option value بvariant من product مختلف داخل نفس tenant. لا يوجد في هذا القرار بعد أي تغيير checkout/storefront أو API منفذ.
 
 ## Context
 
@@ -206,7 +206,7 @@ Pivot مقترح لتطبيع علاقة variant بالقيم المختارة:
 - unique `[tenant_id, product_variant_id, product_option_value_id]`.
 - يجب أن تنتمي option/value لنفس product الخاص بالvariant.
 
-ملاحظة: تنفيذ schema foundation استخدم pivot الأدنى بـ `product_variant_id` و`product_option_value_id`. يبقى `option_signature` normalized key سريعاً لل uniqueness والقراءة، بينما pivot يخدم العلاقات والاستعلامات. منع اختيار قيمة من option تابع لمنتج آخر داخل نفس tenant يحتاج قيداً إضافياً أو validation في مرحلة models/management.
+ملاحظة: تنفيذ schema foundation استخدم pivot الأدنى بـ `product_variant_id` و`product_option_value_id`. يبقى `option_signature` normalized key سريعاً لل uniqueness والقراءة، بينما pivot يخدم العلاقات والاستعلامات. تمت إضافة validation في Vendor management لمنع اختيار قيمة option تابعة لمنتج آخر داخل نفس tenant، ويبقى `option_signature` حقلاً داخلياً يدار يدوياً حتى مرحلة توليد/UX أوسع.
 
 ### `inventory_items`
 
@@ -372,6 +372,7 @@ Rollback:
 - إدارة pivot `product_variant_option_values` عبر resource بسيط بدلاً من RelationManagers أو MultiSelect معقد.
 - استخدام صلاحيات products الحالية للعرض/الإنشاء/التعديل/الحذف.
 - إبقاء `option_signature` كحقل يدوي/داخلي مؤقت؛ توليده والتحقق المتقدم منه مؤجلان.
+- refinement لاحق ضمن نفس foundation يمنع ربط option values بvariants من product مختلف داخل نفس tenant، مع فلترة form حسب المنتج المختار.
 - لا storefront بعد.
 - لا checkout behavior change.
 
