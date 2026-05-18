@@ -93,15 +93,16 @@ Completed foundation:
 - Product Variants ADR/design: `docs/adr/0013-product-variants-inventory-design.md` يحدد تصميم variants/options وتأثيره على inventory/checkout/order items/stock movements/storefront.
 - Product variants schema foundation: migrations للجداول والأعمدة nullable، constraints، وtenant integrity tests بدون تغيير checkout/storefront/models/actions.
 - Product variant models/factories/relationships: طبقة Eloquent فوق schema foundation مع tests، بدون تغيير checkout/storefront/actions/UI/API.
+- Vendor variant management foundation: موارد Filament منفصلة للـ options/values/variants/pivot مع policies واختبارات tenant scoping، بدون checkout/storefront/API/migrations.
 
 Next backlog:
 
-1. Vendor variant management foundation.
-2. Checkout product_variant_id support.
-3. تنفيذ real staging فعلياً باستخدام checklist، بدون أسرار في repo.
-4. Store readiness publish gate.
-5. COD reconciliation foundation.
-6. Manual inventory adjustment UI/API design.
+1. Checkout product_variant_id support.
+2. Storefront variant selection design/implementation.
+3. Product variant option-values UX refinement.
+4. تنفيذ real staging فعلياً باستخدام checklist، بدون أسرار في repo.
+5. Store readiness publish gate.
+6. COD reconciliation foundation.
 7. تنفيذ backup restore drill فعلي وتسجيل evidence.
 8. CSP report-only.
 9. Observability provider selection and integration.

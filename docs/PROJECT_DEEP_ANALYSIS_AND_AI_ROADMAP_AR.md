@@ -219,7 +219,7 @@
 - تخزين المال بوحدات صغيرة.
 - جدول checkout idempotency.
 
-تم قبول تصميم product variants/options في ADR 0013 وتنفيذ schema foundation للجداول والأعمدة nullable والقيود وtenant integrity tests، ثم إضافة طبقة models/factories/relationships. لا يوجد بعد UI أو API أو checkout/storefront behavior للـ variants، ومع استمرار real staging كمسار جاهزية مستقل.
+تم قبول تصميم product variants/options في ADR 0013 وتنفيذ schema foundation للجداول والأعمدة nullable والقيود وtenant integrity tests، ثم إضافة طبقة models/factories/relationships، ثم إضافة Vendor Filament management foundation كموارد منفصلة. لا يوجد بعد API أو checkout/storefront behavior للـ variants، ومع استمرار real staging كمسار جاهزية مستقل.
 
 ### 4.9 tenancy
 
@@ -739,15 +739,15 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 ### 11.5 Catalog
 
-- الحالة الحالية: products/categories/images/search foundation، وschema + model/factory foundation للـ variants/options موجودة بدون behavior.
-- المطلوب: vendor management للـ variants، ثم checkout `product_variant_id` support، filters، product SEO fields، import/export.
+- الحالة الحالية: products/categories/images/search foundation، وschema + model/factory foundation للـ variants/options موجودة، مع Vendor Filament resources لإدارة options/values/variants/pivot بدون behavior في checkout/storefront.
+- المطلوب: checkout `product_variant_id` support، ثم storefront variant selection، ثم refinement لتجربة ربط option values بالvariants، filters، product SEO fields، import/export.
 - الأولوية: P1.
 - معايير القبول: variants لا تكسر checkout/inventory، والـ API paginated، والاختبارات تغطي tenant isolation.
 
 ### 11.6 Inventory
 
 - الحالة الحالية: inventory item لكل منتج، reservation/release/settle، وأساس stock movement ledger، وquick checkout reservation يكتب `reserved` movements، وrelease يكتب `released` movements، وsettlement يكتب `settled` movements، وreturn restock يكتب `restocked` movements، وmanual adjustment action يكتب `manual_adjustment`/`correction` movements مع AuditLog. توجد أعمدة وعلاقات `product_variant_id` nullable في inventory/order/stock movement layers، لكنها غير مستخدمة سلوكياً بعد.
-- المطلوب: vendor variant management ثم تفعيل variant-level inventory لاحقاً، manual inventory adjustment UI/API design، low stock alerts.
+- المطلوب: تفعيل checkout `product_variant_id` ثم variant-level inventory لاحقاً، manual inventory adjustment UI/API design، low stock alerts.
 - الأولوية: P1.
 - معايير القبول: كل حركة مخزون قابلة للتدقيق، checkout يستخدم locks، ولا يوجد تعديل مخزون غير مفسر.
 
