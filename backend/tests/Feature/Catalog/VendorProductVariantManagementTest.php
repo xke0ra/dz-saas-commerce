@@ -5,6 +5,7 @@ use App\Enums\TenantRole;
 use App\Filament\Vendor\Resources\ProductOptions\ProductOptionResource;
 use App\Filament\Vendor\Resources\ProductOptionValues\ProductOptionValueResource;
 use App\Filament\Vendor\Resources\ProductVariantOptionValues\ProductVariantOptionValueResource;
+use App\Filament\Vendor\Resources\ProductVariantOptionValues\Schemas\ProductVariantOptionValueForm;
 use App\Filament\Vendor\Resources\ProductVariants\ProductVariantResource;
 use App\Models\Product;
 use App\Models\ProductOption;
@@ -13,7 +14,9 @@ use App\Models\ProductVariant;
 use App\Models\ProductVariantOptionValue;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Support\Catalog\ProductVariantOptionValueValidator;
 use App\Support\Tenancy\CurrentTenant;
+use Illuminate\Validation\ValidationException;
 
 it('registers vendor product variant management resource urls', function (): void {
     expect(ProductOptionResource::getUrl(panel: 'vendor'))->toContain('/vendor/product-options')
@@ -164,6 +167,109 @@ it('does not grant variant management create update or delete without product pe
             ->and($staff->can('delete', $value))->toBeFalse()
             ->and($staff->can('delete', $variant))->toBeFalse()
             ->and($staff->can('delete', $pivot))->toBeFalse();
+    });
+});
+
+it('accepts linking a product variant to an option value from the same product and tenant', function (): void {
+    $tenant = Tenant::factory()->create();
+    $product = Product::factory()->create(['tenant_id' => $tenant->id]);
+    $option = ProductOption::factory()->forProduct($product)->create(['name' => 'Size']);
+    $value = ProductOptionValue::factory()->forOption($option)->create(['value' => 'Large']);
+    $variant = ProductVariant::factory()->forProduct($product)->create([
+        'option_signature' => 'size=large',
+    ]);
+
+    withVendorProductVariantManagementTenant($tenant, function () use ($tenant, $variant, $value): void {
+        app(ProductVariantOptionValueValidator::class)->validate($tenant->id, $variant->id, $value->id);
+
+        $pivot = ProductVariantOptionValue::query()->create([
+            'tenant_id' => $tenant->id,
+            'product_variant_id' => $variant->id,
+            'product_option_value_id' => $value->id,
+        ]);
+
+        expect($pivot->variant->is($variant))->toBeTrue()
+            ->and($pivot->optionValue->is($value))->toBeTrue();
+    });
+});
+
+it('rejects linking a product variant to an option value from another product in the same tenant', function (): void {
+    $tenant = Tenant::factory()->create();
+    $variantProduct = Product::factory()->create(['tenant_id' => $tenant->id]);
+    $valueProduct = Product::factory()->create(['tenant_id' => $tenant->id]);
+    $variant = ProductVariant::factory()->forProduct($variantProduct)->create([
+        'option_signature' => 'size=large',
+    ]);
+    $otherProductOption = ProductOption::factory()->forProduct($valueProduct)->create(['name' => 'Color']);
+    $otherProductValue = ProductOptionValue::factory()->forOption($otherProductOption)->create(['value' => 'Black']);
+
+    withVendorProductVariantManagementTenant($tenant, function () use ($tenant, $variant, $otherProductValue): void {
+        app(ProductVariantOptionValueValidator::class)->validate($tenant->id, $variant->id, $otherProductValue->id);
+    });
+})->throws(ValidationException::class, 'The selected option value must belong to the same product as the variant.');
+
+it('rejects updating a product variant option value to a value from another product in the same tenant', function (): void {
+    $tenant = Tenant::factory()->create();
+    $variantProduct = Product::factory()->create(['tenant_id' => $tenant->id]);
+    $otherProduct = Product::factory()->create(['tenant_id' => $tenant->id]);
+    $option = ProductOption::factory()->forProduct($variantProduct)->create(['name' => 'Size']);
+    $value = ProductOptionValue::factory()->forOption($option)->create(['value' => 'Large']);
+    $variant = ProductVariant::factory()->forProduct($variantProduct)->create([
+        'option_signature' => 'size=large',
+    ]);
+    $pivot = ProductVariantOptionValue::factory()
+        ->forVariantAndOptionValue($variant, $value)
+        ->create();
+    $otherOption = ProductOption::factory()->forProduct($otherProduct)->create(['name' => 'Color']);
+    $otherValue = ProductOptionValue::factory()->forOption($otherOption)->create(['value' => 'Black']);
+
+    withVendorProductVariantManagementTenant($tenant, function () use ($tenant, $pivot, $variant, $otherValue): void {
+        app(ProductVariantOptionValueValidator::class)->validate($tenant->id, $variant->id, $otherValue->id);
+
+        $pivot->update(['product_option_value_id' => $otherValue->id]);
+    });
+})->throws(ValidationException::class, 'The selected option value must belong to the same product as the variant.');
+
+it('rejects linking a product variant to an option value from another tenant', function (): void {
+    $tenant = Tenant::factory()->create();
+    $otherTenant = Tenant::factory()->create();
+    $product = Product::factory()->create(['tenant_id' => $tenant->id]);
+    $variant = ProductVariant::factory()->forProduct($product)->create([
+        'option_signature' => 'size=large',
+    ]);
+    $otherProduct = Product::factory()->create(['tenant_id' => $otherTenant->id]);
+    $otherOption = ProductOption::factory()->forProduct($otherProduct)->create(['name' => 'Size']);
+    $otherValue = ProductOptionValue::factory()->forOption($otherOption)->create(['value' => 'Large']);
+
+    withVendorProductVariantManagementTenant($tenant, function () use ($tenant, $variant, $otherValue): void {
+        app(ProductVariantOptionValueValidator::class)->validate($tenant->id, $variant->id, $otherValue->id);
+    });
+})->throws(ValidationException::class, 'The selected option value is not available for this tenant.');
+
+it('filters product variant option value form options to the selected variant product and current tenant', function (): void {
+    $tenant = Tenant::factory()->create();
+    $otherTenant = Tenant::factory()->create();
+    $product = Product::factory()->create(['tenant_id' => $tenant->id]);
+    $otherTenantProduct = Product::factory()->create(['tenant_id' => $otherTenant->id]);
+    $sameTenantOtherProduct = Product::factory()->create(['tenant_id' => $tenant->id]);
+    $variant = ProductVariant::factory()->forProduct($product)->create([
+        'option_signature' => 'size=large',
+    ]);
+
+    $option = ProductOption::factory()->forProduct($product)->create(['name' => 'Size']);
+    $value = ProductOptionValue::factory()->forOption($option)->create(['value' => 'Large']);
+    $sameTenantOtherOption = ProductOption::factory()->forProduct($sameTenantOtherProduct)->create(['name' => 'Color']);
+    $sameTenantOtherValue = ProductOptionValue::factory()->forOption($sameTenantOtherOption)->create(['value' => 'Black']);
+    $otherTenantOption = ProductOption::factory()->forProduct($otherTenantProduct)->create(['name' => 'Size']);
+    $otherTenantValue = ProductOptionValue::factory()->forOption($otherTenantOption)->create(['value' => 'Large']);
+
+    withVendorProductVariantManagementTenant($tenant, function () use ($variant, $value, $sameTenantOtherValue, $otherTenantValue): void {
+        $options = ProductVariantOptionValueForm::optionValueOptions($variant->id);
+
+        expect(array_keys($options))->toBe([$value->id])
+            ->and($options)->toHaveKey($value->id)
+            ->and($options)->not->toHaveKey($sameTenantOtherValue->id)
+            ->and($options)->not->toHaveKey($otherTenantValue->id);
     });
 });
 
