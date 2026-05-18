@@ -219,7 +219,7 @@
 - تخزين المال بوحدات صغيرة.
 - جدول checkout idempotency.
 
-تم قبول تصميم product variants/options في ADR 0013 وتنفيذ schema foundation للجداول والأعمدة nullable والقيود وtenant integrity tests، ثم إضافة طبقة models/factories/relationships، ثم إضافة Vendor Filament management foundation كموارد منفصلة، ثم refinement يمنع ربط option values بvariants من product مختلف داخل نفس tenant. يدعم checkout backend الآن `product_variant_id` اختيارياً مع variant pricing/reservation/order snapshot، بينما لا يوجد بعد storefront variant selection، ومع استمرار real staging كمسار جاهزية مستقل.
+تم قبول تصميم product variants/options في ADR 0013 وتنفيذ schema foundation للجداول والأعمدة nullable والقيود وtenant integrity tests، ثم إضافة طبقة models/factories/relationships، ثم إضافة Vendor Filament management foundation كموارد منفصلة، ثم refinement يمنع ربط option values بvariants من product مختلف داخل نفس tenant. يدعم checkout backend الآن `product_variant_id` اختيارياً مع variant pricing/reservation/order snapshot، وأصبح `inventory_items` يسمح بمخزون مستقل لكل sellable unit عبر partial unique indexes، بينما لا يوجد بعد storefront variant selection، ومع استمرار real staging كمسار جاهزية مستقل.
 
 ### 4.9 tenancy
 
@@ -485,8 +485,8 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 - merchant onboarding wizard.
 - store readiness/publish gate.
 - storefront variant selection design/implementation.
-- variant inventory uniqueness/schema activation follow-up.
 - release/settlement/restock product_variant_id propagation review.
+- product type/simple-vs-variable enforcement.
 - manual inventory adjustment UI/API design.
 - product import/export.
 - bulk order operations.
@@ -585,8 +585,8 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 الهدف: دعم متاجر حقيقية بكتالوج ومخزون وطلبات أكثر تعقيداً.
 
 - storefront variant selection design/implementation.
-- variant inventory uniqueness/schema activation follow-up.
 - release/settlement/restock product_variant_id propagation review.
+- product type/simple-vs-variable enforcement.
 - manual inventory adjustment UI/API design.
 - product import/export.
 - bulk order operations.
@@ -742,15 +742,15 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 ### 11.5 Catalog
 
-- الحالة الحالية: products/categories/images/search foundation، وschema + model/factory foundation للـ variants/options موجودة، مع Vendor Filament resources لإدارة options/values/variants/pivot وvalidation يمنع ربط option values بvariant من product مختلف، وcheckout backend يدعم `product_variant_id` اختيارياً.
-- المطلوب: storefront variant selection، ثم variant inventory uniqueness/schema activation follow-up، filters، product SEO fields، import/export.
+- الحالة الحالية: products/categories/images/search foundation، وschema + model/factory foundation للـ variants/options موجودة، مع Vendor Filament resources لإدارة options/values/variants/pivot وvalidation يمنع ربط option values بvariant من product مختلف، وcheckout backend يدعم `product_variant_id` اختيارياً، وinventory uniqueness مفعل على sellable unit.
+- المطلوب: storefront variant selection، product type/simple-vs-variable enforcement، filters، product SEO fields، import/export.
 - الأولوية: P1.
 - معايير القبول: variants لا تكسر checkout/inventory، والـ API paginated، والاختبارات تغطي tenant isolation.
 
 ### 11.6 Inventory
 
-- الحالة الحالية: inventory item لكل منتج، reservation/release/settle، وأساس stock movement ledger، وquick checkout reservation يكتب `reserved` movements، وrelease يكتب `released` movements، وsettlement يكتب `settled` movements، وreturn restock يكتب `restocked` movements، وmanual adjustment action يكتب `manual_adjustment`/`correction` movements مع AuditLog. checkout reservation يستطيع الآن كتابة `product_variant_id` وحجز variant inventory عند وجوده.
-- المطلوب: variant inventory uniqueness/schema activation follow-up، مراجعة propagation في release/settlement/restock، manual inventory adjustment UI/API design، low stock alerts.
+- الحالة الحالية: inventory item لكل sellable unit: simple product عبر `product_variant_id = null` وvariant عبر `product_variant_id` غير null، مع reservation/release/settle وأساس stock movement ledger. quick checkout reservation يكتب `reserved` movements، وrelease يكتب `released` movements، وsettlement يكتب `settled` movements، وreturn restock يكتب `restocked` movements، وmanual adjustment action يكتب `manual_adjustment`/`correction` movements مع AuditLog. checkout reservation يستطيع الآن كتابة `product_variant_id` وحجز أكثر من variant inventory لنفس product.
+- المطلوب: مراجعة propagation في release/settlement/restock، manual inventory adjustment UI/API design، low stock alerts.
 - الأولوية: P1.
 - معايير القبول: كل حركة مخزون قابلة للتدقيق، checkout يستخدم locks، ولا يوجد تعديل مخزون غير مفسر.
 
