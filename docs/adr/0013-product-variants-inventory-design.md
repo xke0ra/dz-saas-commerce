@@ -2,14 +2,14 @@
 
 Date: 2026-05-17
 
-Status: Accepted - schema foundation complete
+Status: Accepted - schema and model foundation complete
 
-تم تنفيذ schema foundation للجداول والقيود والأعمدة nullable الخاصة بالـ variants/options. لا يوجد في هذا القرار بعد أي model أو factory أو تغيير checkout/storefront منفذ.
+تم تنفيذ schema foundation للجداول والقيود والأعمدة nullable الخاصة بالـ variants/options، ثم أضيفت طبقة Eloquent models/factories/relationships فوقها. لا يوجد في هذا القرار بعد أي تغيير checkout/storefront أو UI/API منفذ.
 
 ## Context
 
 - `Product` هو الكيان التجاري الحالي للكتالوج، ويحتوي على `sku`, `price_minor`, `compare_at_price_minor`, `cost_price_minor`, `status`, `metadata`، ويدخل في search index.
-- لا يوجد حالياً `ProductVariant` أو `ProductOption`.
+- توجد الآن طبقة model/factory لـ `ProductVariant` و`ProductOption` فوق schema foundation، بدون تفعيل سلوك checkout أو storefront.
 - `InventoryItem` مرتبط حالياً بـ `product_id` فقط، ويوجد unique على `tenant_id + product_id`.
 - `InventoryItem` يحمل `quantity`, `reserved_quantity`, `track_quantity`, `allow_backorders`.
 - `OrderItem` يحفظ snapshot للمنتج: `product_id`, `product_name`, `product_sku`, `quantity`, `unit_price_minor`, `total_minor`, `metadata`.
@@ -350,7 +350,7 @@ Rollback:
 - منخفض إذا لم تُستخدم الأعمدة الجديدة بعد.
 - يحتاج drop constraints/indexes/tables بالترتيب الصحيح.
 
-### PR 2: Models/factories/tests
+### PR 2: Models/factories/tests - مكتمل 2026-05-18
 
 النطاق:
 
@@ -358,6 +358,7 @@ Rollback:
 - إضافة tenant integrity tests.
 - إضافة casts/status enum إن لزم.
 - لا checkout/storefront behavior change.
+- تم إبقاء `effectivePriceMinor()` helper داخل `ProductVariant` للاستخدام المستقبلي فقط، ولم يتم ربطه بالcheckout.
 
 Rollback:
 

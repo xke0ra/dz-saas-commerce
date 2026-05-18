@@ -92,6 +92,22 @@ class Product extends Model
     }
 
     /**
+     * @return HasMany<ProductOption, $this>
+     */
+    public function options(): HasMany
+    {
+        return $this->hasMany(ProductOption::class)->ordered();
+    }
+
+    /**
+     * @return HasMany<ProductVariant, $this>
+     */
+    public function variants(): HasMany
+    {
+        return $this->hasMany(ProductVariant::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /**
      * @return HasMany<StockMovement, $this>
      */
     public function stockMovements(): HasMany
