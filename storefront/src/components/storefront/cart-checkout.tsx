@@ -23,7 +23,8 @@ export function CartCheckout({
   const isCheckoutComplete = confirmedItems !== null;
   const totalQuantity = displayedItems.reduce((total, item) => total + item.quantity, 0);
   const checkoutItems = displayedItems.map((item) => ({
-    product_id: item.id,
+    product_id: item.product_id ?? item.id,
+    ...(item.product_variant_id ? { product_variant_id: item.product_variant_id } : {}),
     quantity: item.quantity,
   }));
 
@@ -85,6 +86,14 @@ export function CartCheckout({
                   {item.name}
                 </Link>
                 {item.sku ? <p className="mt-1 text-xs text-muted-foreground">{item.sku}</p> : null}
+                {item.variant_title ? <p className="mt-1 text-xs font-semibold text-muted-foreground">{item.variant_title}</p> : null}
+                {Object.keys(item.selected_options ?? {}).length > 0 ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {Object.entries(item.selected_options ?? {})
+                      .map(([name, value]) => `${name}: ${value}`)
+                      .join(" · ")}
+                  </p>
+                ) : null}
                 <p className="mt-2 text-sm font-bold text-primary">
                   {formatMoney(item.price_minor, item.currency, currencyLocale(locale))}
                 </p>

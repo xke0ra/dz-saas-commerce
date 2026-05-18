@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, ShieldCheck, Truck } from "lucide-react";
-import { AddToCartButton } from "@/components/storefront/add-to-cart-button";
 import { JsonLd } from "@/components/storefront/json-ld";
-import { QuickOrderForm } from "@/components/storefront/quick-order-form";
+import { ProductVariantPurchasePanel } from "@/components/storefront/product-variant-purchase-panel";
 import { StoreShell } from "@/components/storefront/store-shell";
 import { StoreUnavailable } from "@/components/storefront/store-unavailable";
 import { assetUrl, getProduct, productImages, unwrapResource } from "@/lib/api";
-import { currencyLocale, formatMoney } from "@/lib/format";
 import { getStorefrontCopy, storeLocale } from "@/lib/i18n";
 import { buildStorefrontMetadata, productSeoImage, storefrontBaseUrl, storefrontUrl } from "@/lib/seo";
 import { getActiveStoreContext } from "@/lib/store-context";
@@ -139,19 +137,6 @@ export default async function ProductDetailsPage({
               <p className="mt-3 text-base leading-8 text-muted-foreground">{product.short_description}</p>
             ) : null}
 
-            <div className="mt-5 flex flex-wrap items-end gap-3">
-              <p className="text-3xl font-extrabold text-primary">
-                {formatMoney(product.price_minor, product.currency, currencyLocale(locale))}
-              </p>
-              {product.compare_at_price_minor ? (
-                <p className="text-sm text-muted-foreground line-through">
-                  {formatMoney(product.compare_at_price_minor, product.currency, currencyLocale(locale))}
-                </p>
-              ) : null}
-            </div>
-
-            <AddToCartButton product={cartProduct} locale={locale} size="lg" className="mt-5 w-full sm:w-auto" />
-
             <div className="mt-5 grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
               <p className="flex items-center gap-2 rounded-md bg-background px-3 py-2">
                 <Truck size={16} aria-hidden="true" />
@@ -175,10 +160,10 @@ export default async function ProductDetailsPage({
             ) : null}
           </section>
 
-          <QuickOrderForm
+          <ProductVariantPurchasePanel
+            product={product}
+            cartProduct={cartProduct}
             storeIdentifier={context.identifier}
-            productId={product.id}
-            productName={product.name}
             locale={locale}
           />
         </div>

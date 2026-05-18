@@ -22,7 +22,7 @@
 - checkout يجب أن يستخدم idempotency key أو duplicate window fallback واضح.
 - order items تحفظ snapshots: product name, SKU, unit price, quantity, line total، ومع variant اختياري تحفظ `product_variant_id`, `variant_title`, `variant_sku`, و`selected_options`.
 - checkout backend يدعم `product_variant_id` اختيارياً داخل cart items. عند وجوده يجب أن يكون تابعاً لنفس tenant ونفس `product_id` وأن يكون active، مع بقاء checkout للمنتجات simple عبر `product_id` فقط.
-- storefront UI لم يتغير بعد ولا يملك variant picker؛ أي `product_variant_id` يصل إلى checkout يجب أن يعاد التحقق منه في backend ولا يعتمد على العميل.
+- storefront product detail يستطيع اختيار variant وإرسال `product_variant_id` في quick checkout/cart checkout، لكن backend يعيد التحقق دائماً ولا يعتمد على العميل.
 - أي checkout failure يجب أن يرجع validation آمن بدون تسريب tenant data أو internal ids غير ضرورية.
 
 ## 3. Inventory Contract
@@ -64,7 +64,7 @@
 - responses يجب أن تبقى مستقرة: أسماء الحقول العامة لا تتغير بدون migration plan أو versioning.
 - product/catalog responses يجب أن تعرض فقط منتجات مرئية ومسموحة لذلك store.
 - product detail response يمكن أن يعرض `variants` و`options` للـ picker: active variants فقط، بدون `tenant_id` أو `cost_price_minor` أو metadata داخلية، مع availability محسوبة من inventory الخاص بالvariant.
-- backend checkout contract الحالي يبقى كما هو: `product_variant_id` اختياري ومدقق server-side، والـ frontend picker لم ينفذ بعد.
+- backend checkout contract الحالي يبقى كما هو: `product_variant_id` اختياري ومدقق server-side، والواجهة لا ترسل السعر ولا يثق backend بأي سعر من العميل.
 - checkout responses يجب أن تحتوي order confirmation آمن، لا raw internal operational data.
 
 ## 6. Security/Audit Contract

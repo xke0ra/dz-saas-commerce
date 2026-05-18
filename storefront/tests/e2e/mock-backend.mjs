@@ -36,6 +36,83 @@ const product = {
   },
 };
 
+const productDetail = {
+  ...product,
+  options: [
+    {
+      id: "opt_size",
+      name: "المقاس",
+      position: 0,
+      values: [
+        { id: "val_large", value: "كبير", position: 0 },
+        { id: "val_small", value: "صغير", position: 1 },
+      ],
+    },
+    {
+      id: "opt_color",
+      name: "اللون",
+      position: 1,
+      values: [
+        { id: "val_black", value: "أسود", position: 0 },
+        { id: "val_white", value: "أبيض", position: 1 },
+      ],
+    },
+  ],
+  variants: [
+    {
+      id: "var_large_white",
+      sku: "TSHIRT-L-WHT",
+      title: "كبير / أبيض",
+      option_signature: "size=large;color=white",
+      price_minor: 280000,
+      compare_at_price_minor: 320000,
+      effective_price_minor: 280000,
+      status: "active",
+      sort_order: 0,
+      available_quantity: 0,
+      is_available: false,
+      selected_options: {
+        "المقاس": "كبير",
+        "اللون": "أبيض",
+      },
+    },
+    {
+      id: "var_large_black",
+      sku: "TSHIRT-L-BLK",
+      title: "كبير / أسود",
+      option_signature: "size=large;color=black",
+      price_minor: 275000,
+      compare_at_price_minor: 320000,
+      effective_price_minor: 275000,
+      status: "active",
+      sort_order: 1,
+      available_quantity: 6,
+      is_available: true,
+      selected_options: {
+        "المقاس": "كبير",
+        "اللون": "أسود",
+      },
+    },
+    {
+      id: "var_small_black",
+      sku: "TSHIRT-S-BLK",
+      title: "صغير / أسود",
+      option_signature: "size=small;color=black",
+      price_minor: null,
+      compare_at_price_minor: null,
+      effective_price_minor: 250000,
+      status: "active",
+      sort_order: 2,
+      available_quantity: null,
+      is_available: true,
+      selected_options: {
+        "المقاس": "صغير",
+        "اللون": "أسود",
+      },
+    },
+  ],
+};
+
 const secondProduct = {
   ...product,
   id: "prod_02",
@@ -44,6 +121,8 @@ const secondProduct = {
   sku: "SHOES-DEMO",
   is_featured: false,
   published_at: "2026-04-28T09:00:00.000000Z",
+  options: [],
+  variants: [],
 };
 
 const order = {
@@ -186,7 +265,11 @@ const server = http.createServer(async (request, response) => {
   }
 
   if (path === "/api/storefront/demo-store/products/demo-shirt") {
-    return json(response, { data: product });
+    return json(response, { data: productDetail });
+  }
+
+  if (path === "/api/storefront/demo-store/products/demo-shoes") {
+    return json(response, { data: secondProduct });
   }
 
   if (path === "/api/storefront/demo-store/categories") {

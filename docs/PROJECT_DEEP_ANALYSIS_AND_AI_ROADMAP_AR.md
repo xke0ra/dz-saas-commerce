@@ -219,7 +219,7 @@
 - تخزين المال بوحدات صغيرة.
 - جدول checkout idempotency.
 
-تم قبول تصميم product variants/options في ADR 0013 وتنفيذ schema foundation للجداول والأعمدة nullable والقيود وtenant integrity tests، ثم إضافة طبقة models/factories/relationships، ثم إضافة Vendor Filament management foundation كموارد منفصلة، ثم refinement يمنع ربط option values بvariants من product مختلف داخل نفس tenant. يدعم checkout backend الآن `product_variant_id` اختيارياً مع variant pricing/reservation/order snapshot، وأصبح `inventory_items` يسمح بمخزون مستقل لكل sellable unit عبر partial unique indexes، كما أصبحت release/settlement/restock تستخدم مخزون الـ variant وتسجل `product_variant_id` في stock movements. product detail API يعرض الآن active variants/options/availability للـ picker، لكن storefront UI لم ينفذ بعد، ومع استمرار real staging كمسار جاهزية مستقل.
+تم قبول تصميم product variants/options في ADR 0013 وتنفيذ schema foundation للجداول والأعمدة nullable والقيود وtenant integrity tests، ثم إضافة طبقة models/factories/relationships، ثم إضافة Vendor Filament management foundation كموارد منفصلة، ثم refinement يمنع ربط option values بvariants من product مختلف داخل نفس tenant. يدعم checkout backend الآن `product_variant_id` اختيارياً مع variant pricing/reservation/order snapshot، وأصبح `inventory_items` يسمح بمخزون مستقل لكل sellable unit عبر partial unique indexes، كما أصبحت release/settlement/restock تستخدم مخزون الـ variant وتسجل `product_variant_id` في stock movements. product detail API يعرض active variants/options/availability، والـ storefront product detail يملك الآن picker محدوداً يرسل `product_variant_id`، ومع استمرار real staging كمسار جاهزية مستقل.
 
 ### 4.9 tenancy
 
@@ -484,7 +484,6 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 - caching/revalidation للـ storefront.
 - merchant onboarding wizard.
 - store readiness/publish gate.
-- storefront variant picker UI.
 - product type/simple-vs-variable enforcement.
 - manual inventory adjustment UI/API design.
 - product import/export.
@@ -583,7 +582,6 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 الهدف: دعم متاجر حقيقية بكتالوج ومخزون وطلبات أكثر تعقيداً.
 
-- storefront variant picker UI.
 - product type/simple-vs-variable enforcement.
 - manual inventory adjustment UI/API design.
 - product import/export.
@@ -740,8 +738,8 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 ### 11.5 Catalog
 
-- الحالة الحالية: products/categories/images/search foundation، وschema + model/factory foundation للـ variants/options موجودة، مع Vendor Filament resources لإدارة options/values/variants/pivot وvalidation يمنع ربط option values بvariant من product مختلف، وcheckout backend يدعم `product_variant_id` اختيارياً، وinventory uniqueness مفعل على sellable unit، وproduct detail API يعرض variants/options/availability للـ picker.
-- المطلوب: storefront variant picker UI، product type/simple-vs-variable enforcement، filters، product SEO fields، import/export.
+- الحالة الحالية: products/categories/images/search foundation، وschema + model/factory foundation للـ variants/options موجودة، مع Vendor Filament resources لإدارة options/values/variants/pivot وvalidation يمنع ربط option values بvariant من product مختلف، وcheckout backend يدعم `product_variant_id` اختيارياً، وinventory uniqueness مفعل على sellable unit، وproduct detail API يعرض variants/options/availability، وproduct detail UI يملك picker محدوداً للـ variants.
+- المطلوب: product type/simple-vs-variable enforcement، Product variant UX polish، filters، product SEO fields، import/export.
 - الأولوية: P1.
 - معايير القبول: variants لا تكسر checkout/inventory، والـ API paginated، والاختبارات تغطي tenant isolation.
 

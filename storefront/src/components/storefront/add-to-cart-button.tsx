@@ -11,26 +11,41 @@ export function AddToCartButton({
   locale = "ar",
   size = "md",
   className,
+  disabled = false,
+  disabledLabel,
 }: {
   product: CartProductInput;
   locale?: StoreLocale | string;
   size?: "sm" | "md" | "lg";
   className?: string;
+  disabled?: boolean;
+  disabledLabel?: string;
 }) {
   const copy = getStorefrontCopy(locale);
   const { addItem } = useCart();
   const [added, setAdded] = useState(false);
 
   function handleAdd() {
+    if (disabled) {
+      return;
+    }
+
     addItem(product, 1);
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1400);
   }
 
   return (
-    <Button type="button" size={size} variant={added ? "accent" : "primary"} className={className} onClick={handleAdd}>
+    <Button
+      type="button"
+      size={size}
+      variant={added ? "accent" : "primary"}
+      className={className}
+      disabled={disabled}
+      onClick={handleAdd}
+    >
       {added ? <Check size={17} aria-hidden="true" /> : <ShoppingCart size={17} aria-hidden="true" />}
-      {added ? copy.product.addedToCart : copy.product.addToCart}
+      {disabled && disabledLabel ? disabledLabel : added ? copy.product.addedToCart : copy.product.addToCart}
     </Button>
   );
 }

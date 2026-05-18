@@ -4,9 +4,13 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 export type CartProductInput = {
   id: string;
+  product_id?: string;
+  product_variant_id?: string | null;
   name: string;
   slug: string;
   sku: string | null;
+  variant_title?: string | null;
+  selected_options?: Record<string, string>;
   price_minor: number;
   currency: string;
   image_url: string | null;
@@ -159,9 +163,13 @@ function sanitizeItems(items: CartItem[]): CartItem[] {
     .filter((item) => typeof item?.id === "string" && typeof item.name === "string")
     .map((item) => ({
       id: item.id,
+      product_id: typeof item.product_id === "string" ? item.product_id : item.id,
+      product_variant_id: typeof item.product_variant_id === "string" ? item.product_variant_id : null,
       name: item.name,
       slug: typeof item.slug === "string" ? item.slug : item.id,
       sku: typeof item.sku === "string" ? item.sku : null,
+      variant_title: typeof item.variant_title === "string" ? item.variant_title : null,
+      selected_options: isStringRecord(item.selected_options) ? item.selected_options : {},
       price_minor: Number.isFinite(item.price_minor) ? item.price_minor : 0,
       currency: typeof item.currency === "string" ? item.currency : "DZD",
       image_url: typeof item.image_url === "string" ? item.image_url : null,
@@ -183,4 +191,11 @@ function clampQuantity(quantity: number): number {
   }
 
   return Math.max(1, Math.min(99, Math.trunc(quantity)));
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return typeof value === "object"
+    && value !== null
+    && !Array.isArray(value)
+    && Object.values(value).every((item) => typeof item === "string");
 }
