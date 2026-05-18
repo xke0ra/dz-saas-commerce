@@ -2,9 +2,9 @@
 
 Date: 2026-05-17
 
-Status: Accepted - schema and model foundation complete
+Status: Accepted - schema, model, and vendor management foundation complete
 
-تم تنفيذ schema foundation للجداول والقيود والأعمدة nullable الخاصة بالـ variants/options، ثم أضيفت طبقة Eloquent models/factories/relationships فوقها. لا يوجد في هذا القرار بعد أي تغيير checkout/storefront أو UI/API منفذ.
+تم تنفيذ schema foundation للجداول والقيود والأعمدة nullable الخاصة بالـ variants/options، ثم أضيفت طبقة Eloquent models/factories/relationships فوقها، ثم أضيفت Vendor Filament management foundation كموارد منفصلة. لا يوجد في هذا القرار بعد أي تغيير checkout/storefront أو API منفذ.
 
 ## Context
 
@@ -18,7 +18,7 @@ Status: Accepted - schema and model foundation complete
 - `StockMovement` مرتبط بـ `product_id` و`inventory_item_id`، وأحياناً `order_id`, `order_item_id`, `order_return_id`.
 - stock ledger الحالي يسجل `reserved`, `released`, `settled`, `restocked`, و`manual_adjustment`/`correction`.
 - storefront product API يعرض product واحداً مع inventory summary على مستوى product فقط.
-- vendor UI الحالي يدير products وinventory items على مستوى product فقط.
+- vendor UI الحالي يدير products وinventory items على مستوى product، وأضيفت موارد Vendor منفصلة لإدارة variants/options كمرحلة foundation بدون ربط checkout أو storefront.
 
 ## Problem
 
@@ -364,12 +364,14 @@ Rollback:
 
 - منخفض؛ إزالة classes/tests بدون data migration إضافية.
 
-### PR 3: Vendor product variant management backend/forms foundation
+### PR 3: Vendor product variant management backend/forms foundation - مكتمل 2026-05-18
 
 النطاق:
 
-- إدارة options/values/variants في vendor backend.
-- validation لإنتاج option signatures.
+- إدارة options/values/variants في vendor backend عبر Filament resources منفصلة.
+- إدارة pivot `product_variant_option_values` عبر resource بسيط بدلاً من RelationManagers أو MultiSelect معقد.
+- استخدام صلاحيات products الحالية للعرض/الإنشاء/التعديل/الحذف.
+- إبقاء `option_signature` كحقل يدوي/داخلي مؤقت؛ توليده والتحقق المتقدم منه مؤجلان.
 - لا storefront بعد.
 - لا checkout behavior change.
 
