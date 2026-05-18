@@ -35,6 +35,8 @@
 - `ReleaseOrderInventoryReservations` يسجل `released` stock movement عند تحرير الحجز فعلياً.
 - `SettleOrderInventory` يسجل `settled` stock movement عند تسوية المخزون فعلياً.
 - `RestockOrderReturn` يسجل `restocked` stock movement عند زيادة المخزون فعلياً بسبب return restock.
+- release/settlement/restock يجب أن تبحث عن inventory item حسب sellable unit: `tenant_id + product_id + product_variant_id`، أو `product_variant_id IS NULL` للمنتجات simple.
+- stock movements الناتجة عن lifecycle flows يجب أن تحفظ `product_variant_id` عندما يكون موجوداً على `order_items`.
 - manual inventory adjustment يجب أن يمر عبر `AdjustInventoryManually` وأن يكتب `StockMovement` و`AuditLog` معاً.
 - أي UI/API مستقبلي لتعديل المخزون يجب أن يستخدم `AdjustInventoryManually` فقط.
 - `reserved_quantity` يعني كمية محجوزة لطلبات لم تُسوَّ نهائياً.

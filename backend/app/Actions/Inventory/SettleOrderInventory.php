@@ -31,12 +31,7 @@ class SettleOrderInventory
                     continue;
                 }
 
-                $inventoryItem = InventoryItem::query()
-                    ->withoutGlobalScope('current_tenant')
-                    ->where('tenant_id', $lockedOrder->tenant_id)
-                    ->where('product_id', $item->product_id)
-                    ->lockForUpdate()
-                    ->first();
+                $inventoryItem = $this->inventoryItemForOrderItem($lockedOrder->tenant_id, $item);
 
                 if ($inventoryItem === null || ! $inventoryItem->track_quantity) {
                     continue;
@@ -81,6 +76,7 @@ class SettleOrderInventory
             ->create([
                 'tenant_id' => $order->tenant_id,
                 'product_id' => $orderItem->product_id,
+                'product_variant_id' => $orderItem->product_variant_id,
                 'inventory_item_id' => $inventoryItem->id,
                 'order_id' => $order->id,
                 'order_item_id' => $orderItem->id,
@@ -100,5 +96,20 @@ class SettleOrderInventory
                     'order_item_id' => $orderItem->id,
                 ],
             ]);
+    }
+
+    private function inventoryItemForOrderItem(string $tenantId, OrderItem $orderItem): ?InventoryItem
+    {
+        return InventoryItem::query()
+            ->withoutGlobalScope('current_tenant')
+            ->where('tenant_id', $tenantId)
+            ->where('product_id', $orderItem->product_id)
+            ->when(
+                $orderItem->product_variant_id === null,
+                fn ($query) => $query->whereNull('product_variant_id'),
+                fn ($query) => $query->where('product_variant_id', $orderItem->product_variant_id),
+            )
+            ->lockForUpdate()
+            ->first();
     }
 }
