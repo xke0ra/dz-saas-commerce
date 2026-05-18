@@ -92,11 +92,12 @@ Completed foundation:
 - Manual inventory adjustment action with AuditLog: `AdjustInventoryManually` يسجل `manual_adjustment`/`correction` stock movements و`inventory_manual_adjustment` AuditLog بدون UI/API.
 - Product Variants ADR/design: `docs/adr/0013-product-variants-inventory-design.md` يحدد تصميم variants/options وتأثيره على inventory/checkout/order items/stock movements/storefront.
 - Product variants schema foundation: migrations للجداول والأعمدة nullable، constraints، وtenant integrity tests بدون تغيير checkout/storefront/models/actions.
+- Product variant models/factories/relationships: طبقة Eloquent فوق schema foundation مع tests، بدون تغيير checkout/storefront/actions/UI/API.
 
 Next backlog:
 
-1. Product variant models/factories/relationships.
-2. Vendor variant management foundation.
+1. Vendor variant management foundation.
+2. Checkout product_variant_id support.
 3. تنفيذ real staging فعلياً باستخدام checklist، بدون أسرار في repo.
 4. Store readiness publish gate.
 5. COD reconciliation foundation.
