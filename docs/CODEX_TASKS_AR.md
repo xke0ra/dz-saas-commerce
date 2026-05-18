@@ -98,10 +98,11 @@ Completed foundation:
 - Checkout product_variant_id support: quick checkout backend يقبل `product_variant_id` اختيارياً، يتحقق من tenant/product/status، يستخدم سعر ومخزون variant، ويحفظ snapshot وحركة `reserved`.
 - Variant inventory uniqueness/schema activation: تفكيك unique القديم على `inventory_items [tenant_id, product_id]` واستبداله بـ partial unique indexes للـ simple inventory والـ variant inventory.
 - Release/settlement/restock product_variant_id propagation review: lifecycle inventory actions تبحث عن `InventoryItem` حسب sellable unit وتسجل `product_variant_id` في حركات `released`/`settled`/`restocked`.
+- Storefront variant selection backend serialization: product detail API يعرض active variants/options/availability للـ picker بدون frontend UI وبدون تغيير checkout contract.
 
 Next backlog:
 
-1. Storefront variant selection design/implementation.
+1. Storefront variant picker UI.
 2. Product type/simple-vs-variable enforcement.
 3. تنفيذ real staging فعلياً باستخدام checklist، بدون أسرار في repo.
 4. Store readiness publish gate.

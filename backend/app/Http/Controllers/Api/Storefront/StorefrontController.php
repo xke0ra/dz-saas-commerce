@@ -7,6 +7,7 @@ use App\Actions\Checkout\CreateQuickOrder;
 use App\Data\Checkout\CheckoutOrderResult;
 use App\Data\Checkout\QuickOrderData;
 use App\Enums\CategoryStatus;
+use App\Enums\ProductStatus;
 use App\Enums\StoreStatus;
 use App\Enums\TenantStatus;
 use App\Http\Controllers\Controller;
@@ -105,7 +106,18 @@ class StorefrontController extends Controller
         $product = $this->productQuery($storeModel)
             ->visibleOnStorefront()
             ->where('slug', $slug)
-            ->with(['category', 'images', 'inventoryItem'])
+            ->with([
+                'category',
+                'images',
+                'inventoryItem',
+                'options.values',
+                'variants' => fn ($query) => $query
+                    ->where('status', ProductStatus::Active->value)
+                    ->orderBy('sort_order')
+                    ->orderBy('id'),
+                'variants.inventoryItems',
+                'variants.optionValues.option',
+            ])
             ->firstOrFail();
 
         return ProductResource::make($product);

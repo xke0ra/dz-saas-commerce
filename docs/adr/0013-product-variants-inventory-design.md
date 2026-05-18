@@ -2,9 +2,9 @@
 
 Date: 2026-05-17
 
-Status: Accepted - schema, model, vendor management, option-value UX refinement, checkout backend support, inventory uniqueness activation, and lifecycle propagation complete
+Status: Accepted - schema, model, vendor management, option-value UX refinement, checkout backend support, inventory uniqueness activation, lifecycle propagation, and storefront API serialization complete
 
-تم تنفيذ schema foundation للجداول والقيود والأعمدة nullable الخاصة بالـ variants/options، ثم أضيفت طبقة Eloquent models/factories/relationships فوقها، ثم أضيفت Vendor Filament management foundation كموارد منفصلة، ثم refinement يمنع ربط option value بvariant من product مختلف داخل نفس tenant. يدعم checkout backend الآن `product_variant_id` اختيارياً لكل cart item مع validation وسعر وحجز مخزون وsnapshot، وتم تفعيل uniqueness على `inventory_items` على مستوى sellable unit، كما أصبحت release/settlement/restock تستخدم `order_item.product_variant_id` عند البحث عن المخزون وتسجيل الحركات، بينما لا يوجد بعد storefront variant picker أو endpoint جديد.
+تم تنفيذ schema foundation للجداول والقيود والأعمدة nullable الخاصة بالـ variants/options، ثم أضيفت طبقة Eloquent models/factories/relationships فوقها، ثم أضيفت Vendor Filament management foundation كموارد منفصلة، ثم refinement يمنع ربط option value بvariant من product مختلف داخل نفس tenant. يدعم checkout backend الآن `product_variant_id` اختيارياً لكل cart item مع validation وسعر وحجز مخزون وsnapshot، وتم تفعيل uniqueness على `inventory_items` على مستوى sellable unit، كما أصبحت release/settlement/restock تستخدم `order_item.product_variant_id` عند البحث عن المخزون وتسجيل الحركات. يعرض product detail في storefront API الآن variants/options/availability كتهيئة للـ picker، بينما لا يوجد بعد storefront UI picker أو endpoint جديد.
 
 ## Context
 
@@ -18,7 +18,7 @@ Status: Accepted - schema, model, vendor management, option-value UX refinement,
 - quick checkout يحجز المخزون بالبحث عن `InventoryItem` عبر `tenant_id + product_id + product_variant_id` عند وجود variant، ولا يسقط إلى parent inventory إذا غاب variant inventory.
 - `StockMovement` مرتبط بـ `product_id` و`inventory_item_id`، وأحياناً `order_id`, `order_item_id`, `order_return_id`.
 - stock ledger الحالي يسجل `reserved`, `released`, `settled`, `restocked`, و`manual_adjustment`/`correction`.
-- storefront product API يعرض product واحداً مع inventory summary على مستوى product فقط.
+- storefront product detail API يعرض product مع inventory summary على مستوى product، ويضيف variants/options/availability للـ active variants فقط كـ serialization foundation للـ picker.
 - vendor UI الحالي يدير products وinventory items على مستوى product، وأضيفت موارد Vendor منفصلة لإدارة variants/options كمرحلة foundation بدون ربط checkout أو storefront.
 
 ## Problem
@@ -426,13 +426,26 @@ Rollback:
 
 - متوسط؛ column nullable يخفف rollback، لكن التقارير variant-level قد تفقد الدقة إذا أزيلت.
 
-### PR 7: Storefront product detail variant selection
+### PR 7: Storefront product detail variant API serialization - مكتمل 2026-05-18
 
 النطاق:
 
-- عرض options/values/variants.
+- عرض `options` و`variants` وselected options وavailability في product detail API.
+- عرض active variants فقط وعدم تسريب `tenant_id` أو `cost_price_minor` أو metadata داخلية.
+- إبقاء listing/search/home بدون payload variants كبير.
+- لا storefront UI بعد.
+- لا checkout contract change.
+
+Rollback:
+
+- منخفض إلى متوسط؛ إزالة fields الجديدة من product detail API قد تكسر frontend picker عندما يبنى فوقها.
+
+### PR 8: Storefront product detail variant picker UI
+
+النطاق:
+
 - cart key يصبح product+variant.
-- إرسال `product_variant_id` في checkout.
+- إرسال `product_variant_id` في checkout من الواجهة.
 - UX للخيارات disabled/out-of-stock.
 
 Rollback:
@@ -457,4 +470,4 @@ Rollback:
 - product-level inventory يبقى صالحاً فقط للـ simple products.
 - variant-level inventory هو القاعدة للـ variable products.
 - stock movement ledger يجب أن يبقى append-only ويعكس sellable unit بدقة.
-- هذا ADR أصبح `Accepted` بعد تثبيت schema foundation وtenant integrity tests. تم تفعيل checkout backend للـ `product_variant_id` اختيارياً، وتفكيك unique القديم لمخزون variants، وربط release/settlement/restock بالـ sellable unit، وتبقى مراحل storefront selection وproduct type enforcement حتى PRs لاحقة.
+- هذا ADR أصبح `Accepted` بعد تثبيت schema foundation وtenant integrity tests. تم تفعيل checkout backend للـ `product_variant_id` اختيارياً، وتفكيك unique القديم لمخزون variants، وربط release/settlement/restock بالـ sellable unit، وإضافة serialization للـ variants/options في storefront product detail. تبقى مراحل storefront picker UI وproduct type enforcement حتى PRs لاحقة.
