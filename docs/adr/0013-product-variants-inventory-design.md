@@ -2,19 +2,20 @@
 
 Date: 2026-05-17
 
-Status: Accepted - schema, model, vendor management, and option-value UX refinement complete
+Status: Accepted - schema, model, vendor management, option-value UX refinement, and checkout backend support complete
 
-تم تنفيذ schema foundation للجداول والقيود والأعمدة nullable الخاصة بالـ variants/options، ثم أضيفت طبقة Eloquent models/factories/relationships فوقها، ثم أضيفت Vendor Filament management foundation كموارد منفصلة، ثم refinement يمنع ربط option value بvariant من product مختلف داخل نفس tenant. لا يوجد في هذا القرار بعد أي تغيير checkout/storefront أو API منفذ.
+تم تنفيذ schema foundation للجداول والقيود والأعمدة nullable الخاصة بالـ variants/options، ثم أضيفت طبقة Eloquent models/factories/relationships فوقها، ثم أضيفت Vendor Filament management foundation كموارد منفصلة، ثم refinement يمنع ربط option value بvariant من product مختلف داخل نفس tenant. يدعم checkout backend الآن `product_variant_id` اختيارياً لكل cart item مع validation وسعر وحجز مخزون وsnapshot، بينما لا يوجد بعد storefront variant picker أو endpoint جديد.
 
 ## Context
 
 - `Product` هو الكيان التجاري الحالي للكتالوج، ويحتوي على `sku`, `price_minor`, `compare_at_price_minor`, `cost_price_minor`, `status`, `metadata`، ويدخل في search index.
-- توجد الآن طبقة model/factory لـ `ProductVariant` و`ProductOption` فوق schema foundation، بدون تفعيل سلوك checkout أو storefront.
+- توجد الآن طبقة model/factory لـ `ProductVariant` و`ProductOption` فوق schema foundation، مع دعم checkout backend للـ variant عند إرساله.
 - `InventoryItem` مرتبط حالياً بـ `product_id` فقط، ويوجد unique على `tenant_id + product_id`.
 - `InventoryItem` يحمل `quantity`, `reserved_quantity`, `track_quantity`, `allow_backorders`.
 - `OrderItem` يحفظ snapshot للمنتج: `product_id`, `product_name`, `product_sku`, `quantity`, `unit_price_minor`, `total_minor`, `metadata`.
-- quick checkout يستقبل `product_id` و`quantity`، أو `items[]` بنفس الشكل، ثم يحسب السعر من `products.price_minor`.
-- quick checkout يحجز المخزون بالبحث عن `InventoryItem` عبر `tenant_id + product_id`.
+- quick checkout يستقبل `product_id` و`quantity`، أو `items[]`، ويدعم `product_variant_id` اختيارياً داخل كل item.
+- quick checkout يحسب سعر variant من `ProductVariant.price_minor` عند وجوده وإلا يرث `Product.price_minor`.
+- quick checkout يحجز المخزون بالبحث عن `InventoryItem` عبر `tenant_id + product_id + product_variant_id` عند وجود variant، ولا يسقط إلى parent inventory إذا غاب variant inventory.
 - `StockMovement` مرتبط بـ `product_id` و`inventory_item_id`، وأحياناً `order_id`, `order_item_id`, `order_return_id`.
 - stock ledger الحالي يسجل `reserved`, `released`, `settled`, `restocked`, و`manual_adjustment`/`correction`.
 - storefront product API يعرض product واحداً مع inventory summary على مستوى product فقط.
@@ -380,7 +381,7 @@ Rollback:
 
 - متوسط؛ قد توجد data variants تجريبية يجب تعطيلها أو حذفها.
 
-### PR 4: Checkout accepts `product_variant_id`
+### PR 4: Checkout accepts `product_variant_id` - مكتمل 2026-05-18
 
 النطاق:
 
@@ -389,7 +390,9 @@ Rollback:
 - تحديث price calculation.
 - تحديث inventory reservation ليستخدم variant inventory.
 - تحديث `QuickCheckoutTest`.
-- رفض checkout على parent variable product بدون variant.
+- حفظ variant snapshot في `order_items`.
+- تسجيل `stock_movements.product_variant_id` لحركة reservation.
+- لم يتم فرض رفض parent variable product بدون variant لأن schema لا يملك بعد `product.type` أو gate واضح للتمييز بين simple/variable.
 
 Rollback:
 
@@ -442,4 +445,4 @@ Rollback:
 - product-level inventory يبقى صالحاً فقط للـ simple products.
 - variant-level inventory هو القاعدة للـ variable products.
 - stock movement ledger يجب أن يبقى append-only ويعكس sellable unit بدقة.
-- هذا ADR أصبح `Accepted` بعد تثبيت schema foundation وtenant integrity tests. تبقى مراحل checkout/storefront/inventory behavior معلقة حتى PRs لاحقة.
+- هذا ADR أصبح `Accepted` بعد تثبيت schema foundation وtenant integrity tests. تم تفعيل checkout backend للـ `product_variant_id` اختيارياً، وتبقى مراحل storefront selection، وتفكيك unique الخاص بمخزون variants، ومراجعة release/settlement/restock حتى PRs لاحقة.
