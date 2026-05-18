@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\ProductStatus;
+use App\Enums\ProductType;
 use App\Models\InventoryItem;
 use App\Models\Product;
 use App\Models\ProductOption;
@@ -19,6 +20,7 @@ describe('StorefrontProductVariantResponseTest', function (): void {
             'slug' => 'variant-shirt',
             'price_minor' => 100000,
             'status' => ProductStatus::Active,
+            'type' => ProductType::Variable,
             'published_at' => now()->subMinute(),
         ]);
 
@@ -85,7 +87,8 @@ describe('StorefrontProductVariantResponseTest', function (): void {
             ->values()
             ->all();
 
-        expect($data['variants'])->toHaveCount(1)
+        expect($data['type'])->toBe(ProductType::Variable->value)
+            ->and($data['variants'])->toHaveCount(1)
             ->and($variant['id'])->toBe($activeVariant->id)
             ->and($variant['sku'])->toBe('VAR-L-BLK')
             ->and($variant['title'])->toBe('Large Black')
@@ -115,6 +118,7 @@ describe('StorefrontProductVariantResponseTest', function (): void {
             'slug' => 'fallback-price-product',
             'price_minor' => 99000,
             'status' => ProductStatus::Active,
+            'type' => ProductType::Variable,
             'published_at' => now()->subMinute(),
         ]);
         $option = ProductOption::factory()->forProduct($product)->create(['name' => 'Size']);
@@ -146,6 +150,7 @@ describe('StorefrontProductVariantResponseTest', function (): void {
             'tenant_id' => $tenant->id,
             'slug' => 'availability-product',
             'status' => ProductStatus::Active,
+            'type' => ProductType::Variable,
             'published_at' => now()->subMinute(),
         ]);
         $option = ProductOption::factory()->forProduct($product)->create(['name' => 'Mode']);
@@ -209,12 +214,20 @@ describe('StorefrontProductVariantResponseTest', function (): void {
             'quantity' => 10,
             'reserved_quantity' => 2,
         ]);
+        $option = ProductOption::factory()->forProduct($product)->create(['name' => 'Ignored']);
+        $value = ProductOptionValue::factory()->forOption($option)->create(['value' => 'Ignored']);
+        $variant = ProductVariant::factory()->forProduct($product)->create([
+            'status' => ProductStatus::Active,
+            'option_signature' => 'ignored=value',
+        ]);
+        ProductVariantOptionValue::factory()->forVariantAndOptionValue($variant, $value)->create();
 
         $listingResponse = $this->getJson("/api/storefront/{$store->subdomain}/products");
 
         $listingResponse
             ->assertOk()
             ->assertJsonPath('data.0.id', $product->id)
+            ->assertJsonPath('data.0.type', ProductType::Simple->value)
             ->assertJsonPath('data.0.inventory.available_quantity', 8)
             ->assertJsonMissingPath('data.0.variants')
             ->assertJsonMissingPath('data.0.options');
@@ -223,7 +236,35 @@ describe('StorefrontProductVariantResponseTest', function (): void {
 
         $detailResponse
             ->assertOk()
+            ->assertJsonPath('data.type', ProductType::Simple->value)
             ->assertJsonPath('data.inventory.available_quantity', 8)
+            ->assertJsonPath('data.variants', [])
+            ->assertJsonPath('data.options', []);
+    });
+
+    it('returns empty variants and options for variable products without active variants', function (): void {
+        $tenant = Tenant::factory()->create();
+        $store = Store::factory()->for($tenant)->create(['subdomain' => 'variable-empty']);
+        $product = Product::factory()->create([
+            'tenant_id' => $tenant->id,
+            'slug' => 'variable-without-active-variants',
+            'status' => ProductStatus::Active,
+            'type' => ProductType::Variable,
+            'published_at' => now()->subMinute(),
+        ]);
+        $option = ProductOption::factory()->forProduct($product)->create(['name' => 'Size']);
+        $value = ProductOptionValue::factory()->forOption($option)->create(['value' => 'Large']);
+        $draftVariant = ProductVariant::factory()->forProduct($product)->create([
+            'status' => ProductStatus::Draft,
+            'option_signature' => 'size=large',
+        ]);
+        ProductVariantOptionValue::factory()->forVariantAndOptionValue($draftVariant, $value)->create();
+
+        $response = $this->getJson("/api/storefront/{$store->subdomain}/products/{$product->slug}");
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.type', ProductType::Variable->value)
             ->assertJsonPath('data.variants', [])
             ->assertJsonPath('data.options', []);
     });

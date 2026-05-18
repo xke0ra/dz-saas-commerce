@@ -21,6 +21,7 @@ const product = {
   short_description: "منتج تجريبي قابل للطلب السريع.",
   description: "قميص قطني مخصص لاختبار تجربة الطلب السريع داخل الواجهة.",
   status: "active",
+  type: "variable",
   price_minor: 250000,
   compare_at_price_minor: 320000,
   currency: "DZD",
@@ -119,11 +120,22 @@ const secondProduct = {
   name: "حذاء تجريبي",
   slug: "demo-shoes",
   sku: "SHOES-DEMO",
+  type: "simple",
   is_featured: false,
   published_at: "2026-04-28T09:00:00.000000Z",
   options: [],
   variants: [],
 };
+
+const legacyProduct = {
+  ...secondProduct,
+  id: "prod_legacy",
+  name: "منتج قديم",
+  slug: "legacy-product",
+  sku: "LEGACY-DEMO",
+};
+
+delete legacyProduct.type;
 
 const order = {
   id: "order_01",
@@ -250,15 +262,12 @@ const server = http.createServer(async (request, response) => {
   }
 
   if (path === "/api/storefront/demo-store/products") {
-    const page = Number(url.searchParams.get("page") ?? 1);
-    const data = page > 1 ? [secondProduct] : [product];
-
     return json(response, {
-      data,
+      data: [product, secondProduct],
       meta: {
-        current_page: page,
-        last_page: 2,
-        per_page: 1,
+        current_page: 1,
+        last_page: 1,
+        per_page: 48,
         total: 2,
       },
     });
@@ -270,6 +279,10 @@ const server = http.createServer(async (request, response) => {
 
   if (path === "/api/storefront/demo-store/products/demo-shoes") {
     return json(response, { data: secondProduct });
+  }
+
+  if (path === "/api/storefront/demo-store/products/legacy-product") {
+    return json(response, { data: legacyProduct });
   }
 
   if (path === "/api/storefront/demo-store/categories") {

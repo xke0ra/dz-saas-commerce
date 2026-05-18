@@ -100,14 +100,15 @@ Completed foundation:
 - Release/settlement/restock product_variant_id propagation review: lifecycle inventory actions تبحث عن `InventoryItem` حسب sellable unit وتسجل `product_variant_id` في حركات `released`/`settled`/`restocked`.
 - Storefront variant selection backend serialization: product detail API يعرض active variants/options/availability للـ picker بدون frontend UI وبدون تغيير checkout contract.
 - Storefront variant picker UI: صفحة product detail تختار variant من options، تعرض السعر/التوفر، وتضيف `product_variant_id` إلى quick/cart checkout بدون تغيير backend contract.
+- Product type/simple-vs-variable enforcement: إضافة `products.type` كمصدر الحقيقة؛ checkout يرفض parent variable بدون variant ويرفض variant على simple product، والـ storefront يستخدم picker للـ variable فقط.
 
 Next backlog:
 
-1. Product type/simple-vs-variable enforcement.
-2. Store readiness publish gate.
-3. تنفيذ real staging فعلياً باستخدام checklist، بدون أسرار في repo.
-4. COD reconciliation foundation.
-5. Product variant UX polish.
+1. Store readiness publish gate.
+2. تنفيذ real staging فعلياً باستخدام checklist، بدون أسرار في repo.
+3. COD reconciliation foundation.
+4. Product variant UX polish.
+5. Production hardening review.
 6. تنفيذ backup restore drill فعلي وتسجيل evidence.
 7. CSP report-only.
 8. Observability provider selection and integration.

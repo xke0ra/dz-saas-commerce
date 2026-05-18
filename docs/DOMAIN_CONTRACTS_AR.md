@@ -21,7 +21,10 @@
 - quick checkout reservation يسجل `reserved` stock movement داخل نفس transaction عند إنشاء order جديد.
 - checkout يجب أن يستخدم idempotency key أو duplicate window fallback واضح.
 - order items تحفظ snapshots: product name, SKU, unit price, quantity, line total، ومع variant اختياري تحفظ `product_variant_id`, `variant_title`, `variant_sku`, و`selected_options`.
-- checkout backend يدعم `product_variant_id` اختيارياً داخل cart items. عند وجوده يجب أن يكون تابعاً لنفس tenant ونفس `product_id` وأن يكون active، مع بقاء checkout للمنتجات simple عبر `product_id` فقط.
+- `ProductType` هو مصدر الحقيقة للتمييز بين `simple` و`variable`.
+- checkout backend يدعم `product_variant_id` اختيارياً داخل cart items. عند وجوده يجب أن يكون تابعاً لنفس tenant ونفس `product_id` وأن يكون active.
+- المنتج `simple` يُشترى بدون `product_variant_id`، ويجب رفض checkout إذا أُرسل معه variant id.
+- المنتج `variable` يجب أن يُشترى عبر `product_variant_id`، ويجب رفض checkout على parent product بدون variant.
 - storefront product detail يستطيع اختيار variant وإرسال `product_variant_id` في quick checkout/cart checkout، لكن backend يعيد التحقق دائماً ولا يعتمد على العميل.
 - أي checkout failure يجب أن يرجع validation آمن بدون تسريب tenant data أو internal ids غير ضرورية.
 
@@ -47,7 +50,7 @@
 - checkout backend يستطيع حجز `InventoryItem` المرتبط بـ `product_variant_id` عند إرساله، ولا يسقط إلى parent inventory إذا لم يوجد variant inventory.
 - uniqueness في `inventory_items` أصبح على sellable unit: صف simple واحد لكل `tenant_id + product_id` عندما `product_variant_id IS NULL`، وصف واحد لكل `tenant_id + product_variant_id` عندما `product_variant_id IS NOT NULL`.
 - variants يجب أن تعامل كـ sellable unit عند تنفيذها سلوكياً: المخزون يكون على `product` للمنتج simple وعلى `product_variant` للمنتج variable.
-- لا يجوز checkout على parent variable product بدون `product_variant_id` بعد تفعيل سلوك variable products.
+- لا يجوز checkout على parent variable product بدون `product_variant_id`.
 
 ## 4. Billing Contract
 
@@ -63,7 +66,7 @@
 - الواجهة لا ترسل totals موثوقة ولا تفرض السعر النهائي.
 - responses يجب أن تبقى مستقرة: أسماء الحقول العامة لا تتغير بدون migration plan أو versioning.
 - product/catalog responses يجب أن تعرض فقط منتجات مرئية ومسموحة لذلك store.
-- product detail response يمكن أن يعرض `variants` و`options` للـ picker: active variants فقط، بدون `tenant_id` أو `cost_price_minor` أو metadata داخلية، مع availability محسوبة من inventory الخاص بالvariant.
+- product detail response يعرض `type`. يعرض `variants` و`options` فقط للمنتجات `variable`: active variants فقط، بدون `tenant_id` أو `cost_price_minor` أو metadata داخلية، مع availability محسوبة من inventory الخاص بالvariant.
 - backend checkout contract الحالي يبقى كما هو: `product_variant_id` اختياري ومدقق server-side، والواجهة لا ترسل السعر ولا يثق backend بأي سعر من العميل.
 - checkout responses يجب أن تحتوي order confirmation آمن، لا raw internal operational data.
 

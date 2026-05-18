@@ -4,6 +4,7 @@ use App\Enums\TenantPermission;
 use App\Enums\TenantRole;
 use App\Filament\Vendor\Resources\ProductOptions\ProductOptionResource;
 use App\Filament\Vendor\Resources\ProductOptionValues\ProductOptionValueResource;
+use App\Filament\Vendor\Resources\Products\Schemas\ProductForm;
 use App\Filament\Vendor\Resources\ProductVariantOptionValues\ProductVariantOptionValueResource;
 use App\Filament\Vendor\Resources\ProductVariantOptionValues\Schemas\ProductVariantOptionValueForm;
 use App\Filament\Vendor\Resources\ProductVariants\ProductVariantResource;
@@ -16,6 +17,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Support\Catalog\ProductVariantOptionValueValidator;
 use App\Support\Tenancy\CurrentTenant;
+use Filament\Schemas\Schema;
 use Illuminate\Validation\ValidationException;
 
 it('registers vendor product variant management resource urls', function (): void {
@@ -23,6 +25,15 @@ it('registers vendor product variant management resource urls', function (): voi
         ->and(ProductOptionValueResource::getUrl(panel: 'vendor'))->toContain('/vendor/product-option-values')
         ->and(ProductVariantResource::getUrl(panel: 'vendor'))->toContain('/vendor/product-variants')
         ->and(ProductVariantOptionValueResource::getUrl(panel: 'vendor'))->toContain('/vendor/product-variant-option-values');
+});
+
+it('adds product type field to the vendor product form', function (): void {
+    $schema = ProductForm::configure(Schema::make());
+    $fieldNames = collect($schema->getComponents())
+        ->map(fn (object $component): string => method_exists($component, 'getName') ? $component->getName() : '')
+        ->all();
+
+    expect($fieldNames)->toContain('type');
 });
 
 it('scopes vendor product variant management resources to the current tenant', function (): void {

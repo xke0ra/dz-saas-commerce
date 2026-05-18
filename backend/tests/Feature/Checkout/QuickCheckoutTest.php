@@ -9,6 +9,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\PlanFeatureKey;
 use App\Enums\ProductStatus;
+use App\Enums\ProductType;
 use App\Enums\StockMovementType;
 use App\Enums\TenantRole;
 use App\Models\CheckoutIdempotencyRecord;
@@ -283,6 +284,46 @@ it('uses the product price when a variant has no price override', function (): v
 
     expect($orderItem->unit_price_minor)->toBe(100000)
         ->and($orderItem->total_minor)->toBe(200000);
+});
+
+it('rejects checkout with a variant for a simple product', function (): void {
+    [, $store, $product] = checkoutScenario($this->wilaya, $this->commune, 'simple-with-variant');
+    $variant = createCheckoutVariant($product);
+    $payload = checkoutPayload($product, $this->wilaya, $this->commune);
+    unset($payload['product_id'], $payload['quantity']);
+    $payload['items'] = [[
+        'product_id' => $product->id,
+        'product_variant_id' => $variant->id,
+        'quantity' => 1,
+    ]];
+
+    $response = $this->postJson("/api/storefront/{$store->subdomain}/checkout", $payload);
+
+    $response
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('items');
+
+    expect($response->json('message'))->toContain('does not accept variants');
+    $this->assertDatabaseCount('orders', 0);
+});
+
+it('rejects checkout for a variable product without a variant', function (): void {
+    [, $store, $product] = checkoutVariantScenario(
+        $this->wilaya,
+        $this->commune,
+        'variable-without-variant',
+        createInventory: false,
+    );
+    $payload = checkoutPayload($product, $this->wilaya, $this->commune);
+
+    $response = $this->postJson("/api/storefront/{$store->subdomain}/checkout", $payload);
+
+    $response
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('items');
+
+    expect($response->json('message'))->toContain('variant is required');
+    $this->assertDatabaseCount('orders', 0);
 });
 
 it('reserves variant inventory and records a reserved stock movement with product variant id', function (): void {
@@ -1141,6 +1182,7 @@ function checkoutVariantScenario(
     $product = Product::factory()->create([
         'tenant_id' => $tenant->id,
         'status' => ProductStatus::Active,
+        'type' => ProductType::Variable,
         'price_minor' => 100000,
     ]);
     $variant = createCheckoutVariant($product, $variantPriceMinor, $variantStatus);

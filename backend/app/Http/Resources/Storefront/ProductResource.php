@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Storefront;
 
 use App\Enums\ProductStatus;
+use App\Enums\ProductType;
 use App\Models\InventoryItem;
 use App\Models\ProductOption;
 use App\Models\ProductOptionValue;
@@ -29,6 +30,7 @@ class ProductResource extends JsonResource
             'short_description' => $this->short_description,
             'description' => $this->description,
             'status' => $this->status?->value,
+            'type' => $this->type?->value,
             'price_minor' => $this->price_minor,
             'compare_at_price_minor' => $this->compare_at_price_minor,
             'currency' => $this->currency,
@@ -42,8 +44,8 @@ class ProductResource extends JsonResource
                 'available_quantity' => $this->inventoryItem->availableQuantity(),
                 'allow_backorders' => $this->inventoryItem->allow_backorders,
             ] : null),
-            'variants' => $this->whenLoaded('variants', fn (): array => $this->storefrontVariants()),
-            'options' => $this->whenLoaded('options', fn (): array => $this->storefrontOptions()),
+            'variants' => $this->whenLoaded('variants', fn (): array => $this->isVariableProduct() ? $this->storefrontVariants() : []),
+            'options' => $this->whenLoaded('options', fn (): array => $this->isVariableProduct() ? $this->storefrontOptions() : []),
         ];
     }
 
@@ -123,6 +125,10 @@ class ProductResource extends JsonResource
      */
     private function visibleVariants(): Collection
     {
+        if (! $this->isVariableProduct()) {
+            return collect();
+        }
+
         if (! $this->relationLoaded('variants')) {
             return collect();
         }
@@ -217,5 +223,10 @@ class ProductResource extends JsonResource
             ->first(fn (InventoryItem $inventoryItem): bool => $inventoryItem->tenant_id === $this->tenant_id
                 && $inventoryItem->product_id === $this->id
                 && $inventoryItem->product_variant_id === $variant->id);
+    }
+
+    private function isVariableProduct(): bool
+    {
+        return $this->type === ProductType::Variable;
     }
 }

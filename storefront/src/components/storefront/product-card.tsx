@@ -11,6 +11,7 @@ export function ProductCard({ product, locale = "ar" }: { product: Product; loca
   const imageSrc = assetUrl(image?.path);
   const category = product.category ? unwrapResource(product.category) : null;
   const copy = getStorefrontCopy(locale);
+  const isVariableProduct = product.type === "variable";
   const cartProduct = {
     id: product.id,
     name: product.name,
@@ -63,7 +64,14 @@ export function ProductCard({ product, locale = "ar" }: { product: Product; loca
             ) : null}
           </div>
           <div className="grid grid-cols-[1fr_auto] gap-2">
-            <AddToCartButton product={cartProduct} locale={locale} size="sm" className="w-full" />
+            <AddToCartButton
+              product={cartProduct}
+              locale={locale}
+              size="sm"
+              disabled={isVariableProduct}
+              disabledLabel={isVariableProduct ? copy.product.chooseVariant : undefined}
+              className="w-full"
+            />
             <Link
               href={`/products/${product.slug}`}
               aria-label={`${copy.product.openProductAria}: ${product.name}`}

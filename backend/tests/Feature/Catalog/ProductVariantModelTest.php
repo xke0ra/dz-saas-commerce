@@ -4,6 +4,7 @@ use App\Enums\DeliveryType;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\ProductStatus;
+use App\Enums\ProductType;
 use App\Enums\StockMovementType;
 use App\Models\Commune;
 use App\Models\Customer;
@@ -21,6 +22,7 @@ use App\Models\Tenant;
 use App\Models\Wilaya;
 use App\Support\Tenancy\CurrentTenant;
 use Database\Seeders\AlgeriaGeographySeeder;
+use Illuminate\Support\Facades\Schema;
 
 beforeEach(function (): void {
     $this->seed(AlgeriaGeographySeeder::class);
@@ -29,6 +31,22 @@ beforeEach(function (): void {
     $this->commune = Commune::query()
         ->where('wilaya_id', $this->wilaya->id)
         ->firstOrFail();
+});
+
+it('products default to simple type and cast type enum helpers', function (): void {
+    expect(Schema::hasColumn('products', 'type'))->toBeTrue();
+
+    $simple = Product::factory()->create()->refresh();
+    $variable = Product::factory()->create([
+        'type' => ProductType::Variable,
+    ])->refresh();
+
+    expect($simple->type)->toBe(ProductType::Simple)
+        ->and($simple->isSimple())->toBeTrue()
+        ->and($simple->isVariable())->toBeFalse()
+        ->and($variable->type)->toBe(ProductType::Variable)
+        ->and($variable->isSimple())->toBeFalse()
+        ->and($variable->isVariable())->toBeTrue();
 });
 
 it('product has many options and variants', function (): void {

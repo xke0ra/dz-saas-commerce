@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ProductStatus;
+use App\Enums\ProductType;
 use App\Models\Concerns\BelongsToTenant;
 use App\Observers\ProductObserver;
 use Database\Factories\ProductFactory;
@@ -27,6 +28,7 @@ use Laravel\Scout\Searchable;
     'short_description',
     'description',
     'status',
+    'type',
     'price_minor',
     'compare_at_price_minor',
     'cost_price_minor',
@@ -53,6 +55,7 @@ class Product extends Model
         return [
             'metadata' => 'array',
             'status' => ProductStatus::class,
+            'type' => ProductType::class,
             'requires_shipping' => 'boolean',
             'is_featured' => 'boolean',
             'published_at' => 'datetime',
@@ -148,6 +151,16 @@ class Product extends Model
             && ($this->published_at === null || $this->published_at->lessThanOrEqualTo(now()));
     }
 
+    public function isSimple(): bool
+    {
+        return $this->type === ProductType::Simple;
+    }
+
+    public function isVariable(): bool
+    {
+        return $this->type === ProductType::Variable;
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -164,6 +177,7 @@ class Product extends Model
             'short_description' => $this->short_description,
             'description' => $this->description,
             'status' => $this->status?->value,
+            'type' => $this->type?->value,
             'price_minor' => $this->price_minor,
             'currency' => $this->currency,
             'is_featured' => $this->is_featured,

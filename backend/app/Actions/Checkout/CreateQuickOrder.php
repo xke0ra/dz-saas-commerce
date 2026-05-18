@@ -9,6 +9,7 @@ use App\Enums\PaymentMethodType;
 use App\Enums\PaymentStatus;
 use App\Enums\PlanFeatureKey;
 use App\Enums\ProductStatus;
+use App\Enums\ProductType;
 use App\Enums\StockMovementType;
 use App\Models\Customer;
 use App\Models\InventoryItem;
@@ -316,13 +317,31 @@ class CreateQuickOrder
     private function validateVariants(array $items, Collection $products, Collection $variants): void
     {
         foreach ($items as $item) {
+            $product = $products->get($item['product_id']);
             $variantId = $item['product_variant_id'];
+
+            if ($product === null) {
+                throw ValidationException::withMessages([
+                    'items' => 'One or more products are unavailable.',
+                ]);
+            }
+
+            if ($product->type === ProductType::Variable && $variantId === null) {
+                throw ValidationException::withMessages([
+                    'items' => 'A product variant is required for this product.',
+                ]);
+            }
+
+            if ($product->type === ProductType::Simple && $variantId !== null) {
+                throw ValidationException::withMessages([
+                    'items' => 'This product does not accept variants.',
+                ]);
+            }
 
             if ($variantId === null) {
                 continue;
             }
 
-            $product = $products->get($item['product_id']);
             $variant = $variants->get($variantId);
 
             if ($variant === null) {
