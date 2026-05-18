@@ -109,6 +109,7 @@ export type Product = {
   short_description: string | null;
   description: string | null;
   status: string;
+  type?: "simple" | "variable" | string;
   price_minor: number;
   compare_at_price_minor: number | null;
   currency: string;

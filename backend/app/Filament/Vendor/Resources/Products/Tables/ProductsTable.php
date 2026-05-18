@@ -3,6 +3,7 @@
 namespace App\Filament\Vendor\Resources\Products\Tables;
 
 use App\Enums\ProductStatus;
+use App\Enums\ProductType;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -29,6 +30,9 @@ class ProductsTable
                     ->label('SKU')
                     ->searchable(),
                 TextColumn::make('status')
+                    ->badge()
+                    ->searchable(),
+                TextColumn::make('type')
                     ->badge()
                     ->searchable(),
                 TextColumn::make('price_minor')
@@ -65,6 +69,8 @@ class ProductsTable
             ->filters([
                 SelectFilter::make('status')
                     ->options(ProductStatus::class),
+                SelectFilter::make('type')
+                    ->options(ProductType::class),
             ])
             ->recordActions([
                 EditAction::make(),

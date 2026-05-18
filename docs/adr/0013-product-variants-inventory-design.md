@@ -2,9 +2,9 @@
 
 Date: 2026-05-17
 
-Status: Accepted - schema, model, vendor management, option-value UX refinement, checkout backend support, inventory uniqueness activation, lifecycle propagation, storefront API serialization, and storefront picker UI complete
+Status: Accepted - schema, model, vendor management, option-value UX refinement, checkout backend support, inventory uniqueness activation, lifecycle propagation, storefront API serialization, storefront picker UI, and product type enforcement complete
 
-تم تنفيذ schema foundation للجداول والقيود والأعمدة nullable الخاصة بالـ variants/options، ثم أضيفت طبقة Eloquent models/factories/relationships فوقها، ثم أضيفت Vendor Filament management foundation كموارد منفصلة، ثم refinement يمنع ربط option value بvariant من product مختلف داخل نفس tenant. يدعم checkout backend الآن `product_variant_id` اختيارياً لكل cart item مع validation وسعر وحجز مخزون وsnapshot، وتم تفعيل uniqueness على `inventory_items` على مستوى sellable unit، كما أصبحت release/settlement/restock تستخدم `order_item.product_variant_id` عند البحث عن المخزون وتسجيل الحركات. يعرض product detail في storefront API الآن variants/options/availability، وأصبح storefront product detail يملك picker محدوداً يرسل `product_variant_id` عند اختيار variant، بدون endpoint جديد.
+تم تنفيذ schema foundation للجداول والقيود والأعمدة nullable الخاصة بالـ variants/options، ثم أضيفت طبقة Eloquent models/factories/relationships فوقها، ثم أضيفت Vendor Filament management foundation كموارد منفصلة، ثم refinement يمنع ربط option value بvariant من product مختلف داخل نفس tenant. يدعم checkout backend الآن `product_variant_id` اختيارياً لكل cart item مع validation وسعر وحجز مخزون وsnapshot، وتم تفعيل uniqueness على `inventory_items` على مستوى sellable unit، كما أصبحت release/settlement/restock تستخدم `order_item.product_variant_id` عند البحث عن المخزون وتسجيل الحركات. يعرض product detail في storefront API الآن variants/options/availability، وأصبح storefront product detail يملك picker محدوداً يرسل `product_variant_id` عند اختيار variant. أضيف `products.type` كمصدر الحقيقة: `simple` يرفض variant id، و`variable` يتطلب variant id عند checkout، بدون endpoint جديد.
 
 ## Context
 
@@ -13,7 +13,7 @@ Status: Accepted - schema, model, vendor management, option-value UX refinement,
 - `InventoryItem` مرتبط دائماً بـ `product_id`، ويمكن أن يرتبط اختيارياً بـ `product_variant_id`، والـ uniqueness أصبح على sellable unit.
 - `InventoryItem` يحمل `quantity`, `reserved_quantity`, `track_quantity`, `allow_backorders`.
 - `OrderItem` يحفظ snapshot للمنتج: `product_id`, `product_name`, `product_sku`, `quantity`, `unit_price_minor`, `total_minor`, `metadata`.
-- quick checkout يستقبل `product_id` و`quantity`، أو `items[]`، ويدعم `product_variant_id` اختيارياً داخل كل item.
+- quick checkout يستقبل `product_id` و`quantity`، أو `items[]`، ويدعم `product_variant_id` اختيارياً داخل كل item، لكنه يفرض `product.type` عند تقرير هل variant مطلوب أو ممنوع.
 - quick checkout يحسب سعر variant من `ProductVariant.price_minor` عند وجوده وإلا يرث `Product.price_minor`.
 - quick checkout يحجز المخزون بالبحث عن `InventoryItem` عبر `tenant_id + product_id + product_variant_id` عند وجود variant، ولا يسقط إلى parent inventory إذا غاب variant inventory.
 - `StockMovement` مرتبط بـ `product_id` و`inventory_item_id`، وأحياناً `order_id`, `order_item_id`, `order_return_id`.
@@ -453,7 +453,20 @@ Rollback:
 
 - متوسط؛ يجب الحفاظ على simple product checkout وعدم كسر cart المخزن في localStorage.
 
-### PR 9: Import/export support لاحقاً
+### PR 9: Product type/simple-vs-variable enforcement - مكتمل 2026-05-18
+
+النطاق:
+
+- إضافة `products.type` بقيمتي `simple` و`variable` مع enum/model cast.
+- Vendor product form يعرض نوع المنتج ولا يحول النوع تلقائياً عند إنشاء variants.
+- checkout يرفض شراء parent variable product بدون `product_variant_id` ويرفض إرسال variant id مع simple product.
+- Storefront API يعرض variants/options فقط عندما يكون المنتج `variable`، والواجهة تمنع checkout المباشر للمنتجات variable بدون اختيار variant.
+
+Rollback:
+
+- منخفض إلى متوسط؛ كل المنتجات الحالية default `simple`، لكن rollback بعد تحويل منتجات إلى `variable` سيعيد checkout لسلوك parent product إن أزيل enforcement.
+
+### PR 10: Import/export support لاحقاً
 
 النطاق:
 
@@ -471,4 +484,4 @@ Rollback:
 - product-level inventory يبقى صالحاً فقط للـ simple products.
 - variant-level inventory هو القاعدة للـ variable products.
 - stock movement ledger يجب أن يبقى append-only ويعكس sellable unit بدقة.
-- هذا ADR أصبح `Accepted` بعد تثبيت schema foundation وtenant integrity tests. تم تفعيل checkout backend للـ `product_variant_id` اختيارياً، وتفكيك unique القديم لمخزون variants، وربط release/settlement/restock بالـ sellable unit، وإضافة serialization للـ variants/options في storefront product detail، ثم إضافة picker UI محدود يرسل `product_variant_id`. تبقى مرحلة product type enforcement حتى PR لاحق.
+- هذا ADR أصبح `Accepted` بعد تثبيت schema foundation وtenant integrity tests. تم تفعيل checkout backend للـ `product_variant_id` اختيارياً، وتفكيك unique القديم لمخزون variants، وربط release/settlement/restock بالـ sellable unit، وإضافة serialization للـ variants/options في storefront product detail، ثم إضافة picker UI محدود يرسل `product_variant_id`، ثم إضافة `products.type` كمصدر الحقيقة للـ simple/variable enforcement.

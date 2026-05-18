@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\ProductStatus;
+use App\Enums\ProductType;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Tenant;
@@ -32,6 +33,7 @@ class ProductFactory extends Factory
             'short_description' => fake()->sentence(),
             'description' => fake()->paragraph(),
             'status' => ProductStatus::Active,
+            'type' => ProductType::Simple,
             'price_minor' => fake()->numberBetween(50000, 2500000),
             'compare_at_price_minor' => null,
             'cost_price_minor' => null,

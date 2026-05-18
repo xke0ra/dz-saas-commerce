@@ -21,9 +21,10 @@ export function ProductVariantPurchasePanel({
   locale?: StoreLocale | string;
 }) {
   const copy = getStorefrontCopy(locale);
+  const isVariableProduct = product.type === "variable";
   const variants = product.variants ?? [];
   const options = product.options ?? [];
-  const hasVariants = variants.length > 0;
+  const hasVariants = isVariableProduct && variants.length > 0;
   const defaultVariant = useMemo(() => selectDefaultVariant(variants), [variants]);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>(
     () => defaultVariant?.selected_options ?? {},
@@ -41,8 +42,10 @@ export function ProductVariantPurchasePanel({
     ? selectedVariant.compare_at_price_minor ?? product.compare_at_price_minor
     : product.compare_at_price_minor;
   const variantTitle = selectedVariant?.title ?? selectedVariant?.option_signature ?? null;
-  const checkoutDisabledReason = hasVariants
-    ? !allOptionsSelected
+  const checkoutDisabledReason = isVariableProduct
+    ? variants.length === 0
+      ? copy.product.outOfStock
+      : !allOptionsSelected
       ? copy.product.chooseVariant
       : selectedVariant === null
         ? copy.product.unavailableCombination

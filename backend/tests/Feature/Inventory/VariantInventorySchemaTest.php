@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\PlanFeatureKey;
 use App\Enums\ProductStatus;
+use App\Enums\ProductType;
 use App\Enums\StockMovementType;
 use App\Models\Commune;
 use App\Models\InventoryItem;
@@ -232,6 +233,7 @@ function variantInventorySchemaCheckoutContext(Wilaya $wilaya, Commune $commune,
     $product = Product::factory()->create([
         'tenant_id' => $tenant->id,
         'status' => ProductStatus::Active,
+        'type' => ProductType::Variable,
         'price_minor' => 100000,
     ]);
     $smallVariant = ProductVariant::factory()->forProduct($product)->create([

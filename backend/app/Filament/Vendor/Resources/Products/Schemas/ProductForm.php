@@ -3,6 +3,7 @@
 namespace App\Filament\Vendor\Resources\Products\Schemas;
 
 use App\Enums\ProductStatus;
+use App\Enums\ProductType;
 use App\Support\Tenancy\CurrentTenant;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
@@ -44,6 +45,11 @@ class ProductForm
                     ->options(ProductStatus::class)
                     ->default(ProductStatus::Draft->value)
                     ->required(),
+                Select::make('type')
+                    ->options(ProductType::class)
+                    ->default(ProductType::Simple->value)
+                    ->required()
+                    ->helperText('Simple products are bought directly. Variable products require the customer to select a variant.'),
                 TextInput::make('price_minor')
                     ->required()
                     ->numeric()

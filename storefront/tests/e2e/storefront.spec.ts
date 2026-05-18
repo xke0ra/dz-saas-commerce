@@ -13,6 +13,7 @@ test("renders the tenant storefront home and product listing", async ({ page }) 
   await page.getByRole("link", { name: "كل المنتجات" }).first().click();
   await expect(page).toHaveURL(/\/products$/);
   await expect(page.getByRole("heading", { name: "كل المنتجات المتاحة" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "اختر خصائص المنتج أولا." }).first()).toBeDisabled();
 });
 
 test("exposes storefront SEO metadata and crawl routes", async ({ page, request }) => {
@@ -159,6 +160,38 @@ test("creates a simple product quick order without product_variant_id", async ({
   expect(checkoutPayload).not.toHaveProperty("product_variant_id");
 });
 
+test("treats a legacy product payload without type as simple", async ({ page }) => {
+  let checkoutPayload: Record<string, unknown> | null = null;
+
+  await page.route("**/api/storefront/demo-store/checkout", async (route) => {
+    checkoutPayload = route.request().postDataJSON() as Record<string, unknown>;
+
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({ data: checkoutOrder("ORD-1004") }),
+    });
+  });
+
+  await page.goto("/products/legacy-product");
+
+  await expect(page.getByRole("heading", { level: 1, name: "منتج قديم" })).toBeVisible();
+  await page.getByLabel("الاسم الكامل").fill("Ahmed Legacy");
+  await page.getByLabel("الهاتف").fill("0555123456");
+  await page.locator('select[name="wilaya_id"]').selectOption("16");
+  await expect(page.locator('select[name="commune_id"]')).toBeEnabled();
+  await page.locator('select[name="commune_id"]').selectOption("1601");
+  await page.getByLabel("العنوان").fill("Alger Centre, Legacy Demo");
+  await page.getByRole("button", { name: "تأكيد الطلب" }).click();
+
+  await expect(page.getByText("ORD-1004")).toBeVisible();
+  expect(checkoutPayload).toMatchObject({
+    product_id: "prod_legacy",
+    quantity: 1,
+  });
+  expect(checkoutPayload).not.toHaveProperty("product_variant_id");
+});
+
 test("creates a cart COD order with item payloads", async ({ page }) => {
   let checkoutPayload: Record<string, unknown> | null = null;
 
@@ -182,7 +215,7 @@ test("creates a cart COD order with item payloads", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/cart$/);
   await expect(page.getByRole("heading", { name: "منتجاتك المختارة" })).toBeVisible();
-  await expect(page.getByText("قميص تجريبي").first()).toBeVisible();
+  await expect(page.getByText("حذاء تجريبي").first()).toBeVisible();
 
   await page.getByLabel("الاسم الكامل").fill("Ahmed Cart");
   await page.getByLabel("الهاتف").fill("0555123456");
@@ -197,7 +230,7 @@ test("creates a cart COD order with item payloads", async ({ page }) => {
   expect(checkoutPayload).toMatchObject({
     items: [
       {
-        product_id: "prod_01",
+        product_id: "prod_02",
         quantity: 1,
       },
     ],
