@@ -72,6 +72,34 @@ export type ProductInventory = {
   allow_backorders: boolean;
 };
 
+export type ProductOptionValue = {
+  id: string;
+  value: string;
+  position: number;
+};
+
+export type ProductOption = {
+  id: string;
+  name: string;
+  position: number;
+  values: ProductOptionValue[];
+};
+
+export type ProductVariant = {
+  id: string;
+  sku: string | null;
+  title: string | null;
+  option_signature: string;
+  price_minor: number | null;
+  compare_at_price_minor: number | null;
+  effective_price_minor: number;
+  status: string;
+  sort_order: number;
+  available_quantity: number | null;
+  is_available: boolean;
+  selected_options: Record<string, string>;
+};
+
 export type Product = {
   id: string;
   category_id: string | null;
@@ -90,6 +118,8 @@ export type Product = {
   category?: Category | ApiResource<Category> | null;
   images?: ProductImage[] | ApiCollection<ProductImage>;
   inventory?: ProductInventory | null;
+  variants?: ProductVariant[];
+  options?: ProductOption[];
 };
 
 export type Wilaya = {
@@ -141,6 +171,7 @@ export type Order = {
 
 export type CheckoutItemPayload = {
   product_id: string;
+  product_variant_id?: string;
   quantity: number;
 };
 
@@ -170,6 +201,7 @@ export type CheckoutPayload = {
   note?: string | null;
   coupon_code?: string | null;
   product_id?: string;
+  product_variant_id?: string;
   quantity?: number;
   items?: CheckoutItemPayload[];
 };

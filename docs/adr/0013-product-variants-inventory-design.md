@@ -2,9 +2,9 @@
 
 Date: 2026-05-17
 
-Status: Accepted - schema, model, vendor management, option-value UX refinement, checkout backend support, inventory uniqueness activation, lifecycle propagation, and storefront API serialization complete
+Status: Accepted - schema, model, vendor management, option-value UX refinement, checkout backend support, inventory uniqueness activation, lifecycle propagation, storefront API serialization, and storefront picker UI complete
 
-تم تنفيذ schema foundation للجداول والقيود والأعمدة nullable الخاصة بالـ variants/options، ثم أضيفت طبقة Eloquent models/factories/relationships فوقها، ثم أضيفت Vendor Filament management foundation كموارد منفصلة، ثم refinement يمنع ربط option value بvariant من product مختلف داخل نفس tenant. يدعم checkout backend الآن `product_variant_id` اختيارياً لكل cart item مع validation وسعر وحجز مخزون وsnapshot، وتم تفعيل uniqueness على `inventory_items` على مستوى sellable unit، كما أصبحت release/settlement/restock تستخدم `order_item.product_variant_id` عند البحث عن المخزون وتسجيل الحركات. يعرض product detail في storefront API الآن variants/options/availability كتهيئة للـ picker، بينما لا يوجد بعد storefront UI picker أو endpoint جديد.
+تم تنفيذ schema foundation للجداول والقيود والأعمدة nullable الخاصة بالـ variants/options، ثم أضيفت طبقة Eloquent models/factories/relationships فوقها، ثم أضيفت Vendor Filament management foundation كموارد منفصلة، ثم refinement يمنع ربط option value بvariant من product مختلف داخل نفس tenant. يدعم checkout backend الآن `product_variant_id` اختيارياً لكل cart item مع validation وسعر وحجز مخزون وsnapshot، وتم تفعيل uniqueness على `inventory_items` على مستوى sellable unit، كما أصبحت release/settlement/restock تستخدم `order_item.product_variant_id` عند البحث عن المخزون وتسجيل الحركات. يعرض product detail في storefront API الآن variants/options/availability، وأصبح storefront product detail يملك picker محدوداً يرسل `product_variant_id` عند اختيار variant، بدون endpoint جديد.
 
 ## Context
 
@@ -440,19 +440,20 @@ Rollback:
 
 - منخفض إلى متوسط؛ إزالة fields الجديدة من product detail API قد تكسر frontend picker عندما يبنى فوقها.
 
-### PR 8: Storefront product detail variant picker UI
+### PR 8: Storefront product detail variant picker UI - مكتمل 2026-05-18
 
 النطاق:
 
 - cart key يصبح product+variant.
 - إرسال `product_variant_id` في checkout من الواجهة.
 - UX للخيارات disabled/out-of-stock.
+- السعر المعروض في صفحة المنتج يستخدم `effective_price_minor` للvariant المختار، بينما backend يبقى مصدر الحقيقة عند checkout.
 
 Rollback:
 
 - متوسط؛ يجب الحفاظ على simple product checkout وعدم كسر cart المخزن في localStorage.
 
-### PR 8: Import/export support لاحقاً
+### PR 9: Import/export support لاحقاً
 
 النطاق:
 
@@ -470,4 +471,4 @@ Rollback:
 - product-level inventory يبقى صالحاً فقط للـ simple products.
 - variant-level inventory هو القاعدة للـ variable products.
 - stock movement ledger يجب أن يبقى append-only ويعكس sellable unit بدقة.
-- هذا ADR أصبح `Accepted` بعد تثبيت schema foundation وtenant integrity tests. تم تفعيل checkout backend للـ `product_variant_id` اختيارياً، وتفكيك unique القديم لمخزون variants، وربط release/settlement/restock بالـ sellable unit، وإضافة serialization للـ variants/options في storefront product detail. تبقى مراحل storefront picker UI وproduct type enforcement حتى PRs لاحقة.
+- هذا ADR أصبح `Accepted` بعد تثبيت schema foundation وtenant integrity tests. تم تفعيل checkout backend للـ `product_variant_id` اختيارياً، وتفكيك unique القديم لمخزون variants، وربط release/settlement/restock بالـ sellable unit، وإضافة serialization للـ variants/options في storefront product detail، ثم إضافة picker UI محدود يرسل `product_variant_id`. تبقى مرحلة product type enforcement حتى PR لاحق.

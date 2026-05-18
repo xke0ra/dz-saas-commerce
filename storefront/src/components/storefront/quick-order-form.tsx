@@ -27,6 +27,7 @@ type QuickOrderValues = {
 
 type CheckoutLineItem = {
   product_id: string;
+  product_variant_id?: string;
   quantity: number;
 };
 
@@ -51,17 +52,21 @@ export function QuickOrderForm({
   productId,
   productName,
   locale = "ar",
+  productVariantId,
   checkoutItems,
   onOrderCreated,
   submitLabel,
+  checkoutDisabledReason,
 }: {
   storeIdentifier: string;
   productId?: string;
+  productVariantId?: string | null;
   productName: string;
   locale?: StoreLocale | string;
   checkoutItems?: CheckoutLineItem[];
   onOrderCreated?: (order: Order) => void;
   submitLabel?: string;
+  checkoutDisabledReason?: string | null;
 }) {
   const copy = getStorefrontCopy(locale);
   const isCartCheckout = checkoutItems !== undefined;
@@ -179,6 +184,11 @@ export function QuickOrderForm({
       return;
     }
 
+    if (!isCartCheckout && checkoutDisabledReason) {
+      setFormError(checkoutDisabledReason);
+      return;
+    }
+
     const idempotencyKey = createIdempotencyKey();
 
     const response = await fetch(`/api/storefront/${encodeURIComponent(storeIdentifier)}/checkout`, {
@@ -194,7 +204,11 @@ export function QuickOrderForm({
         coupon_code: values.coupon_code || null,
         ...(isCartCheckout
           ? { items }
-          : { product_id: productId, quantity: values.quantity ?? 1 }),
+          : {
+              product_id: productId,
+              ...(productVariantId ? { product_variant_id: productVariantId } : {}),
+              quantity: values.quantity ?? 1,
+            }),
       }),
     });
 
@@ -323,9 +337,13 @@ export function QuickOrderForm({
           <Textarea rows={2} {...register("note")} />
         </Field>
 
+        {checkoutDisabledReason ? (
+          <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">{checkoutDisabledReason}</p>
+        ) : null}
+
         {formError ? <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">{formError}</p> : null}
 
-        <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
+        <Button type="submit" size="lg" disabled={isSubmitting || Boolean(checkoutDisabledReason)} className="w-full">
           {isSubmitting ? <Loader2 className="animate-spin" size={18} aria-hidden="true" /> : <Send size={18} aria-hidden="true" />}
           {submitLabel ?? copy.quickOrder.submit}
         </Button>
