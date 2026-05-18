@@ -8,6 +8,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentMethodType;
 use App\Enums\PaymentStatus;
 use App\Enums\PlanFeatureKey;
+use App\Enums\ProductStatus;
 use App\Enums\StockMovementType;
 use App\Models\Customer;
 use App\Models\InventoryItem;
@@ -15,6 +16,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentMethod;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\ShippingRate;
 use App\Models\StockMovement;
 use App\Models\Store;
@@ -38,27 +40,36 @@ class CreateQuickOrder
             $this->featureGate->ensureWithinLimit($tenantId, PlanFeatureKey::MaxOrdersPerMonth);
 
             $items = $this->normalizeItems($data->items);
-            $products = $this->loadProducts($tenantId, array_keys($items));
+            $productIds = $this->productIds($items);
+            $products = $this->loadProducts($tenantId, $productIds);
 
-            if ($products->count() !== count($items)) {
+            if ($products->count() !== count($productIds)) {
                 throw ValidationException::withMessages([
                     'items' => 'One or more products are unavailable.',
                 ]);
             }
+
+            $variants = $this->loadVariants($tenantId, $this->variantIds($items));
+
+            $this->validateVariants($items, $products, $variants);
 
             $shippingRate = $this->findShippingRate($tenantId, $data);
             $paymentMethod = $this->findPaymentMethod($tenantId);
             $subtotal = 0;
             $reservedInventoryItems = [];
 
-            foreach ($products as $product) {
-                $quantity = $items[$product->id];
-                $subtotal += $product->price_minor * $quantity;
+            foreach ($items as $itemKey => $item) {
+                $product = $products->get($item['product_id']);
+                $variant = $this->variantForItem($item, $variants);
+                $quantity = $item['quantity'];
+                $unitPriceMinor = $this->unitPriceMinor($product, $variant);
 
-                $inventoryItem = $this->reserveInventory($tenantId, $product, $quantity);
+                $subtotal += $unitPriceMinor * $quantity;
+
+                $inventoryItem = $this->reserveInventory($tenantId, $product, $variant, $quantity);
 
                 if ($inventoryItem !== null) {
-                    $reservedInventoryItems[$product->id] = $inventoryItem;
+                    $reservedInventoryItems[$itemKey] = $inventoryItem;
                 }
             }
 
@@ -107,24 +118,32 @@ class CreateQuickOrder
                     'metadata' => [],
                 ]);
 
-            foreach ($products as $product) {
-                $quantity = $items[$product->id];
+            foreach ($items as $itemKey => $item) {
+                $product = $products->get($item['product_id']);
+                $variant = $this->variantForItem($item, $variants);
+                $quantity = $item['quantity'];
+                $unitPriceMinor = $this->unitPriceMinor($product, $variant);
 
                 $orderItem = $order->items()->create([
                     'tenant_id' => $tenantId,
                     'product_id' => $product->id,
+                    'product_variant_id' => $variant?->id,
                     'product_name' => $product->name,
                     'product_sku' => $product->sku,
+                    'variant_title' => $variant === null ? null : ($variant->title ?? $variant->option_signature),
+                    'variant_sku' => $variant?->sku,
+                    'selected_options' => $this->selectedOptions($variant),
                     'quantity' => $quantity,
-                    'unit_price_minor' => $product->price_minor,
-                    'total_minor' => $product->price_minor * $quantity,
+                    'unit_price_minor' => $unitPriceMinor,
+                    'total_minor' => $unitPriceMinor * $quantity,
                     'metadata' => [],
                 ]);
 
-                if (isset($reservedInventoryItems[$product->id])) {
+                if (isset($reservedInventoryItems[$itemKey])) {
                     $this->recordStockReservation(
-                        inventoryItem: $reservedInventoryItems[$product->id],
+                        inventoryItem: $reservedInventoryItems[$itemKey],
                         product: $product,
+                        variant: $variant,
                         order: $order,
                         orderItem: $orderItem,
                         quantity: $quantity,
@@ -167,26 +186,90 @@ class CreateQuickOrder
     }
 
     /**
-     * @param  array<int, array{product_id: string, quantity: int}>  $items
-     * @return array<string, int>
+     * @param  array<int, array{product_id: string, product_variant_id?: ?string, quantity: int}>  $items
+     * @return array<string, array{product_id: string, product_variant_id: ?string, quantity: int}>
      */
     private function normalizeItems(array $items): array
     {
         $normalized = [];
+        $parentProducts = [];
+        $variantProducts = [];
+        $variants = [];
 
         foreach ($items as $item) {
             $productId = $item['product_id'];
+            $variantId = $item['product_variant_id'] ?? null;
+            $variantId = is_string($variantId) && $variantId !== '' ? $variantId : null;
 
-            if (array_key_exists($productId, $normalized)) {
+            if ($variantId === null) {
+                if (isset($variantProducts[$productId])) {
+                    throw ValidationException::withMessages([
+                        'items' => 'Cart cannot mix parent product and variants for the same product.',
+                    ]);
+                }
+
+                if (isset($parentProducts[$productId])) {
+                    throw ValidationException::withMessages([
+                        'items' => 'Duplicate products are not allowed in the same checkout.',
+                    ]);
+                }
+
+                $parentProducts[$productId] = true;
+                $normalized["product:{$productId}"] = [
+                    'product_id' => $productId,
+                    'product_variant_id' => null,
+                    'quantity' => $item['quantity'],
+                ];
+
+                continue;
+            }
+
+            if (isset($parentProducts[$productId])) {
                 throw ValidationException::withMessages([
-                    'items' => 'Duplicate products are not allowed in the same checkout.',
+                    'items' => 'Cart cannot mix parent product and variants for the same product.',
                 ]);
             }
 
-            $normalized[$productId] = $item['quantity'];
+            if (isset($variants[$variantId])) {
+                throw ValidationException::withMessages([
+                    'items' => 'Duplicate product variants are not allowed in the same checkout.',
+                ]);
+            }
+
+            $variantProducts[$productId] = true;
+            $variants[$variantId] = true;
+            $normalized["variant:{$variantId}"] = [
+                'product_id' => $productId,
+                'product_variant_id' => $variantId,
+                'quantity' => $item['quantity'],
+            ];
         }
 
         return $normalized;
+    }
+
+    /**
+     * @param  array<string, array{product_id: string, product_variant_id: ?string, quantity: int}>  $items
+     * @return array<int, string>
+     */
+    private function productIds(array $items): array
+    {
+        return array_values(array_unique(array_map(
+            fn (array $item): string => $item['product_id'],
+            $items,
+        )));
+    }
+
+    /**
+     * @param  array<string, array{product_id: string, product_variant_id: ?string, quantity: int}>  $items
+     * @return array<int, string>
+     */
+    private function variantIds(array $items): array
+    {
+        return array_values(array_unique(array_filter(array_map(
+            fn (array $item): ?string => $item['product_variant_id'],
+            $items,
+        ))));
     }
 
     /**
@@ -203,6 +286,111 @@ class CreateQuickOrder
             ->lockForUpdate()
             ->get()
             ->keyBy('id');
+    }
+
+    /**
+     * @param  array<int, string>  $variantIds
+     * @return Collection<int, ProductVariant>
+     */
+    private function loadVariants(string $tenantId, array $variantIds): Collection
+    {
+        if ($variantIds === []) {
+            return new Collection;
+        }
+
+        return ProductVariant::query()
+            ->withoutGlobalScope('current_tenant')
+            ->where('tenant_id', $tenantId)
+            ->whereKey($variantIds)
+            ->with(['optionValues.option'])
+            ->lockForUpdate()
+            ->get()
+            ->keyBy('id');
+    }
+
+    /**
+     * @param  array<string, array{product_id: string, product_variant_id: ?string, quantity: int}>  $items
+     * @param  Collection<int, Product>  $products
+     * @param  Collection<int, ProductVariant>  $variants
+     */
+    private function validateVariants(array $items, Collection $products, Collection $variants): void
+    {
+        foreach ($items as $item) {
+            $variantId = $item['product_variant_id'];
+
+            if ($variantId === null) {
+                continue;
+            }
+
+            $product = $products->get($item['product_id']);
+            $variant = $variants->get($variantId);
+
+            if ($variant === null) {
+                throw ValidationException::withMessages([
+                    'items' => 'One or more product variants are unavailable.',
+                ]);
+            }
+
+            if ($product === null || $variant->product_id !== $item['product_id']) {
+                throw ValidationException::withMessages([
+                    'items' => 'The selected product variant does not belong to the selected product.',
+                ]);
+            }
+
+            if ($variant->status !== ProductStatus::Active) {
+                throw ValidationException::withMessages([
+                    'items' => 'The selected product variant is unavailable.',
+                ]);
+            }
+
+            $variant->setRelation('product', $product);
+        }
+    }
+
+    /**
+     * @param  array{product_id: string, product_variant_id: ?string, quantity: int}  $item
+     * @param  Collection<int, ProductVariant>  $variants
+     */
+    private function variantForItem(array $item, Collection $variants): ?ProductVariant
+    {
+        if ($item['product_variant_id'] === null) {
+            return null;
+        }
+
+        return $variants->get($item['product_variant_id']);
+    }
+
+    private function unitPriceMinor(Product $product, ?ProductVariant $variant): int
+    {
+        if ($variant !== null) {
+            return $variant->effectivePriceMinor();
+        }
+
+        return (int) $product->price_minor;
+    }
+
+    /**
+     * @return array<string, string>|null
+     */
+    private function selectedOptions(?ProductVariant $variant): ?array
+    {
+        if ($variant === null) {
+            return null;
+        }
+
+        $selectedOptions = [];
+
+        foreach ($variant->optionValues as $optionValue) {
+            $option = $optionValue->option;
+
+            if ($option === null || $option->product_id !== $variant->product_id) {
+                continue;
+            }
+
+            $selectedOptions[$option->name] = $optionValue->value;
+        }
+
+        return $selectedOptions === [] ? null : $selectedOptions;
     }
 
     private function findShippingRate(string $tenantId, QuickOrderData $data): ShippingRate
@@ -247,12 +435,17 @@ class CreateQuickOrder
         return $paymentMethod;
     }
 
-    private function reserveInventory(string $tenantId, Product $product, int $quantity): ?InventoryItem
+    private function reserveInventory(string $tenantId, Product $product, ?ProductVariant $variant, int $quantity): ?InventoryItem
     {
         $inventoryItem = InventoryItem::query()
             ->withoutGlobalScope('current_tenant')
             ->where('tenant_id', $tenantId)
             ->where('product_id', $product->id)
+            ->when(
+                $variant === null,
+                fn ($query) => $query->whereNull('product_variant_id'),
+                fn ($query) => $query->where('product_variant_id', $variant->id),
+            )
             ->lockForUpdate()
             ->first();
 
@@ -274,6 +467,7 @@ class CreateQuickOrder
     private function recordStockReservation(
         InventoryItem $inventoryItem,
         Product $product,
+        ?ProductVariant $variant,
         Order $order,
         OrderItem $orderItem,
         int $quantity,
@@ -283,6 +477,7 @@ class CreateQuickOrder
             ->create([
                 'tenant_id' => $order->tenant_id,
                 'product_id' => $product->id,
+                'product_variant_id' => $variant?->id,
                 'inventory_item_id' => $inventoryItem->id,
                 'order_id' => $order->id,
                 'order_item_id' => $orderItem->id,

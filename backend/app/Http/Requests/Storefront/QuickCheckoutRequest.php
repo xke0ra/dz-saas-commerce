@@ -41,9 +41,11 @@ class QuickCheckoutRequest extends FormRequest
             'coupon_code' => ['nullable', 'string', 'max:64'],
             'note' => ['nullable', 'string', 'max:1000'],
             'product_id' => ['required_without:items', 'string', 'exists:products,id'],
+            'product_variant_id' => ['nullable', 'string', 'ulid', 'exists:product_variants,id'],
             'quantity' => ['required_with:product_id', 'integer', 'min:1', 'max:99'],
             'items' => ['required_without:product_id', 'array', 'min:1', 'max:50'],
-            'items.*.product_id' => ['required_with:items', 'string', 'distinct', 'exists:products,id'],
+            'items.*.product_id' => ['required_with:items', 'string', 'exists:products,id'],
+            'items.*.product_variant_id' => ['nullable', 'string', 'ulid', 'exists:product_variants,id'],
             'items.*.quantity' => ['required_with:items', 'integer', 'min:1', 'max:99'],
         ];
     }
@@ -57,7 +59,70 @@ class QuickCheckoutRequest extends FormRequest
                 if ($commune !== null && $commune->wilaya_id !== $this->integer('wilaya_id')) {
                     $validator->errors()->add('commune_id', 'The selected commune does not belong to the selected wilaya.');
                 }
+
+                $this->validateSellableUnitDuplicates($validator);
             },
         ];
+    }
+
+    private function validateSellableUnitDuplicates(Validator $validator): void
+    {
+        $items = $this->input('items');
+
+        if (! is_array($items)) {
+            return;
+        }
+
+        $parentProducts = [];
+        $variantProducts = [];
+        $variants = [];
+
+        foreach ($items as $index => $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $productId = $item['product_id'] ?? null;
+
+            if (! is_string($productId) || $productId === '') {
+                continue;
+            }
+
+            $variantId = $item['product_variant_id'] ?? null;
+            $variantId = is_string($variantId) && $variantId !== '' ? $variantId : null;
+
+            if ($variantId === null) {
+                if (isset($variantProducts[$productId])) {
+                    $validator->errors()->add('items', 'Cart cannot mix parent product and variants for the same product.');
+
+                    continue;
+                }
+
+                if (isset($parentProducts[$productId])) {
+                    $validator->errors()->add("items.{$index}.product_id", 'Duplicate products are not allowed in the same checkout.');
+
+                    continue;
+                }
+
+                $parentProducts[$productId] = true;
+
+                continue;
+            }
+
+            if (isset($parentProducts[$productId])) {
+                $validator->errors()->add('items', 'Cart cannot mix parent product and variants for the same product.');
+
+                continue;
+            }
+
+            if (isset($variants[$variantId])) {
+                $validator->errors()->add("items.{$index}.product_variant_id", 'Duplicate product variants are not allowed in the same checkout.');
+
+                continue;
+            }
+
+            $variantProducts[$productId] = true;
+            $variants[$variantId] = true;
+        }
     }
 }

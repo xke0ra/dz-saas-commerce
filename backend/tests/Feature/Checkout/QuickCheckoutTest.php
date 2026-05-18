@@ -17,10 +17,15 @@ use App\Models\Coupon;
 use App\Models\Customer;
 use App\Models\InventoryItem;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\PaymentMethod;
 use App\Models\Plan;
 use App\Models\PlanFeature;
 use App\Models\Product;
+use App\Models\ProductOption;
+use App\Models\ProductOptionValue;
+use App\Models\ProductVariant;
+use App\Models\ProductVariantOptionValue;
 use App\Models\ShippingRate;
 use App\Models\StockMovement;
 use App\Models\Store;
@@ -207,6 +212,329 @@ it('records reserved stock movements for quick checkout order items', function (
             ->and(json_encode($metadata))->not->toContain($payload['phone'])
             ->and(json_encode($metadata))->not->toContain($rawKey);
     }
+});
+
+it('accepts a product variant and creates an order item snapshot', function (): void {
+    [, $store, $product, $variant, $inventoryItem] = checkoutVariantScenario($this->wilaya, $this->commune, 'variant-snapshot');
+    $payload = checkoutPayload($product, $this->wilaya, $this->commune, quantity: 2);
+    unset($payload['product_id'], $payload['quantity']);
+    $payload['items'] = [[
+        'product_id' => $product->id,
+        'product_variant_id' => $variant->id,
+        'quantity' => 2,
+    ]];
+
+    $response = $this->postJson("/api/storefront/{$store->subdomain}/checkout", $payload);
+
+    $response
+        ->assertCreated()
+        ->assertJsonPath('data.subtotal_minor', 250000)
+        ->assertJsonPath('data.shipping_fee_minor', 50000)
+        ->assertJsonPath('data.total_minor', 300000);
+
+    $order = Order::query()
+        ->withoutGlobalScope('current_tenant')
+        ->with('items')
+        ->findOrFail($response->json('data.id'));
+    $orderItem = $order->items->first();
+
+    expect($orderItem->product_id)->toBe($product->id)
+        ->and($orderItem->product_variant_id)->toBe($variant->id)
+        ->and($orderItem->product_name)->toBe($product->name)
+        ->and($orderItem->product_sku)->toBe($product->sku)
+        ->and($orderItem->variant_title)->toBe('Large / Black')
+        ->and($orderItem->variant_sku)->toBe('VARIANT-L-BLK')
+        ->and($orderItem->selected_options)->toMatchArray([
+            'Size' => 'Large',
+            'Color' => 'Black',
+        ])
+        ->and($orderItem->quantity)->toBe(2)
+        ->and($orderItem->unit_price_minor)->toBe(125000)
+        ->and($orderItem->total_minor)->toBe(250000)
+        ->and($inventoryItem->refresh()->reserved_quantity)->toBe(2);
+});
+
+it('uses the product price when a variant has no price override', function (): void {
+    [, $store, $product, $variant] = checkoutVariantScenario(
+        $this->wilaya,
+        $this->commune,
+        'variant-product-price',
+        variantPriceMinor: null,
+    );
+    $payload = checkoutPayload($product, $this->wilaya, $this->commune, quantity: 2);
+    unset($payload['product_id'], $payload['quantity']);
+    $payload['items'] = [[
+        'product_id' => $product->id,
+        'product_variant_id' => $variant->id,
+        'quantity' => 2,
+    ]];
+
+    $response = $this->postJson("/api/storefront/{$store->subdomain}/checkout", $payload);
+
+    $response
+        ->assertCreated()
+        ->assertJsonPath('data.subtotal_minor', 200000)
+        ->assertJsonPath('data.total_minor', 250000);
+
+    $orderItem = OrderItem::query()
+        ->withoutGlobalScope('current_tenant')
+        ->where('product_variant_id', $variant->id)
+        ->firstOrFail();
+
+    expect($orderItem->unit_price_minor)->toBe(100000)
+        ->and($orderItem->total_minor)->toBe(200000);
+});
+
+it('reserves variant inventory and records a reserved stock movement with product variant id', function (): void {
+    [, $store, $product, $variant, $inventoryItem] = checkoutVariantScenario($this->wilaya, $this->commune, 'variant-inventory-ledger');
+    $inventoryItem->update([
+        'quantity' => 8,
+        'reserved_quantity' => 1,
+    ]);
+    $payload = checkoutPayload($product, $this->wilaya, $this->commune, quantity: 3);
+    unset($payload['product_id'], $payload['quantity']);
+    $payload['items'] = [[
+        'product_id' => $product->id,
+        'product_variant_id' => $variant->id,
+        'quantity' => 3,
+    ]];
+
+    $response = $this->postJson("/api/storefront/{$store->subdomain}/checkout", $payload);
+
+    $response->assertCreated();
+
+    $order = Order::query()
+        ->withoutGlobalScope('current_tenant')
+        ->with('items')
+        ->findOrFail($response->json('data.id'));
+    $orderItem = $order->items->first();
+    $movement = StockMovement::query()
+        ->withoutGlobalScope('current_tenant')
+        ->where('order_item_id', $orderItem->id)
+        ->firstOrFail();
+
+    expect($inventoryItem->refresh()->reserved_quantity)->toBe(4)
+        ->and($movement->product_id)->toBe($product->id)
+        ->and($movement->product_variant_id)->toBe($variant->id)
+        ->and($movement->inventory_item_id)->toBe($inventoryItem->id)
+        ->and($movement->type)->toBe(StockMovementType::Reserved)
+        ->and($movement->reserved_delta)->toBe(3)
+        ->and($movement->balance_quantity_after)->toBe(8)
+        ->and($movement->balance_reserved_after)->toBe(4);
+});
+
+it('does not reserve parent inventory when variant inventory is missing', function (): void {
+    [, $store, $product, $variant] = checkoutVariantScenario(
+        $this->wilaya,
+        $this->commune,
+        'variant-no-inventory-fallback',
+        createInventory: false,
+    );
+    $parentInventory = InventoryItem::factory()->forProduct($product)->create([
+        'quantity' => 10,
+        'reserved_quantity' => 0,
+    ]);
+    $payload = checkoutPayload($product, $this->wilaya, $this->commune);
+    unset($payload['product_id'], $payload['quantity']);
+    $payload['items'] = [[
+        'product_id' => $product->id,
+        'product_variant_id' => $variant->id,
+        'quantity' => 1,
+    ]];
+
+    $response = $this->postJson("/api/storefront/{$store->subdomain}/checkout", $payload);
+
+    $response->assertCreated();
+
+    expect($parentInventory->refresh()->reserved_quantity)->toBe(0)
+        ->and(StockMovement::query()
+            ->withoutGlobalScope('current_tenant')
+            ->where('product_id', $product->id)
+            ->count())->toBe(0);
+});
+
+it('rejects a variant from another product', function (): void {
+    [, $store, $product] = checkoutScenario($this->wilaya, $this->commune, 'variant-other-product');
+    $otherProduct = Product::factory()->create([
+        'tenant_id' => $product->tenant_id,
+        'status' => ProductStatus::Active,
+    ]);
+    $otherVariant = createCheckoutVariant($otherProduct);
+    $payload = checkoutPayload($product, $this->wilaya, $this->commune);
+    unset($payload['product_id'], $payload['quantity']);
+    $payload['items'] = [[
+        'product_id' => $product->id,
+        'product_variant_id' => $otherVariant->id,
+        'quantity' => 1,
+    ]];
+
+    $response = $this->postJson("/api/storefront/{$store->subdomain}/checkout", $payload);
+
+    $response
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('items');
+
+    $this->assertDatabaseCount('orders', 0);
+});
+
+it('rejects a variant from another tenant', function (): void {
+    [, $store, $product] = checkoutScenario($this->wilaya, $this->commune, 'variant-other-tenant');
+    $otherTenant = Tenant::factory()->create();
+    $otherProduct = Product::factory()->create([
+        'tenant_id' => $otherTenant->id,
+        'status' => ProductStatus::Active,
+    ]);
+    $otherVariant = createCheckoutVariant($otherProduct);
+    $payload = checkoutPayload($product, $this->wilaya, $this->commune);
+    unset($payload['product_id'], $payload['quantity']);
+    $payload['items'] = [[
+        'product_id' => $product->id,
+        'product_variant_id' => $otherVariant->id,
+        'quantity' => 1,
+    ]];
+
+    $response = $this->postJson("/api/storefront/{$store->subdomain}/checkout", $payload);
+
+    $response
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('items');
+
+    $this->assertDatabaseCount('orders', 0);
+});
+
+it('rejects an inactive variant', function (): void {
+    [, $store, $product, $variant] = checkoutVariantScenario(
+        $this->wilaya,
+        $this->commune,
+        'variant-inactive',
+        variantStatus: ProductStatus::Draft,
+        createInventory: false,
+    );
+    $payload = checkoutPayload($product, $this->wilaya, $this->commune);
+    unset($payload['product_id'], $payload['quantity']);
+    $payload['items'] = [[
+        'product_id' => $product->id,
+        'product_variant_id' => $variant->id,
+        'quantity' => 1,
+    ]];
+
+    $response = $this->postJson("/api/storefront/{$store->subdomain}/checkout", $payload);
+
+    $response
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('items');
+
+    $this->assertDatabaseCount('orders', 0);
+});
+
+it('rejects duplicate same variant in the cart', function (): void {
+    [, $store, $product, $variant] = checkoutVariantScenario(
+        $this->wilaya,
+        $this->commune,
+        'variant-duplicate',
+        createInventory: false,
+    );
+    $payload = checkoutPayload($product, $this->wilaya, $this->commune);
+    unset($payload['product_id'], $payload['quantity']);
+    $payload['items'] = [
+        [
+            'product_id' => $product->id,
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+        ],
+        [
+            'product_id' => $product->id,
+            'product_variant_id' => $variant->id,
+            'quantity' => 2,
+        ],
+    ];
+
+    $response = $this->postJson("/api/storefront/{$store->subdomain}/checkout", $payload);
+
+    $response
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('items.1.product_variant_id');
+
+    $this->assertDatabaseCount('orders', 0);
+});
+
+it('rejects mixing parent product and variants for the same product in one cart', function (): void {
+    [, $store, $product, $variant] = checkoutVariantScenario(
+        $this->wilaya,
+        $this->commune,
+        'variant-parent-mix',
+        createInventory: false,
+    );
+    $payload = checkoutPayload($product, $this->wilaya, $this->commune);
+    unset($payload['product_id'], $payload['quantity']);
+    $payload['items'] = [
+        [
+            'product_id' => $product->id,
+            'quantity' => 1,
+        ],
+        [
+            'product_id' => $product->id,
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+        ],
+    ];
+
+    $response = $this->postJson("/api/storefront/{$store->subdomain}/checkout", $payload);
+
+    $response
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('items');
+
+    $this->assertDatabaseCount('orders', 0);
+});
+
+it('replays an idempotent variant checkout without duplicating order or stock movement', function (): void {
+    [, $store, $product, $variant, $inventoryItem] = checkoutVariantScenario($this->wilaya, $this->commune, 'variant-idempotent');
+    $payload = checkoutPayload($product, $this->wilaya, $this->commune);
+    unset($payload['product_id'], $payload['quantity']);
+    $payload['items'] = [[
+        'product_id' => $product->id,
+        'product_variant_id' => $variant->id,
+        'quantity' => 1,
+    ]];
+    $key = 'variant-checkout-repeat-1';
+
+    $firstResponse = $this->withHeader('Idempotency-Key', $key)
+        ->postJson("/api/storefront/{$store->subdomain}/checkout", $payload);
+    $secondResponse = $this->withHeader('Idempotency-Key', $key)
+        ->postJson("/api/storefront/{$store->subdomain}/checkout", $payload);
+
+    $firstResponse->assertCreated();
+    $secondResponse
+        ->assertCreated()
+        ->assertJsonPath('data.id', $firstResponse->json('data.id'));
+
+    $this->assertDatabaseCount('orders', 1);
+    expect($inventoryItem->refresh()->reserved_quantity)->toBe(1)
+        ->and(StockMovement::query()->withoutGlobalScope('current_tenant')->count())->toBe(1);
+});
+
+it('returns duplicate-window variant checkout without duplicating stock movement', function (): void {
+    [, $store, $product, $variant, $inventoryItem] = checkoutVariantScenario($this->wilaya, $this->commune, 'variant-duplicate-window');
+    $payload = checkoutPayload($product, $this->wilaya, $this->commune);
+    unset($payload['product_id'], $payload['quantity']);
+    $payload['items'] = [[
+        'product_id' => $product->id,
+        'product_variant_id' => $variant->id,
+        'quantity' => 1,
+    ]];
+
+    $firstResponse = $this->postJson("/api/storefront/{$store->subdomain}/checkout", $payload);
+    $secondResponse = $this->postJson("/api/storefront/{$store->subdomain}/checkout", $payload);
+
+    $firstResponse->assertCreated();
+    $secondResponse
+        ->assertOk()
+        ->assertJsonPath('data.id', $firstResponse->json('data.id'));
+
+    $this->assertDatabaseCount('orders', 1);
+    expect($inventoryItem->refresh()->reserved_quantity)->toBe(1)
+        ->and(StockMovement::query()->withoutGlobalScope('current_tenant')->count())->toBe(1);
 });
 
 it('replays a checkout response for the same idempotency key without creating a second order', function (): void {
@@ -794,6 +1122,86 @@ function checkoutScenario(Wilaya $wilaya, Commune $commune, string $subdomain): 
     PaymentMethod::factory()->create(['tenant_id' => $tenant->id]);
 
     return [$tenant, $store, $product];
+}
+
+/**
+ * @return array{0: Tenant, 1: Store, 2: Product, 3: ProductVariant, 4: ?InventoryItem}
+ */
+function checkoutVariantScenario(
+    Wilaya $wilaya,
+    Commune $commune,
+    string $subdomain,
+    ?int $variantPriceMinor = 125000,
+    ProductStatus $variantStatus = ProductStatus::Active,
+    bool $createInventory = true,
+): array {
+    $tenant = Tenant::factory()->create();
+    startCheckoutSubscription($tenant);
+    $store = Store::factory()->for($tenant)->create(['subdomain' => $subdomain]);
+    $product = Product::factory()->create([
+        'tenant_id' => $tenant->id,
+        'status' => ProductStatus::Active,
+        'price_minor' => 100000,
+    ]);
+    $variant = createCheckoutVariant($product, $variantPriceMinor, $variantStatus);
+    $inventoryItem = $createInventory
+        ? InventoryItem::factory()->forProduct($product)->create([
+            'product_variant_id' => $variant->id,
+            'sku' => $variant->sku,
+            'quantity' => 10,
+            'reserved_quantity' => 0,
+        ])
+        : null;
+
+    ShippingRate::factory()->create([
+        'tenant_id' => $tenant->id,
+        'wilaya_id' => $wilaya->id,
+        'commune_id' => $commune->id,
+        'delivery_type' => DeliveryType::Home,
+        'price_minor' => 50000,
+    ]);
+    PaymentMethod::factory()->create(['tenant_id' => $tenant->id]);
+
+    return [$tenant, $store, $product, $variant, $inventoryItem];
+}
+
+function createCheckoutVariant(
+    Product $product,
+    ?int $priceMinor = 125000,
+    ProductStatus $status = ProductStatus::Active,
+): ProductVariant {
+    $size = ProductOption::factory()->forProduct($product)->create([
+        'name' => 'Size',
+        'position' => 1,
+    ]);
+    $large = ProductOptionValue::factory()->forOption($size)->create([
+        'value' => 'Large',
+        'position' => 1,
+    ]);
+    $color = ProductOption::factory()->forProduct($product)->create([
+        'name' => 'Color',
+        'position' => 2,
+    ]);
+    $black = ProductOptionValue::factory()->forOption($color)->create([
+        'value' => 'Black',
+        'position' => 1,
+    ]);
+    $variant = ProductVariant::factory()->forProduct($product)->create([
+        'sku' => 'VARIANT-L-BLK',
+        'option_signature' => 'size=large;color=black',
+        'title' => 'Large / Black',
+        'price_minor' => $priceMinor,
+        'status' => $status,
+    ]);
+
+    ProductVariantOptionValue::factory()
+        ->forVariantAndOptionValue($variant, $large)
+        ->create();
+    ProductVariantOptionValue::factory()
+        ->forVariantAndOptionValue($variant, $black)
+        ->create();
+
+    return $variant;
 }
 
 /**

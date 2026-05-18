@@ -7,7 +7,7 @@ use App\Enums\DeliveryType;
 class QuickOrderData
 {
     /**
-     * @param  array<int, array{product_id: string, quantity: int}>  $items
+     * @param  array<int, array{product_id: string, product_variant_id?: ?string, quantity: int}>  $items
      */
     public function __construct(
         public readonly string $fullName,
@@ -28,6 +28,7 @@ class QuickOrderData
     {
         $items = $data['items'] ?? [[
             'product_id' => $data['product_id'],
+            'product_variant_id' => $data['product_variant_id'] ?? null,
             'quantity' => $data['quantity'],
         ]];
 
@@ -38,10 +39,15 @@ class QuickOrderData
             communeId: (int) $data['commune_id'],
             address: $data['address'],
             deliveryType: DeliveryType::from($data['delivery_type']),
-            items: array_map(fn (array $item): array => [
-                'product_id' => $item['product_id'],
-                'quantity' => (int) $item['quantity'],
-            ], $items),
+            items: array_map(function (array $item): array {
+                $productVariantId = $item['product_variant_id'] ?? null;
+
+                return [
+                    'product_id' => $item['product_id'],
+                    'product_variant_id' => is_string($productVariantId) && $productVariantId !== '' ? $productVariantId : null,
+                    'quantity' => (int) $item['quantity'],
+                ];
+            }, $items),
             couponCode: $data['coupon_code'] ?? null,
             note: $data['note'] ?? null,
         );
