@@ -43,7 +43,7 @@
 - checkout لا يخصم `quantity` مباشرة؛ يحجز أولاً ثم settle/release حسب حالة الطلب.
 - schema foundation للـ variants يضيف `product_variant_id` nullable إلى inventory/order/stock movement tables مع tenant-scoped constraints.
 - checkout backend يستطيع حجز `InventoryItem` المرتبط بـ `product_variant_id` عند إرساله، ولا يسقط إلى parent inventory إذا لم يوجد variant inventory.
-- في هذه المرحلة يبقى unique الحالي على `inventory_items [tenant_id, product_id]` قائماً، لذلك تفعيل مخزون عدة variants لنفس المنتج يحتاج schema activation follow-up لاحقاً.
+- uniqueness في `inventory_items` أصبح على sellable unit: صف simple واحد لكل `tenant_id + product_id` عندما `product_variant_id IS NULL`، وصف واحد لكل `tenant_id + product_variant_id` عندما `product_variant_id IS NOT NULL`.
 - variants يجب أن تعامل كـ sellable unit عند تنفيذها سلوكياً: المخزون يكون على `product` للمنتج simple وعلى `product_variant` للمنتج variable.
 - لا يجوز checkout على parent variable product بدون `product_variant_id` بعد تفعيل سلوك variable products.
 

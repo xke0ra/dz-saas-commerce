@@ -2,15 +2,15 @@
 
 Date: 2026-05-17
 
-Status: Accepted - schema, model, vendor management, option-value UX refinement, and checkout backend support complete
+Status: Accepted - schema, model, vendor management, option-value UX refinement, checkout backend support, and inventory uniqueness activation complete
 
-تم تنفيذ schema foundation للجداول والقيود والأعمدة nullable الخاصة بالـ variants/options، ثم أضيفت طبقة Eloquent models/factories/relationships فوقها، ثم أضيفت Vendor Filament management foundation كموارد منفصلة، ثم refinement يمنع ربط option value بvariant من product مختلف داخل نفس tenant. يدعم checkout backend الآن `product_variant_id` اختيارياً لكل cart item مع validation وسعر وحجز مخزون وsnapshot، بينما لا يوجد بعد storefront variant picker أو endpoint جديد.
+تم تنفيذ schema foundation للجداول والقيود والأعمدة nullable الخاصة بالـ variants/options، ثم أضيفت طبقة Eloquent models/factories/relationships فوقها، ثم أضيفت Vendor Filament management foundation كموارد منفصلة، ثم refinement يمنع ربط option value بvariant من product مختلف داخل نفس tenant. يدعم checkout backend الآن `product_variant_id` اختيارياً لكل cart item مع validation وسعر وحجز مخزون وsnapshot، وتم تفعيل uniqueness على `inventory_items` على مستوى sellable unit، بينما لا يوجد بعد storefront variant picker أو endpoint جديد.
 
 ## Context
 
 - `Product` هو الكيان التجاري الحالي للكتالوج، ويحتوي على `sku`, `price_minor`, `compare_at_price_minor`, `cost_price_minor`, `status`, `metadata`، ويدخل في search index.
 - توجد الآن طبقة model/factory لـ `ProductVariant` و`ProductOption` فوق schema foundation، مع دعم checkout backend للـ variant عند إرساله.
-- `InventoryItem` مرتبط حالياً بـ `product_id` فقط، ويوجد unique على `tenant_id + product_id`.
+- `InventoryItem` مرتبط دائماً بـ `product_id`، ويمكن أن يرتبط اختيارياً بـ `product_variant_id`، والـ uniqueness أصبح على sellable unit.
 - `InventoryItem` يحمل `quantity`, `reserved_quantity`, `track_quantity`, `allow_backorders`.
 - `OrderItem` يحفظ snapshot للمنتج: `product_id`, `product_name`, `product_sku`, `quantity`, `unit_price_minor`, `total_minor`, `metadata`.
 - quick checkout يستقبل `product_id` و`quantity`، أو `items[]`، ويدعم `product_variant_id` اختيارياً داخل كل item.
@@ -211,7 +211,7 @@ Pivot مقترح لتطبيع علاقة variant بالقيم المختارة:
 
 ### `inventory_items`
 
-إضافة مستقبلية:
+تمت إضافته:
 
 - `product_variant_id` nullable.
 
@@ -221,12 +221,12 @@ Pivot مقترح لتطبيع علاقة variant بالقيم المختارة:
 - المنتج variable يجب أن يكون لكل variant قابل للبيع `InventoryItem`.
 - `inventory_item_id` يبقى مصدر الحقيقة للـ stock ledger.
 
-قيود مقترحة:
+قيود مطبقة/مرجعية:
 
 - FK `product_variant_id` إلى `product_variants`.
 - composite FK `[tenant_id, product_variant_id]` references `product_variants [tenant_id, id]`.
 - composite FK `[tenant_id, product_id, product_variant_id]` إن أضيف unique مناسب في `product_variants`.
-- استبدال unique الحالي `[tenant_id, product_id]` بقيود partial:
+- تم استبدال unique القديم `[tenant_id, product_id]` بقيود partial:
   - unique `[tenant_id, product_id] WHERE product_variant_id IS NULL`.
   - unique `[tenant_id, product_variant_id] WHERE product_variant_id IS NOT NULL`.
 - منع أكثر من inventory item لنفس variant.
@@ -344,7 +344,7 @@ Snapshots مطلوبة:
 - إضافة `product_variant_id` nullable في `inventory_items`, `order_items`, `stock_movements`.
 - إضافة constraints/indexes/tenant integrity tests فقط.
 - لا checkout behavior change.
-- بقي unique الحالي على `inventory_items [tenant_id, product_id]` كما هو. سيتم تفكيكه لاحقاً عند تفعيل variant-level inventory فعلياً.
+- بقي unique القديم على `inventory_items [tenant_id, product_id]` كما هو في هذه الجولة، ثم فُك لاحقاً في PR تفعيل variant inventory uniqueness.
 
 Rollback:
 
@@ -399,7 +399,21 @@ Rollback:
 - متوسط إلى عال؛ قد توجد orders مع `product_variant_id`.
 - rollback يحتاج إيقاف قبول variants أو الحفاظ على compatibility للطلبات المنشأة.
 
-### PR 5: Stock movements include `product_variant_id` in all flows
+### PR 5: Variant inventory uniqueness/schema activation - مكتمل 2026-05-18
+
+النطاق:
+
+- إزالة unique القديم على `inventory_items [tenant_id, product_id]`.
+- إضافة partial unique index للـ simple inventory عندما `product_variant_id IS NULL`.
+- إضافة partial unique index للـ variant inventory عندما `product_variant_id IS NOT NULL`.
+- إثبات أن checkout backend يستطيع حجز مخزون أكثر من variant لنفس product بدون fallback إلى parent inventory.
+- لا storefront أو checkout contract change.
+
+Rollback:
+
+- متوسط؛ rollback يعيد unique القديم وقد يفشل إذا وُجدت عدة inventory rows لنفس `tenant_id + product_id`.
+
+### PR 6: Stock movements include `product_variant_id` in all flows
 
 النطاق:
 
@@ -414,7 +428,7 @@ Rollback:
 
 - متوسط؛ column nullable يخفف rollback، لكن التقارير variant-level قد تفقد الدقة إذا أزيلت.
 
-### PR 6: Storefront product detail variant selection
+### PR 7: Storefront product detail variant selection
 
 النطاق:
 
@@ -427,7 +441,7 @@ Rollback:
 
 - متوسط؛ يجب الحفاظ على simple product checkout وعدم كسر cart المخزن في localStorage.
 
-### PR 7: Import/export support لاحقاً
+### PR 8: Import/export support لاحقاً
 
 النطاق:
 
@@ -445,4 +459,4 @@ Rollback:
 - product-level inventory يبقى صالحاً فقط للـ simple products.
 - variant-level inventory هو القاعدة للـ variable products.
 - stock movement ledger يجب أن يبقى append-only ويعكس sellable unit بدقة.
-- هذا ADR أصبح `Accepted` بعد تثبيت schema foundation وtenant integrity tests. تم تفعيل checkout backend للـ `product_variant_id` اختيارياً، وتبقى مراحل storefront selection، وتفكيك unique الخاص بمخزون variants، ومراجعة release/settlement/restock حتى PRs لاحقة.
+- هذا ADR أصبح `Accepted` بعد تثبيت schema foundation وtenant integrity tests. تم تفعيل checkout backend للـ `product_variant_id` اختيارياً وتفكيك unique القديم لمخزون variants، وتبقى مراحل storefront selection ومراجعة release/settlement/restock حتى PRs لاحقة.
