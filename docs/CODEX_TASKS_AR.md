@@ -80,6 +80,7 @@ Completed foundation:
 - إصلاح موثوقية Storefront E2E.
 - توحيد نسخة pnpm بين `packageManager` وCI/scripts/docs.
 - Store readiness foundation.
+- Store readiness publish gate validation layer: `StoreReadinessChecker` يرجع `ready/errors/warnings` ويدعم `assertReady`/`assertProductReady` مع اختبارات simple/variable inventory. لم يُربط بـ UI status change لأن publish action الصريح غير موجود بعد.
 - Audit matrix.
 - Operations readiness docs/checklists محدثة: staging readiness checklist, restore drill evidence template, monitoring baseline matrix.
 - 2FA للـ super admin/platform support/tenant owner داخل لوحات Filament، مع recovery codes وaudit coverage.
@@ -104,15 +105,11 @@ Completed foundation:
 
 Next backlog:
 
-1. Store readiness publish gate.
-2. تنفيذ real staging فعلياً باستخدام checklist، بدون أسرار في repo.
-3. COD reconciliation foundation.
+1. Real staging environment.
+2. COD reconciliation foundation.
+3. Production hardening review.
 4. Product variant UX polish.
-5. Production hardening review.
-6. تنفيذ backup restore drill فعلي وتسجيل evidence.
-7. CSP report-only.
-8. Observability provider selection and integration.
-9. Storefront caching ADR implementation.
+5. Monitoring/observability foundation.
 
 ## Definition Of Done
 
