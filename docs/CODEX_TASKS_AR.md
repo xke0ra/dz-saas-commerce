@@ -102,10 +102,11 @@ Completed foundation:
 - Storefront variant selection backend serialization: product detail API يعرض active variants/options/availability للـ picker بدون frontend UI وبدون تغيير checkout contract.
 - Storefront variant picker UI: صفحة product detail تختار variant من options، تعرض السعر/التوفر، وتضيف `product_variant_id` إلى quick/cart checkout بدون تغيير backend contract.
 - Product type/simple-vs-variable enforcement: إضافة `products.type` كمصدر الحقيقة؛ checkout يرفض parent variable بدون variant ويرفض variant على simple product، والـ storefront يستخدم picker للـ variable فقط.
+- Staging deployment runbook: `docs/STAGING_DEPLOYMENT_RUNBOOK_AR.md` مع checklist وsmoke proof template، بدون أسرار وبدون نشر حقيقي.
 
 Next backlog:
 
-1. Real staging environment.
+1. Real staging environment: pending until VPS/domain available.
 2. COD reconciliation foundation.
 3. Production hardening review.
 4. Product variant UX polish.

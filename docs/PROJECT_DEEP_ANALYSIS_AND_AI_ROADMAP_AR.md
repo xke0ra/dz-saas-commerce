@@ -1,6 +1,6 @@
 # التحليل العميق وخارطة الطريق الاستراتيجية لمنصة dz-saas-commerce
 
-آخر تحديث: 2026-05-18
+آخر تحديث: 2026-05-19
 
 نوع الوثيقة: مرجع استراتيجي أعلى + تحليل معماري + خارطة طريق تنفيذية طويلة المدى لعمل الإنسان وCodex على المشروع.
 
@@ -25,7 +25,7 @@
 
 الواجهة `storefront/` جيدة كبداية فعلية: صفحات متجر، منتجات، تصنيفات، بحث، سلة، checkout، تتبع طلب، SEO، robots، sitemap، وJSON-LD. تم توحيد الاعتماد الفعلي على `storefront/pnpm-lock.yaml`، وتم إغلاق بوابة أمان الواجهة في 2026-05-12 بتحديث Next إلى `15.5.18`. التحقق المحلي الحالي يثبت `pnpm audit --audit-level moderate`, `pnpm build`, `pnpm typecheck`, و`pnpm test:e2e` بنجاح.
 
-الجاهزية للإنتاج غير مكتملة. توجد Dockerfiles، health/readiness، runbooks، CI baseline، backup/proxy/monitoring docs، وأساس أمني. تم في 2026-05-12 إثبات Quality Gates داخل GitHub Actions على PR #1 / run `25743248405` وبعد الدمج على `main` / run `25744282999`، وتفعيلها كـ required checks على `main`. وتم أيضاً إثبات GHCR staging image publish بعد Trivy scan عبر run `25751543062`. بعد ذلك أثبت smoke مؤقت محلي كامل أن topology الخاص بالـ backend/storefront/queue/scheduler/edge يعمل مع PostgreSQL وRedis وMeilisearch وS3/MinIO وSMTP/Mailpit، وكشف نقص اعتماد S3 في backend ثم أُغلق بإضافة `league/flysystem-aws-s3-v3`. لا يوجد بعد دليل كاف على staging deployment خارجي حقيقي، TLS/custom domains، restore drill منفذ، monitoring/alerting فعلي، error tracking، أو security hardening كامل.
+الجاهزية للإنتاج غير مكتملة. توجد Dockerfiles، health/readiness، runbooks، CI baseline، backup/proxy/monitoring docs، وأساس أمني. تم في 2026-05-12 إثبات Quality Gates داخل GitHub Actions على PR #1 / run `25743248405` وبعد الدمج على `main` / run `25744282999`، وتفعيلها كـ required checks على `main`. وتم أيضاً إثبات GHCR staging image publish بعد Trivy scan عبر run `25751543062`. بعد ذلك أثبت smoke مؤقت محلي كامل أن topology الخاص بالـ backend/storefront/queue/scheduler/edge يعمل مع PostgreSQL وRedis وMeilisearch وS3/MinIO وSMTP/Mailpit، وكشف نقص اعتماد S3 في backend ثم أُغلق بإضافة `league/flysystem-aws-s3-v3`. في 2026-05-19 أضيف runbook عملي للـ staging مع checklist وsmoke proof template بدون أسرار. لا يوجد بعد دليل كاف على staging deployment خارجي حقيقي، TLS/custom domains، restore drill منفذ، monitoring/alerting فعلي، error tracking، أو security hardening كامل.
 
 الهدف بعيد المدى ليس إطلاق متجر واحد، بل بناء منصة SaaS تجارية واسعة شبيهة بـ Shopify ومناسبة للجزائر. لذلك لا ينصح بالإطلاق قبل إغلاق التشغيل، الأمان، العزل بين المستأجرين، موثوقية CI، النسخ الاحتياطي، والمراقبة.
 
@@ -553,7 +553,8 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 - `مكتمل 2026-05-12`: دمج إصلاح S3 + smoke المؤقت في PR #7 / commit `096bc05`.
 - `مكتمل 2026-05-12`: نشر صور backend/storefront جديدة عبر `container-images` run `25756290200` بالوسم `staging-20260512-096bc05` بعد Trivy image scan.
 - `مكتمل 2026-05-12`: تشغيل **Staging Smoke** بـ `target=ephemeral` و`mode=all` على الصور المنشورة الجديدة في run `25756545567` ونجاح readiness بما فيها S3 storage.
-- `التالي مباشرة`: تعبئة GitHub environment `staging` بالقيم الحقيقية وتشغيل **Staging Smoke** بـ `target=environment` و`mode=all` على خدمات staging خارجية حقيقية، ثم الانتقال إلى restore drill وmonitoring/alerting.
+- `مكتمل 2026-05-19`: Staging deployment runbook جاهز في `docs/STAGING_DEPLOYMENT_RUNBOOK_AR.md`، مع تحديث checklist وإضافة smoke proof template، بدون أسرار وبدون نشر حقيقي.
+- `pending حتى توفر VPS/domain`: تعبئة GitHub environment `staging` بالقيم الحقيقية وتشغيل **Staging Smoke** بـ `target=environment` و`mode=all` على خدمات staging خارجية حقيقية، ثم الانتقال إلى restore drill وmonitoring/alerting.
 - monitoring.
 - backup schedule.
 - restore drill.
@@ -1069,7 +1070,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 2. `مكتمل 2026-05-12`: إعادة تشغيل التحقق الكامل للواجهة: `pnpm build`, `pnpm typecheck`, `pnpm test:e2e`، ثم `./storefront/scripts/verify-docker.sh all`.
 3. `مكتمل 2026-05-12`: تمرير `.github/workflows/quality.yml` داخل GitHub Actions وتفعيلها في branch protection كـ required checks.
 4. `مكتمل 2026-05-12`: تشغيل `container-images` workflow فعلياً إلى GHCR للـ staging channel.
-5. `قيد التنفيذ`: أضيف مسار GitHub Actions يدوي لتوليد ملفات staging المهملة من GitHub environment وتشغيل `deploy/staging/staging-smoke.sh`. المتبقي الآن تعبئة أسرار/متغيرات `staging` حسب `deploy/staging/GITHUB_ENVIRONMENT.md` ثم تشغيل workflow **Staging Smoke** أولاً بـ `mode=validate` ثم `mode=all`.
+5. `مكتمل 2026-05-19`: أضيف runbook عملي للـ staging في `docs/STAGING_DEPLOYMENT_RUNBOOK_AR.md` مع تحديث `docs/STAGING_READINESS_CHECKLIST_AR.md` وإضافة `docs/STAGING_SMOKE_PROOF_TEMPLATE_AR.md`. real staging نفسه pending حتى توفر VPS/domain ثم تعبئة أسرار/متغيرات `staging` حسب `deploy/staging/GITHUB_ENVIRONMENT.md` وتشغيل workflow **Staging Smoke** أولاً بـ `mode=validate` ثم `mode=all`.
 6. تفعيل monitoring/alerting/error tracking.
 7. `مكتمل 2026-05-09`: مراجعة tenant scoping الأساسية لـ `Store`، مع إبقائه exception موثقاً وfail-closed عند `forTenant(null)`.
 8. `مكتمل 2026-05-09`: إصلاح catalog pagination وsitemap حتى لا تختفي المنتجات بعد أول 48 منتج.
@@ -1152,7 +1153,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 ## 20. خلاصة العمل القادم
 
-المشروع جيد بما يكفي ليستحق البناء الطويل، وليس جيداً بما يكفي للإطلاق المتسرع. نحن ما زلنا داخل Phase 0، لكن بوابة أمان الواجهة أُغلقت محلياً وداخل GitHub Actions، وتم تفعيل required gates على `main`، وتم إثبات GHCR staging publish، وأصبح staging smoke قابلاً للتشغيل بسكربت fail-closed وworkflow يدوي، وارتفع مستوى Dockerfile Checks بإضافة image vulnerability scan. الخطوة التالية الدقيقة التي تحتاج مدخلاً خارجياً هي تعبئة GitHub environment `staging` بالخدمات والأسرار ثم تشغيل smoke حقيقي، وبعدها monitoring/backup/restore/security hardening.
+المشروع جيد بما يكفي ليستحق البناء الطويل، وليس جيداً بما يكفي للإطلاق المتسرع. نحن ما زلنا داخل Phase 0، لكن بوابة أمان الواجهة أُغلقت محلياً وداخل GitHub Actions، وتم تفعيل required gates على `main`، وتم إثبات GHCR staging publish، وأصبح staging smoke قابلاً للتشغيل بسكربت fail-closed وworkflow يدوي، واكتمل runbook staging العملي بدون أسرار أو نشر حقيقي. ارتفع مستوى Dockerfile Checks بإضافة image vulnerability scan. الخطوة التالية الدقيقة التي تحتاج مدخلاً خارجياً هي توفير VPS/domain، ثم تعبئة GitHub environment `staging` بالخدمات والأسرار وتشغيل smoke حقيقي، وبعدها monitoring/backup/restore/security hardening.
 
 بعد ذلك يمكن الانتقال بثقة إلى SaaS usability، ثم commerce expansion، ثم shipping/COD الجزائري، ثم billing/revenue ops، ثم growth/integrations/scale.
 
