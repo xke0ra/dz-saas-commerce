@@ -87,7 +87,7 @@ Security prerequisites:
 ```dotenv
 APP_NAME="DZ SaaS Commerce"
 APP_ENV=staging
-APP_KEY=base64:GENERATE_ON_SERVER
+APP_KEY=<generated-staging-app-key>
 APP_DEBUG=false
 APP_URL=<staging-backend-url>
 TRUSTED_PROXIES=<proxy-cidr-or-provider-value>
@@ -101,7 +101,7 @@ DB_HOST=<staging-postgres-host>
 DB_PORT=5432
 DB_DATABASE=<staging-database-name>
 DB_USERNAME=<staging-db-user>
-DB_PASSWORD=CHANGE_ME_IN_SECRET_STORE
+DB_PASSWORD=<staging-db-password-secret>
 DB_SSLMODE=require
 
 CACHE_STORE=redis
@@ -119,7 +119,7 @@ REDIS_PORT=6379
 FILESYSTEM_DISK=s3
 PRODUCT_IMAGES_DISK=s3
 AWS_ACCESS_KEY_ID=SET_IN_SECRET_STORE_ONLY
-AWS_SECRET_ACCESS_KEY=SET_IN_SECRET_STORE_ONLY
+AWS_SECRET_ACCESS_KEY=<staging-aws-secret-access-key>
 AWS_DEFAULT_REGION=<staging-object-storage-region>
 AWS_BUCKET=<staging-object-storage-bucket>
 AWS_USE_PATH_STYLE_ENDPOINT=false
@@ -195,7 +195,7 @@ GitHub staging workflow optional:
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
 - أي مفاتيح دفع أو شحن مستقبلية
-- `STAGING_AWS_SECRET_ACCESS_KEY=SET_IN_SECRET_STORE_ONLY`
+- `STAGING_AWS_SECRET_ACCESS_KEY`
 
 لا توثق القيم الفعلية في issues أو PRs أو logs. عند استخدام GitHub Actions، ضعها كـ environment secrets في `staging` كما هو موثق في `deploy/staging/GITHUB_ENVIRONMENT.md`.
 
@@ -271,6 +271,8 @@ docker compose \
 ```bash
 deploy/staging/staging-smoke.sh verify
 ```
+
+بعد نجاح health/edge checks، نفذ checkout smoke محدوداً على بيانات staging آمنة. استخدم منتجاً simple، وأضف variant checkout smoke إذا كان seed staging يحتوي منتجاً `variable` وvariant inventory صالحاً. لا تستخدم production data، ولا تدعِ اكتمال production readiness من smoke واحد.
 
 لا تستخدم `deploy/staging/staging-smoke.sh all` ضد real staging إلا بعد التأكد من أن قاعدة البيانات جاهزة وأن migrations/seed preconditions محسومة.
 

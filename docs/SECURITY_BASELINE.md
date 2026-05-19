@@ -1,6 +1,6 @@
 # Security Baseline
 
-Last updated: 2026-05-17
+Last updated: 2026-05-19
 
 This document defines the minimum security posture expected as the platform moves toward commercial launch.
 
@@ -42,6 +42,9 @@ Currently present:
 - audit log domain foundation
 - Filament app-based 2FA for admin/support and tenant owners, using encrypted user fields and recovery codes
 - emergency 2FA reset command for verified operator use, with required reason and audit logging
+- store readiness validation for active tenant/store/payment/shipping/sellable product rules; this is a publish/domain guard, not a deployment proof
+- manual inventory adjustment action records both `StockMovement` and `AuditLog` event `inventory_manual_adjustment`
+- product type and variant checkout rules are enforced server-side; storefront variant picker is not trusted for final price or inventory
 
 Current important gaps:
 
@@ -53,6 +56,7 @@ Current important gaps:
 - no formal vulnerability review workflow beyond dependency audits, image vulnerability scanning, and secret hygiene baseline
 - no production monitoring/error tracking integration or alert routing
 - production `.env.production.example` files exist, but real secret management and rotation are not implemented yet
+- staging deployment runbook/checklist/smoke proof template exist, but real external staging is still pending until VPS/provider, domain or hostname, and staging secrets/variables are available
 - `Store` remains a documented exception to the global tenant scope; new store queries still need explicit review
 
 ## Authentication
@@ -178,6 +182,7 @@ Rules:
 - `.env` and `.env.local` must not be committed or included in clean delivery bundles
 - `.env.example` and `.env.testing.example` must contain only placeholders or local-only dummy values
 - staging secrets and variables must be configured through the GitHub `staging` environment contract in `deploy/staging/GITHUB_ENVIRONMENT.md`, not committed env files
+- staging docs may list required key names, but must never include real values
 
 Before launch, document:
 
@@ -199,6 +204,12 @@ Before launch, document:
 - `.github/workflows/quality.yml` runs both checks as `Repository Hygiene`.
 - `docs/PRODUCTION_READINESS.md` documents the first production runbook baseline.
 - A scan excluding local `.env` files found local dummy credentials in `docker-compose.yml` and `.env.example`; these are acceptable only for local development and must be rotated outside local use.
+
+2026-05-19 documentation refresh:
+
+- `docs/STAGING_DEPLOYMENT_RUNBOOK_AR.md`, `docs/STAGING_READINESS_CHECKLIST_AR.md`, and `docs/STAGING_SMOKE_PROOF_TEMPLATE_AR.md` were reviewed as staging preparation docs only.
+- No real staging deployment is recorded.
+- Root `README.md` now points developers to the canonical docs and explicitly states that production launch is not proven.
 
 2026-05-12 security verification:
 
@@ -229,6 +240,7 @@ Actions that require audit logs:
 - support ticket status/assignee changed
 - custom domain verified or removed
 - 2FA enabled, disabled, recovery codes regenerated, successful 2FA challenges, and emergency operator resets
+- manual inventory adjustments
 
 Audit logs should include:
 
@@ -287,6 +299,7 @@ Required before commercial launch:
 - error tracking provider and PII redaction must be selected and verified
 - alerting for failed jobs and payment/billing failures
 - database connection least privilege
+- real staging smoke proof through an external environment before production launch
 
 ## Security Review Checklist
 

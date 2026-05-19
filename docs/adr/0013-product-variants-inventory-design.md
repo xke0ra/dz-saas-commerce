@@ -2,486 +2,193 @@
 
 Date: 2026-05-17
 
-Status: Accepted - schema, model, vendor management, option-value UX refinement, checkout backend support, inventory uniqueness activation, lifecycle propagation, storefront API serialization, storefront picker UI, and product type enforcement complete
+Last updated: 2026-05-19
 
-تم تنفيذ schema foundation للجداول والقيود والأعمدة nullable الخاصة بالـ variants/options، ثم أضيفت طبقة Eloquent models/factories/relationships فوقها، ثم أضيفت Vendor Filament management foundation كموارد منفصلة، ثم refinement يمنع ربط option value بvariant من product مختلف داخل نفس tenant. يدعم checkout backend الآن `product_variant_id` اختيارياً لكل cart item مع validation وسعر وحجز مخزون وsnapshot، وتم تفعيل uniqueness على `inventory_items` على مستوى sellable unit، كما أصبحت release/settlement/restock تستخدم `order_item.product_variant_id` عند البحث عن المخزون وتسجيل الحركات. يعرض product detail في storefront API الآن variants/options/availability، وأصبح storefront product detail يملك picker محدوداً يرسل `product_variant_id` عند اختيار variant. أضيف `products.type` كمصدر الحقيقة: `simple` يرفض variant id، و`variable` يتطلب variant id عند checkout، بدون endpoint جديد.
+Status: Accepted - schema, model, vendor management, option-value UX refinement, checkout backend support, inventory uniqueness activation, lifecycle propagation, storefront API serialization, storefront picker UI, and product type enforcement are complete.
 
 ## Context
 
-- `Product` هو الكيان التجاري الحالي للكتالوج، ويحتوي على `sku`, `price_minor`, `compare_at_price_minor`, `cost_price_minor`, `status`, `metadata`، ويدخل في search index.
-- توجد الآن طبقة model/factory لـ `ProductVariant` و`ProductOption` فوق schema foundation، مع دعم checkout backend للـ variant عند إرساله.
-- `InventoryItem` مرتبط دائماً بـ `product_id`، ويمكن أن يرتبط اختيارياً بـ `product_variant_id`، والـ uniqueness أصبح على sellable unit.
-- `InventoryItem` يحمل `quantity`, `reserved_quantity`, `track_quantity`, `allow_backorders`.
-- `OrderItem` يحفظ snapshot للمنتج: `product_id`, `product_name`, `product_sku`, `quantity`, `unit_price_minor`, `total_minor`, `metadata`.
-- quick checkout يستقبل `product_id` و`quantity`، أو `items[]`، ويدعم `product_variant_id` اختيارياً داخل كل item، لكنه يفرض `product.type` عند تقرير هل variant مطلوب أو ممنوع.
-- quick checkout يحسب سعر variant من `ProductVariant.price_minor` عند وجوده وإلا يرث `Product.price_minor`.
-- quick checkout يحجز المخزون بالبحث عن `InventoryItem` عبر `tenant_id + product_id + product_variant_id` عند وجود variant، ولا يسقط إلى parent inventory إذا غاب variant inventory.
-- `StockMovement` مرتبط بـ `product_id` و`inventory_item_id`، وأحياناً `order_id`, `order_item_id`, `order_return_id`.
-- stock ledger الحالي يسجل `reserved`, `released`, `settled`, `restocked`, و`manual_adjustment`/`correction`.
-- storefront product detail API يعرض product مع inventory summary على مستوى product، ويضيف variants/options/availability للـ active variants فقط كـ serialization foundation للـ picker.
-- vendor UI الحالي يدير products وinventory items على مستوى product، وأضيفت موارد Vendor منفصلة لإدارة variants/options كمرحلة foundation بدون ربط checkout أو storefront.
+`Product` remains the public catalog entity for SEO, category assignment, product page content, and listing/search. `ProductVariant` represents a specific sellable unit when a product is `variable`.
+
+The implemented chain now includes:
+
+- `ProductType` enum with `simple` and `variable`.
+- `products.type` column and model cast.
+- `product_options`.
+- `product_option_values`.
+- `product_variants`.
+- `product_variant_option_values`.
+- nullable `product_variant_id` on `inventory_items`, `order_items`, and `stock_movements`.
+- variant models, factories, relationships, and tenant scoping.
+- Vendor Filament resources for options, values, variants, and pivot records.
+- validation preventing option values from another product/tenant from being linked to a variant.
+- checkout support for optional `product_variant_id`.
+- backend enforcement that simple products reject variants and variable products require variants.
+- variant inventory uniqueness by sellable unit.
+- release/settlement/restock propagation of `product_variant_id`.
+- storefront product detail variant/options serialization.
+- storefront variant picker UI and product+variant cart key.
 
 ## Problem
 
-المتاجر الواقعية تحتاج variants/options مثل المقاس، اللون، السعة، النكهة، أو bundle configuration. هذه القيم ليست metadata تجميلية فقط، لأنها قد تغيّر:
+Real stores need options such as size, color, capacity, flavor, or bundle configuration. These choices can change SKU, price, inventory, availability, order snapshots, stock movements, and reporting.
 
-- SKU.
-- السعر.
-- تكلفة الشراء.
-- حالة النشر.
-- المخزون المتاح.
-- قابلية الشحن.
-- اختيار العميل في storefront.
-- line item snapshot داخل الطلب.
-- stock movement ledger والتقارير.
-
-إذا بقي checkout يشتري parent `product_id` فقط لمنتج له variants، فلن نستطيع معرفة أي SKU بيع، ولا أي مخزون يجب حجزه أو تسويته أو إرجاعه.
+Treating variants as metadata would make checkout and inventory unreliable. The platform needs a stable backend sellable-unit model.
 
 ## Decision
 
-التصميم المفضل هو Option B: إضافة `product_variants` ككيان مستقل، وربط المخزون والطلبات وحركات المخزون بالـ sellable unit.
+Use `ProductVariant` as the sellable unit for variable products.
 
-### Option A: إبقاء `inventory_items.product_id` فقط وتخزين variant داخل metadata
+Rules:
 
-الفكرة:
+- `Product` is the parent display/catalog entity.
+- `ProductVariant` is the purchasable unit for `ProductType::Variable`.
+- `InventoryItem` can reference either a simple product or a variant.
+- `OrderItem` stores both `product_id` and nullable `product_variant_id` plus snapshots.
+- `StockMovement` stores `product_id`, nullable `product_variant_id`, and `inventory_item_id`.
+- Laravel remains the source of truth for price, availability, inventory reservation, and order totals.
 
-- لا نضيف جدول variants.
-- نخزن `color`, `size`, `variant_sku` أو option signature في `metadata`.
-- checkout يرسل `product_id` وربما metadata.
+## Rejected Options
 
-المزايا:
+### Option A: Store variants in metadata
 
-- أسرع في التنفيذ الأولي.
-- لا يحتاج migration واسعة مباشرة.
+Rejected because metadata cannot enforce SKU uniqueness, option uniqueness, tenant integrity, checkout trust boundaries, or reliable stock reporting.
 
-العيوب:
+### Option C: Make every variant a standalone product
 
-- لا توجد constraints حقيقية على SKU أو option uniqueness.
-- صعب منع duplicate variants أو invalid option combinations.
-- صعب ضمان tenant integrity بعلاقات مركبة.
-- checkout سيعتمد على metadata قابلة للتلاعب إن لم يعاد بناؤها في backend.
-- stock ledger لن يملك مفتاحاً مستقراً للتقارير variant-level.
-- search/import/export سيحتاج parsing غير موثوق للـ json.
-- لا يناسب vendor UI أو future APIs.
+Rejected because it mixes product display with sellable unit identity, complicates SEO/category/search grouping, and pushes parent/child logic into every query.
 
-النتيجة: مرفوض.
-
-### Option B: `product_variants` ككيان مستقل
-
-الفكرة:
-
-- `Product` يبقى parent للعرض والـ SEO والتصنيف.
-- `ProductVariant` يمثل وحدة بيع محددة عندما يكون المنتج variable.
-- `InventoryItem` يصبح قادراً على الارتباط بـ `product_variant_id`.
-- `OrderItem` يحفظ `product_id` و`product_variant_id` nullable مع snapshots.
-- `StockMovement` يحفظ `product_id`, `product_variant_id` nullable، و`inventory_item_id`.
-
-المزايا:
-
-- constraints واضحة.
-- SKU وسعر ومخزون لكل variant.
-- checkout يستطيع شراء sellable unit محدد.
-- stock ledger يبقى دقيقاً على مستوى variant.
-- search/import/export وvendor UI يمكن بناؤها فوق نموذج واضح.
-- tenant integrity يمكن فرضه بـ composite foreign keys.
-
-العيوب:
-
-- يحتاج migrations انتقالية مدروسة.
-- يحتاج تحديثات متعددة في checkout/storefront/inventory actions.
-- يحتاج UI لإدارة options والقيم وتوليد variants لاحقاً.
-
-النتيجة: مقبول كتصميم مفضل.
-
-### Option C: اعتبار كل variant كـ product مستقل مع `parent_product_id`
-
-الفكرة:
-
-- كل لون/مقاس يصبح product منفصل.
-- المنتج الأب يستخدم للتجميع فقط.
-
-المزايا:
-
-- يستفيد من بعض جداول product الحالية.
-- يجعل inventory على product كما هو تقريباً.
-
-العيوب:
-
-- يخلط product للعرض مع sellable unit.
-- يعقد SEO، الصور، التصنيفات، search، وstorefront grouping.
-- قد يسبب duplicate content وتكرار بيانات product.
-- order/reporting تحتاج فهم parent/child في كل مكان.
-- إدارة options ستكون أقل وضوحاً من `ProductVariant`.
-
-النتيجة: مرفوض للمرحلة الأولى.
-
-## Proposed Schema Overview
-
-هذا schema هو التصميم المرجعي. تم تنفيذ foundation للجداول والأعمدة nullable في جولة schema foundation، بينما تبقى قواعد السلوك وتكامل checkout/storefront والمخزون التفصيلي لمراحل لاحقة.
+## Implemented Schema
 
 ### `products`
 
-إضافة مستقبلية مقترحة:
-
-- `type` string default `simple`
-  - القيم: `simple`, `variable`.
-
-قرار SKU:
-
-- `products.sku` يبقى مستخدماً للمنتجات simple.
-- للمنتجات variable يمكن أن يبقى SKU للأب اختيارياً لأغراض داخلية، لكن SKU الذي يدخل checkout والمخزون يجب أن يكون variant SKU.
+- `type` string default `simple`.
+- allowed values: `simple`, `variable`.
+- model cast to `ProductType`.
+- `products.sku` remains valid for simple products and optional/internal parent SKU for variable products.
 
 ### `product_options`
 
-- `id` ULID primary key.
-- `tenant_id` required.
-- `product_id` required.
-- `name` string.
-- `position` unsigned integer default 0.
-- timestamps.
-
-قيود مقترحة:
-
-- FK `tenant_id` إلى `tenants`.
-- FK `product_id` إلى `products`.
-- composite FK `[tenant_id, product_id]` references `products [tenant_id, id]`.
-- unique `[tenant_id, product_id, name]`.
-- check `btrim(name) <> ''`.
+- tenant-scoped.
+- belongs to product.
+- unique option name per tenant/product.
+- ordered by `position`.
 
 ### `product_option_values`
 
-- `id` ULID primary key.
-- `tenant_id` required.
-- `product_option_id` required.
-- `value` string.
-- `position` unsigned integer default 0.
-- timestamps.
-
-قيود مقترحة:
-
-- FK `tenant_id` إلى `tenants`.
-- FK `product_option_id` إلى `product_options`.
-- composite FK `[tenant_id, product_option_id]` references `product_options [tenant_id, id]`.
-- unique `[tenant_id, product_option_id, value]`.
-- check `btrim(value) <> ''`.
+- tenant-scoped.
+- belongs to product option.
+- unique value per tenant/option.
+- ordered by `position`.
 
 ### `product_variants`
 
-- `id` ULID primary key.
-- `tenant_id` required.
-- `product_id` required.
-- `sku` nullable في migration الأولى، ثم يمكن جعله مطلوباً للمنتجات variable بعد data readiness.
-- `option_signature` string required.
-- `title` أو `display_name` nullable.
-- `price_minor` nullable.
-- `compare_at_price_minor` nullable.
-- `cost_price_minor` nullable.
-- `status` string.
-- `sort_order` unsigned integer default 0.
-- `metadata` jsonb nullable.
-- timestamps.
-
-قيود مقترحة:
-
-- FK `tenant_id` إلى `tenants`.
-- FK `product_id` إلى `products`.
-- composite FK `[tenant_id, product_id]` references `products [tenant_id, id]`.
-- unique `[tenant_id, product_id, option_signature]`.
-- unique partial على `[tenant_id, sku]` عندما `sku IS NOT NULL`.
-- check nonnegative prices when nullable.
-- check `btrim(option_signature) <> ''`.
+- tenant-scoped.
+- belongs to product.
+- nullable `sku` with unique tenant SKU when present.
+- required `option_signature`.
+- nullable price override fields.
+- `status`, `sort_order`, and metadata.
+- `effectivePriceMinor()` returns variant price override or parent product price.
 
 ### `product_variant_option_values`
 
-Pivot مقترح لتطبيع علاقة variant بالقيم المختارة:
-
-- `id` ULID primary key أو composite primary key.
-- `tenant_id` required.
-- `product_variant_id` required.
-- `product_option_value_id` required.
-- timestamps.
-
-قيود مقترحة:
-
-- composite FKs لكل علاقة tenant-scoped.
-- unique `[tenant_id, product_variant_id, product_option_value_id]`.
-- يجب أن تنتمي option/value لنفس product الخاص بالvariant.
-
-ملاحظة: تنفيذ schema foundation استخدم pivot الأدنى بـ `product_variant_id` و`product_option_value_id`. يبقى `option_signature` normalized key سريعاً لل uniqueness والقراءة، بينما pivot يخدم العلاقات والاستعلامات. تمت إضافة validation في Vendor management لمنع اختيار قيمة option تابعة لمنتج آخر داخل نفس tenant، ويبقى `option_signature` حقلاً داخلياً يدار يدوياً حتى مرحلة توليد/UX أوسع.
+- pivot between variant and option value.
+- tenant-scoped.
+- unique variant/value pair.
+- app-level validation ensures option values belong to the variant product.
 
 ### `inventory_items`
 
-تمت إضافته:
-
-- `product_variant_id` nullable.
-
-المرحلة الانتقالية:
-
-- المنتج simple يستخدم `product_id` و`product_variant_id = null`.
-- المنتج variable يجب أن يكون لكل variant قابل للبيع `InventoryItem`.
-- `inventory_item_id` يبقى مصدر الحقيقة للـ stock ledger.
-
-قيود مطبقة/مرجعية:
-
-- FK `product_variant_id` إلى `product_variants`.
-- composite FK `[tenant_id, product_variant_id]` references `product_variants [tenant_id, id]`.
-- composite FK `[tenant_id, product_id, product_variant_id]` إن أضيف unique مناسب في `product_variants`.
-- تم استبدال unique القديم `[tenant_id, product_id]` بقيود partial:
-  - unique `[tenant_id, product_id] WHERE product_variant_id IS NULL`.
-  - unique `[tenant_id, product_variant_id] WHERE product_variant_id IS NOT NULL`.
-- منع أكثر من inventory item لنفس variant.
-- منع `product_variant_id` لمنتج simple.
-- منع `product_variant_id = null` لمنتج variable بعد اكتمال migration وdata backfill.
+- nullable `product_variant_id`.
+- simple product inventory: one row per `tenant_id + product_id` where `product_variant_id IS NULL`.
+- variant inventory: one row per `tenant_id + product_variant_id` where `product_variant_id IS NOT NULL`.
+- checkout does not fall back to parent inventory when a variant inventory row is missing.
 
 ### `order_items`
 
-إضافة مستقبلية:
-
-- `product_variant_id` nullable.
-- `variant_title` nullable.
-- `variant_sku` nullable.
-- `selected_options` jsonb nullable، أو داخل `metadata` بقرار migration واضح.
-
-Snapshots مطلوبة:
-
-- `product_name`.
-- `product_sku`.
+- nullable `product_variant_id`.
 - `variant_title`.
 - `variant_sku`.
-- selected options مثل `{ "Size": "XL", "Color": "Black" }`.
-
-قيود مقترحة:
-
-- composite FK `[tenant_id, product_variant_id]` references `product_variants [tenant_id, id]`.
-- إذا `product_variant_id` موجود، يجب أن يتبع نفس `product_id`.
+- `selected_options`.
+- snapshots are captured at checkout time.
 
 ### `stock_movements`
 
-إضافة مستقبلية:
-
-- `product_variant_id` nullable.
-
-قواعد:
-
-- `inventory_item_id` يبقى مصدر الحقيقة للحركة.
-- `product_id` يبقى denormalized/explicit لتسهيل الاستعلامات والتقارير القديمة.
-- `product_variant_id` يساعد variant-level reporting.
-- كل flows التي تنشئ movements يجب أن تنسخ `product_variant_id` من `InventoryItem`/`OrderItem` بعد تفعيل schema.
-
-قيود وفهارس مقترحة:
-
-- composite FK `[tenant_id, product_variant_id]` references `product_variants [tenant_id, id]`.
-- index `[tenant_id, product_variant_id, occurred_at]`.
-- check اختياري: إذا `product_variant_id` ليس null يجب أن يكون مرتبطاً بنفس `product_id`.
+- nullable `product_variant_id`.
+- `inventory_item_id` remains the exact operational movement target.
+- lifecycle flows copy `product_variant_id` from the order item/sellable unit when applicable.
 
 ## Domain Rules
 
 ### Catalog
 
-- المنتج قد يكون `simple` أو `variable`.
-- `simple product` لا يملك variants قابلة للبيع.
-- `variable product` يجب أن يملك variant واحداً على الأقل قبل النشر.
-- `variant SKU` يجب أن يكون unique داخل tenant عندما يكون موجوداً.
-- `product SKU` يبقى للمنتج الأب أو للمنتجات simple؛ checkout لا يعتمد على parent SKU عندما توجد variants.
-- options يجب أن تكون tenant-scoped ومرتبطة بمنتج واحد.
-- لا يسمح بتكرار نفس option signature داخل product واحد.
+- Product can be `simple` or `variable`.
+- Simple products should not be sold with `product_variant_id`.
+- Variable products require active variants before they can be sold.
+- Vendor UX currently manages options/values/variants/pivot records; generation and polish remain future UX work.
+- Variant SKU is unique per tenant when present.
+- Option values must belong to the same product and tenant as the variant.
 
 ### Inventory
 
-- inventory must be tracked at sellable unit level.
-- sellable unit هو:
-  - `product` للمنتج simple.
-  - `product_variant` للمنتج variable.
-- لا يجوز checkout على parent product إذا كان variable وله variants.
-- كل تعديل مخزون variant يجب أن يكتب `StockMovement`.
-- `InventoryItem` يجب أن يكون واضحاً: product-level للـ simple، variant-level للـ variable.
-- `allow_backorders` يبقى على sellable unit inventory item.
+- Sellable unit is:
+  - product for `simple`.
+  - product variant for `variable`.
+- Product-level inventory is valid only for simple products.
+- Variant-level inventory is required for variable products.
+- Backorders remain an explicit inventory item setting.
 
 ### Checkout
 
-- payload المستقبلي يجب أن يدعم:
-  - `product_id`.
-  - `product_variant_id` nullable.
-  - `quantity`.
-- إذا product requires variant، يجب رفض checkout بدون `product_variant_id`.
-- إذا product simple، يجب رفض `product_variant_id` غير تابع له أو غير null حسب contract النهائي.
-- السعر يحسب من backend:
-  - `product_variant.price_minor` إذا موجود.
-  - وإلا `product.price_minor`.
-- availability يحسب من `InventoryItem` للـ sellable unit.
-- `OrderItem` يجب أن يحفظ snapshot للvariant/options وقت الشراء.
-- idempotency request hash يجب أن يشمل `product_variant_id` عندما يدعم checkout ذلك.
+- Payload supports `product_id`, optional `product_variant_id`, and `quantity`.
+- `simple` product with variant id is rejected.
+- `variable` product without variant id is rejected.
+- inactive, cross-product, or cross-tenant variants are rejected.
+- price is calculated by backend.
+- order item snapshots include selected options when variant exists.
+- idempotency hashing includes the full payload, including variant id when present.
+
+### Lifecycle
+
+- Quick checkout reservation writes `reserved`.
+- Order cancellation/release writes `released`.
+- Delivered/settled order inventory writes `settled`.
+- Return restock writes `restocked`.
+- Variant orders use variant inventory and do not touch parent inventory.
 
 ### Storefront
 
-- product detail يجب أن يعرض options/values/variants المتاحة.
-- UX المرحلة الأولى: disabled أو out-of-stock variants تظهر كخيارات disabled إذا كان ذلك يساعد العميل على فهم الخيارات، وتختفي فقط إذا كانت غير منشورة.
-- الواجهة لا تعتمد على السعر أو المخزون كحقيقة نهائية.
-- cart item key يجب أن يصبح `product_id + product_variant_id` للمنتجات variable، وليس `product_id` فقط.
-- product cards يمكن أن تعرض price range أو lowest active variant price لاحقاً، لكن backend يجب أن يحدد ذلك.
+- Product detail API loads active variants/options/availability.
+- Storefront product detail picker selects options and sends `product_variant_id`.
+- Cart item key includes product+variant for variable products.
+- Displayed price and availability are UX hints; checkout still revalidates in Laravel.
 
-### Search
+## Implementation History
 
-- product search يفهرس product كوثيقة أساسية مع variants summary في المرحلة الأولى.
-- لا يلزم index كل variant كوثيقة مستقلة في المرحلة الأولى.
-- يمكن إضافة variant-level documents لاحقاً إذا احتجنا بحثاً على SKU أو option value بدقة أعلى.
+- PR 1: Schema foundation - completed 2026-05-17.
+- PR 2: Models/factories/tests - completed 2026-05-18.
+- PR 3: Vendor variant management backend/forms foundation - completed 2026-05-18.
+- PR 4: Checkout accepts `product_variant_id` - completed 2026-05-18.
+- PR 5: Variant inventory uniqueness/schema activation - completed 2026-05-18.
+- PR 6: Stock movements include `product_variant_id` in lifecycle flows - completed 2026-05-18.
+- PR 7: Storefront product detail variant API serialization - completed 2026-05-18.
+- PR 8: Storefront product detail variant picker UI - completed 2026-05-18.
+- PR 9: Product type/simple-vs-variable enforcement - completed 2026-05-18.
 
-### Tenant Integrity
+## Remaining Work
 
-- كل جداول variants/options/inventory/order references يجب أن تكون tenant-scoped.
-- استخدم composite FKs حيث مناسب.
-- أي query يستخدم `withoutGlobalScope('current_tenant')` في catalog/inventory/checkout يجب أن يضيف `where('tenant_id', ...)` واختبار tenant isolation.
-
-## Phased Implementation Plan
-
-### PR 1: Schema foundation فقط - مكتمل 2026-05-17
-
-النطاق:
-
-- إضافة `product_options`.
-- إضافة `product_option_values`.
-- إضافة `product_variants`.
-- إضافة `product_variant_id` nullable في `inventory_items`, `order_items`, `stock_movements`.
-- إضافة constraints/indexes/tenant integrity tests فقط.
-- لا checkout behavior change.
-- بقي unique القديم على `inventory_items [tenant_id, product_id]` كما هو في هذه الجولة، ثم فُك لاحقاً في PR تفعيل variant inventory uniqueness.
-
-Rollback:
-
-- منخفض إذا لم تُستخدم الأعمدة الجديدة بعد.
-- يحتاج drop constraints/indexes/tables بالترتيب الصحيح.
-
-### PR 2: Models/factories/tests - مكتمل 2026-05-18
-
-النطاق:
-
-- إضافة models وrelations وfactories.
-- إضافة tenant integrity tests.
-- إضافة casts/status enum إن لزم.
-- لا checkout/storefront behavior change.
-- تم إبقاء `effectivePriceMinor()` helper داخل `ProductVariant` للاستخدام المستقبلي فقط، ولم يتم ربطه بالcheckout.
-
-Rollback:
-
-- منخفض؛ إزالة classes/tests بدون data migration إضافية.
-
-### PR 3: Vendor product variant management backend/forms foundation - مكتمل 2026-05-18
-
-النطاق:
-
-- إدارة options/values/variants في vendor backend عبر Filament resources منفصلة.
-- إدارة pivot `product_variant_option_values` عبر resource بسيط بدلاً من RelationManagers أو MultiSelect معقد.
-- استخدام صلاحيات products الحالية للعرض/الإنشاء/التعديل/الحذف.
-- إبقاء `option_signature` كحقل يدوي/داخلي مؤقت؛ توليده والتحقق المتقدم منه مؤجلان.
-- refinement لاحق ضمن نفس foundation يمنع ربط option values بvariants من product مختلف داخل نفس tenant، مع فلترة form حسب المنتج المختار.
-- لا storefront بعد.
-- لا checkout behavior change.
-
-Rollback:
-
-- متوسط؛ قد توجد data variants تجريبية يجب تعطيلها أو حذفها.
-
-### PR 4: Checkout accepts `product_variant_id` - مكتمل 2026-05-18
-
-النطاق:
-
-- تحديث request payload.
-- تحديث validation.
-- تحديث price calculation.
-- تحديث inventory reservation ليستخدم variant inventory.
-- تحديث `QuickCheckoutTest`.
-- حفظ variant snapshot في `order_items`.
-- تسجيل `stock_movements.product_variant_id` لحركة reservation.
-- لم يتم فرض رفض parent variable product بدون variant لأن schema لا يملك بعد `product.type` أو gate واضح للتمييز بين simple/variable.
-
-Rollback:
-
-- متوسط إلى عال؛ قد توجد orders مع `product_variant_id`.
-- rollback يحتاج إيقاف قبول variants أو الحفاظ على compatibility للطلبات المنشأة.
-
-### PR 5: Variant inventory uniqueness/schema activation - مكتمل 2026-05-18
-
-النطاق:
-
-- إزالة unique القديم على `inventory_items [tenant_id, product_id]`.
-- إضافة partial unique index للـ simple inventory عندما `product_variant_id IS NULL`.
-- إضافة partial unique index للـ variant inventory عندما `product_variant_id IS NOT NULL`.
-- إثبات أن checkout backend يستطيع حجز مخزون أكثر من variant لنفس product بدون fallback إلى parent inventory.
-- لا storefront أو checkout contract change.
-
-Rollback:
-
-- متوسط؛ rollback يعيد unique القديم وقد يفشل إذا وُجدت عدة inventory rows لنفس `tenant_id + product_id`.
-
-### PR 6: Stock movements include `product_variant_id` in lifecycle flows - مكتمل 2026-05-18
-
-النطاق:
-
-- release/cancellation.
-- settlement.
-- return restock.
-- ledger tests لكل flow.
-
-Rollback:
-
-- متوسط؛ column nullable يخفف rollback، لكن التقارير variant-level قد تفقد الدقة إذا أزيلت.
-
-### PR 7: Storefront product detail variant API serialization - مكتمل 2026-05-18
-
-النطاق:
-
-- عرض `options` و`variants` وselected options وavailability في product detail API.
-- عرض active variants فقط وعدم تسريب `tenant_id` أو `cost_price_minor` أو metadata داخلية.
-- إبقاء listing/search/home بدون payload variants كبير.
-- لا storefront UI بعد.
-- لا checkout contract change.
-
-Rollback:
-
-- منخفض إلى متوسط؛ إزالة fields الجديدة من product detail API قد تكسر frontend picker عندما يبنى فوقها.
-
-### PR 8: Storefront product detail variant picker UI - مكتمل 2026-05-18
-
-النطاق:
-
-- cart key يصبح product+variant.
-- إرسال `product_variant_id` في checkout من الواجهة.
-- UX للخيارات disabled/out-of-stock.
-- السعر المعروض في صفحة المنتج يستخدم `effective_price_minor` للvariant المختار، بينما backend يبقى مصدر الحقيقة عند checkout.
-
-Rollback:
-
-- متوسط؛ يجب الحفاظ على simple product checkout وعدم كسر cart المخزن في localStorage.
-
-### PR 9: Product type/simple-vs-variable enforcement - مكتمل 2026-05-18
-
-النطاق:
-
-- إضافة `products.type` بقيمتي `simple` و`variable` مع enum/model cast.
-- Vendor product form يعرض نوع المنتج ولا يحول النوع تلقائياً عند إنشاء variants.
-- checkout يرفض شراء parent variable product بدون `product_variant_id` ويرفض إرسال variant id مع simple product.
-- Storefront API يعرض variants/options فقط عندما يكون المنتج `variable`، والواجهة تمنع checkout المباشر للمنتجات variable بدون اختيار variant.
-
-Rollback:
-
-- منخفض إلى متوسط؛ كل المنتجات الحالية default `simple`، لكن rollback بعد تحويل منتجات إلى `variable` سيعيد checkout لسلوك parent product إن أزيل enforcement.
-
-### PR 10: Import/export support لاحقاً
-
-النطاق:
-
-- import/export للoptions/variants/SKU/price/inventory.
-- validation للتوقيعات والـ duplicate SKUs.
-
-Rollback:
-
-- متوسط إلى عال حسب حجم البيانات المستوردة؛ يحتاج dry-run وerror report قبل writes.
+- Product variant UX polish.
+- Better option/variant generation.
+- import/export for options/variants/SKU/price/inventory.
+- filters/search improvements for variant-heavy catalogs.
+- reporting UX for variant-level inventory and sales.
 
 ## Consequences
 
-- يجب عدم تنفيذ variants كـ metadata فقط.
-- كل تنفيذ لاحق يجب أن يحافظ على backend as source of truth للسعر والمخزون.
-- product-level inventory يبقى صالحاً فقط للـ simple products.
-- variant-level inventory هو القاعدة للـ variable products.
-- stock movement ledger يجب أن يبقى append-only ويعكس sellable unit بدقة.
-- هذا ADR أصبح `Accepted` بعد تثبيت schema foundation وtenant integrity tests. تم تفعيل checkout backend للـ `product_variant_id` اختيارياً، وتفكيك unique القديم لمخزون variants، وربط release/settlement/restock بالـ sellable unit، وإضافة serialization للـ variants/options في storefront product detail، ثم إضافة picker UI محدود يرسل `product_variant_id`، ثم إضافة `products.type` كمصدر الحقيقة للـ simple/variable enforcement.
+- Do not implement variants as metadata-only.
+- Do not allow storefront to determine trusted price or inventory.
+- Do not sell parent variable products without a variant id.
+- Do not let variant lifecycle flows fall back to parent inventory.
+- Keep stock movement ledger append-oriented.
+- Any future change to variants must update this ADR, `DOMAIN_CONTRACTS_AR.md`, `STOREFRONT_CART.md`, and relevant tests.

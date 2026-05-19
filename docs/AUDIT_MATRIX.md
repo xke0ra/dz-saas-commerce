@@ -1,5 +1,7 @@
 # Audit Matrix
 
+Last updated: 2026-05-19
+
 Status is conservative. `implemented` means the code or tests showed a concrete audit path. `partial` means some related path exists but coverage is incomplete. `unknown` means no claim is made yet.
 
 | Domain | Operation | Actor | Audit required? | Current status | Metadata required | Suggested test |
@@ -23,3 +25,56 @@ Status is conservative. `implemented` means the code or tests showed a concrete 
 | Security | Emergency 2FA reset | Authorized shell operator | yes | implemented | target_user_id, masked target_email, actor_user_id if known, reason, source, reset_at; never TOTP/recovery/secret | run `security:reset-two-factor` with actor and assert audit without raw codes or secrets |
 
 Note: `stock_movements` is an operational inventory ledger. Inventory adjustments still need an `AuditLog` entry when a human or system action changes stock intentionally.
+
+## Observed Audit Event Names
+
+هذه القائمة مبنية على events الموجودة في الكود والاختبارات عند تحديث 2026-05-19. لا تضف event جديداً إلى الوثائق إلا إذا كان موجوداً في كود audit فعلي أو test يثبته.
+
+Tenant/store/staff:
+
+- `tenant.created`
+- `tenant.suspended`
+- `store.suspended`
+- `user.invited`
+- `invitation.accepted`
+- `staff.added`
+- `staff.role_changed`
+- `staff.permission_changed`
+- `staff.removed`
+
+Billing/payments:
+
+- `subscription.started`
+- `subscription.replaced`
+- `subscription.renewed`
+- `subscription.renewal_reminder_sent`
+- `subscription.grace_period_started`
+- `subscription.past_due`
+- `subscription.suspended`
+- `invoice.issued`
+- `invoice.paid`
+- `invoice.overdue`
+- `subscription_payment.recorded`
+- `subscription_payment.confirmed`
+- `subscription_payment.rejected`
+- `payment.confirmed`
+
+Catalog/inventory/orders/support/security:
+
+- `product.deleted`
+- `inventory_manual_adjustment`
+- `order.status_changed`
+- `support_ticket.created`
+- `support_ticket.status_changed`
+- `support_ticket.assigned`
+- `two_factor_enabled`
+- `two_factor_disabled`
+- `two_factor_recovery_codes_regenerated`
+- `two_factor_challenge_passed`
+- `two_factor_reset_by_operator`
+
+Known conservative gaps:
+
+- Domain verification status changes exist as behavior, but an AuditLogger path was not verified in this pass.
+- Shipment histories exist, but AuditLog coverage for shipment status changes remains partial.
+- Return/refund/restock workflow exists, but AuditLog coverage beyond inventory/payment side effects needs a focused review before claiming full audit coverage.

@@ -1,6 +1,6 @@
 # Production Readiness Runbook
 
-Last updated: 2026-05-12
+Last updated: 2026-05-19
 
 This runbook records the production foundation for `dz-saas-commerce`. It is not a deployment guarantee yet; it defines the required operating contract before beta or production.
 
@@ -38,9 +38,11 @@ Implemented in this foundation pass:
 - production logging example routes Laravel logs to `stderr` for container collection
 - staging deployment skeleton in `deploy/staging/`
 - self-contained ephemeral staging smoke overlay in `deploy/staging/docker-compose.staging.ephemeral.yml`
+- staging deployment runbook, readiness checklist, and smoke proof template for future real staging execution
 
 Still required:
 
+- Provide VPS/provider or hosting platform and staging domain/temporary hostname
 - Populate the GitHub `staging` environment secret/variable contract
 - Execute the staging compose skeleton against real staging services through the manual staging smoke workflow or a staging host
 - keep container image vulnerability scans green as base images and advisories change
@@ -50,6 +52,7 @@ Still required:
 - error tracking integration
 - real uptime checks, alert routing, and centralized log aggregation
 - CSP tightening after staging/proxy browser and e2e validation
+- Production hardening review after real staging proof
 
 Latest local smoke verification: 2026-05-12.
 
@@ -73,6 +76,12 @@ Latest local smoke verification: 2026-05-12.
 - The run exposed and closed a real production dependency gap: the previously published backend image did not include Laravel's S3 Flysystem adapter, so readiness failed at the `storage` check when `FILESYSTEM_DISK=s3`.
 - GitHub **Staging Smoke** passed with `target=ephemeral` and `mode=all` on run `25756545567`, using the published `staging-20260512-096bc05` backend and storefront images.
 - This verification proves the Compose/process contract against disposable backing services. It still does not prove an externally provisioned staging deployment, TLS/custom-domain routing, restore drills, alert routing, or production-grade secret management.
+
+Documentation refresh on 2026-05-19:
+
+- `docs/STAGING_DEPLOYMENT_RUNBOOK_AR.md`, `docs/STAGING_READINESS_CHECKLIST_AR.md`, and `docs/STAGING_SMOKE_PROOF_TEMPLATE_AR.md` define the next real staging execution path.
+- This refresh did not run a new external staging smoke and did not change application code.
+- Real staging remains pending until VPS/provider, domain or hostname, and staging secrets/variables are available.
 
 ## Image Build Commands
 
@@ -224,6 +233,8 @@ Required branch protection checks for `.github/workflows/quality.yml`:
 - `Storefront`
 - `Dockerfile Checks`
 - `Storefront E2E`
+
+These checks are the documented quality gate contract. If branch protection is changed in GitHub, update this runbook instead of relying on stale status text.
 
 ## Backend Runtime Processes
 
