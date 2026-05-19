@@ -1,6 +1,8 @@
 # قالب إثبات Smoke للـ Staging
 
-هذه الوثيقة قالب يملؤه المشغل لاحقاً بعد توفر real staging environment. لا تحتوي نتائج حالية، ولا تعني أن staging تم نشره.
+آخر تحديث: 2026-05-19
+
+هذه الوثيقة قالب يملؤه المشغل لاحقاً بعد توفر بيئة staging خارجية حقيقية. لا تحتوي نتائج حالية، ولا تعني وجود نشر staging حالي.
 
 ## بيانات التشغيل
 
@@ -51,6 +53,7 @@
 | Payment method |  |
 | Shipping/commune test data |  |
 | Checkout smoke result |  |
+| Variant checkout smoke result, if seeded |  |
 | Created order reference |  |
 | Cleanup needed |  |
 

@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: 2026-05-12
+Last updated: 2026-05-19
 
 This document describes the current architecture of `dz-saas-commerce` based on the repository state. It is an execution reference, not a marketing overview.
 
@@ -52,9 +52,10 @@ Important storefront entry points:
 - `storefront/src/lib/api.ts`: wraps backend API calls.
 - `storefront/src/app/page.tsx`: storefront home.
 - `storefront/src/app/products/*`: product listing and details.
-- `storefront/src/components/storefront/quick-order-form.tsx`: current quick order UI.
+- `storefront/src/components/storefront/product-variant-purchase-panel.tsx`: product detail purchase panel and variant picker.
+- `storefront/src/components/storefront/quick-order-form.tsx`: quick order UI for simple and selected variant products.
 - `storefront/src/components/storefront/cart-provider.tsx`: store-scoped client cart state.
-- `storefront/src/components/storefront/cart-checkout.tsx`: cart order UI that submits item IDs and quantities to Laravel.
+- `storefront/src/components/storefront/cart-checkout.tsx`: cart order UI that submits product IDs, optional variant IDs, and quantities to Laravel.
 - `storefront/src/app/cart/page.tsx`: public cart checkout page.
 - `storefront/src/components/storefront/store-trust-badges.tsx`: localized storefront trust section.
 - `storefront/src/components/storefront/store-contact-strip.tsx`: store contact and legal section.
@@ -126,7 +127,9 @@ Implemented or partially implemented domains:
 - Identity and RBAC
 - Stores
 - Catalog
+- Product variants and options
 - Inventory
+- Stock movement ledger
 - Checkout
 - Orders
 - Payments
@@ -184,7 +187,15 @@ The current storefront API is REST-first:
 
 The storefront must never calculate trusted totals, discounts, shipping fees, inventory validity, payment status, or subscription limits. Laravel remains the source of truth.
 
-The checkout endpoint supports both single-product quick order payloads and cart payloads with `items: [{ product_id, quantity }]`. Cart display data is client-side only and must not be trusted by Laravel.
+The checkout endpoint supports both single-product quick order payloads and cart payloads with `items: [{ product_id, product_variant_id?, quantity }]`. Cart display data is client-side only and must not be trusted by Laravel.
+
+Variant boundary:
+
+- `simple` products are purchased without `product_variant_id`.
+- `variable` products require `product_variant_id`.
+- Laravel rejects cross-tenant, cross-product, inactive, missing, or disallowed variants.
+- Product detail API serializes active variants/options/availability only for variable products.
+- Storefront picker and displayed price are UX hints; Laravel recalculates price and inventory.
 
 Current public API hardening notes:
 
@@ -263,7 +274,7 @@ The storefront currently favors correctness with `force-dynamic` pages and `cach
 
 Before commercial launch, the architecture must include:
 
-- 2FA for super admins and tenant owners
+- 2FA for super admins, platform support, and tenant owners: implemented for current Filament panels
 - stricter rate limits for sensitive actions
 - a green storefront dependency audit, maintained locally and in CI; as of 2026-05-12 the storefront is on Next `15.5.18`
 - security headers baseline and production CSP tightening
@@ -271,6 +282,7 @@ Before commercial launch, the architecture must include:
 - tested backup and restore process; runbook exists but drill execution is still required
 - explicit audit trails for financial, tenant, order, and staff actions
 - least-privilege production credentials
+- emergency 2FA reset procedure: implemented through `security:reset-two-factor`; active session revocation is still missing
 
 ## Architecture Change Rule
 

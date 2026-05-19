@@ -1,6 +1,6 @@
 # Documentation Index
 
-هذا الملف هو نقطة البداية اليومية لأي مطور أو جلسة Codex تعمل على `dz-saas-commerce`. اقرأ الوثائق حسب الدومين الذي ستلمسه، ولا تعتمد على الذاكرة أو roadmap فقط عند تعديل منطق حساس.
+هذا الملف هو نقطة البداية اليومية لأي مطور أو جلسة Codex تعمل على `dz-saas-commerce`. اقرأ الوثائق حسب الدومين الذي ستلمسه، ولا تعتمد على الذاكرة أو roadmap فقط عند تعديل منطق حساس. يوجد أيضاً `README.md` في جذر المستودع كنقطة دخول مختصرة، لكن هذا الملف هو فهرس الوثائق التفصيلي.
 
 ## أين تبدأ؟
 
@@ -14,6 +14,7 @@
 - `PROJECT_DEEP_ANALYSIS_AND_AI_ROADMAP_AR.md`: المرجع الاستراتيجي الأعلى وخارطة الطريق.
 - `ARCHITECTURE.md`: شكل monorepo، modular monolith، الدومينات، وقواعد البنية.
 - `DOMAIN_CONTRACTS_AR.md`: عقود الدومينات التي تمنع خلط المسؤوليات.
+- `README.md` في جذر المستودع: ملخص سريع للمشروع ومسارات البداية.
 
 ## AI/Codex Workflow
 
@@ -40,12 +41,15 @@
 - `STOREFRONT_CART.md`: cart/checkout payload وقواعد UX.
 - `STOREFRONT_SEO.md`: SEO/crawl contract.
 - `STOREFRONT_THEME.md`: home sections والثيم.
+- `DOMAIN_CONTRACTS_AR.md`: عقود `ProductType`, variant picker، و`product_variant_id` في checkout.
 
 ## Operations And Deployment
 
 - `PRODUCTION_READINESS.md`: حالة الجاهزية وما ينقص قبل beta/production.
 - `OPERATIONS_NEXT_STEPS_AR.md`: خطة real staging ثم restore drill ثم monitoring.
 - `STAGING_READINESS_CHECKLIST_AR.md`: checklist مختصرة قبل تشغيل real staging smoke.
+- `STAGING_DEPLOYMENT_RUNBOOK_AR.md`: خطوات نشر staging غير إنتاجي لاحقاً، بدون أسرار وبدون ادعاء تنفيذ staging خارجي حقيقي.
+- `STAGING_SMOKE_PROOF_TEMPLATE_AR.md`: قالب يملأ بعد smoke حقيقي فقط.
 - `BACKUP_RESTORE_RUNBOOK.md`: backup/restore/runbook.
 - `BACKUP_RESTORE_DRILL_EVIDENCE_TEMPLATE.md`: قالب تسجيل evidence بعد restore drill حقيقي.
 - `MONITORING_ALERTING_RUNBOOK.md`: observability والalerts.
@@ -62,14 +66,15 @@
 ## ADRs
 
 - `adr/README.md`: فهرس قرارات البنية.
-- `adr/0013-product-variants-inventory-design.md`: تصميم مقترح لدعم product variants/options وتأثيره على inventory/checkout/stock movements.
+- `adr/0013-product-variants-inventory-design.md`: قرار accepted لحالة product variants/options بعد اكتمال schema/model/vendor UX/checkout/inventory uniqueness/lifecycle/serialization/UI/product type enforcement.
 - اقرأ ADR قبل أي تغيير يلمس المعمارية، tenancy، المال، storefront caching، deployment، marketplace، أو shipping.
 
 ## اقرأ قبل التعديل
 
 - Checkout: `STOREFRONT_CART.md`, `DOMAIN_CONTRACTS_AR.md`, `TESTING_STRATEGY.md`, `adr/0005-backend-source-of-truth-for-commerce-money.md`, `adr/0006-do-not-trust-client-totals.md`.
 - Billing: `DOMAIN_CONTRACTS_AR.md`, `SECURITY_BASELINE.md`, `TESTING_STRATEGY.md`.
-- Inventory: `DOMAIN_CONTRACTS_AR.md`, `TENANCY_RULES.md`, `TESTING_STRATEGY.md`.
+- Inventory: `DOMAIN_CONTRACTS_AR.md`, `AUDIT_MATRIX.md`, `TENANCY_RULES.md`, `TESTING_STRATEGY.md`.
+- Variants: `DOMAIN_CONTRACTS_AR.md`, `STOREFRONT_CART.md`, `adr/0013-product-variants-inventory-design.md`.
 - Tenancy: `TENANCY_RULES.md`, `SECURITY_BASELINE.md`, `adr/0002-shared-database-tenancy.md`.
 - Storefront: `STOREFRONT_CART.md`, `STOREFRONT_SEO.md`, `STOREFRONT_THEME.md`, `LOCAL_DEVELOPMENT.md`.
 - Deployment: `PRODUCTION_READINESS.md`, `OPERATIONS_NEXT_STEPS_AR.md`, `STAGING_READINESS_CHECKLIST_AR.md`, `REVERSE_PROXY_RUNBOOK.md`, `QUEUE_SCHEDULER_RUNBOOK.md`.

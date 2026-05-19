@@ -215,6 +215,7 @@ deploy/staging/staging-smoke.sh down
 - [ ] backend live يرد 200 عبر staging edge/proxy.
 - [ ] backend ready يرد 200 ويغطي PostgreSQL, cache/Redis, queue, storage, وMeilisearch عند تفعيلها.
 - [ ] storefront home يرد عبر host staging الصحيح.
+- [ ] checkout smoke محدود ينجح على منتج simple، وعلى variant product إذا كان seed staging يحتوي variant آمن للاختبار.
 - [ ] queue worker يعمل ولا توجد failed jobs.
 - [ ] scheduler يعمل كعملية مستقلة وبنسخة واحدة.
 - [ ] object storage readiness ينجح ضد bucket staging.

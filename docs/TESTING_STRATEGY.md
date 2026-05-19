@@ -1,6 +1,6 @@
 # Testing Strategy
 
-Last updated: 2026-05-12
+Last updated: 2026-05-19
 
 This document defines how the project should be tested as it grows into a commercial SaaS platform.
 
@@ -23,18 +23,18 @@ Frontend:
 
 ## Current Baseline
 
-Latest recorded verification: 2026-05-12.
+Latest full recorded verification remains 2026-05-12. The 2026-05-19 pass was documentation-only and did not rerun full backend/storefront suites because application code did not change.
 
-- Backend: `154 passed (629 assertions)`.
+- Backend historical full-suite baseline: `154 passed (629 assertions)`.
 - Repository hygiene: `scripts/security/secret-hygiene.sh` and `scripts/release/clean-export-check.sh` passed.
 - Backend smoke checks passed: `composer audit --no-interaction`, `php vendor/bin/pint --test`, and `php artisan system:health --scope=ready --format=json`.
 - Storefront build: passed.
 - Storefront typecheck: passed when run sequentially after build.
-- Storefront Playwright e2e: `6 passed`.
+- Storefront Playwright e2e historical baseline: `6 passed` on 2026-05-12. The current spec now includes variant picker/simple-product/legacy-payload cases, but this docs-only pass did not rerun it.
 - Storefront dependency audit: passed. `pnpm audit --audit-level moderate` reports no known vulnerabilities after updating Next to `15.5.18`.
 - Storefront Docker verification: `./storefront/scripts/verify-docker.sh all` passed on 2026-05-12 with Playwright reporting `6 passed`.
 - Dockerfile checks and local image build smoke: backend and storefront passed on 2026-05-12 through `docker buildx build --check` and `docker buildx build --load`.
-- CI baseline: `.github/workflows/quality.yml` includes repository hygiene, clean export rehearsal, backend/frontend dependency audits, backend Pint, required storefront e2e, and Docker image build smoke checks. It passed in GitHub Actions on PR #1 / run `25743248405`, and main branch protection now requires all five Quality Gates checks.
+- CI baseline: `.github/workflows/quality.yml` includes repository hygiene, clean export rehearsal, backend/frontend dependency audits, backend Pint, storefront e2e, Docker image build smoke checks, and image vulnerability scans. It passed in GitHub Actions on PR #1 / run `25743248405`, and main branch protection was documented as requiring all five Quality Gates checks.
 
 These numbers must be updated in the living roadmap when they change.
 
@@ -50,7 +50,7 @@ Jobs:
 - docker-check: `docker buildx build --check` and no-push image build smoke checks for backend and storefront Dockerfiles
 - e2e: installs Playwright Chromium, runs `pnpm test:e2e`, and uploads artifacts on failure
 
-This workflow must become a required pull request gate before large Codex-driven feature work. Until then, local verification remains mandatory.
+Treat this workflow as the required quality gate contract. If GitHub branch protection changes, update this document and `PRODUCTION_READINESS.md`; do not assume local verification alone is enough for production-facing work.
 
 ## Backend Test Command
 
@@ -179,9 +179,13 @@ P0 areas:
 - authorization and policies
 - checkout totals
 - checkout idempotency and duplicate-window behavior
+- product variant checkout with `product_variant_id`
+- simple-vs-variable `ProductType` enforcement
 - checkout idempotency pruning when retention behavior changes
 - checkout abuse limits by IP/phone/store when changed
 - inventory reservation and release
+- variant inventory uniqueness and lifecycle propagation
+- stock movement ledger entries for reserve/release/settle/restock/manual adjustment
 - order status transitions
 - payment status transitions
 - subscription limits and suspension behavior
@@ -195,6 +199,8 @@ P0 areas:
 - trusted proxy behavior for `X-Forwarded-Proto` / HSTS behind reverse proxies
 - scheduler registration and failed-jobs smoke checks when operating commands change
 - repository secret hygiene when env, deployment, CI, or ignore rules change
+- store readiness validation for simple and variable products
+- emergency 2FA reset behavior and audit metadata when security flows change
 
 P1 areas:
 
@@ -289,6 +295,7 @@ Current Playwright tests are storefront-focused. As the storefront grows, e2e co
 - homepage loads for a resolved store
 - product listing
 - product details
+- product variant picker and variant checkout payloads
 - quick order happy path
 - cart checkout happy path with item payloads
 - sitemap, robots, canonical, and OpenGraph smoke coverage, including multi-page product sitemap coverage
