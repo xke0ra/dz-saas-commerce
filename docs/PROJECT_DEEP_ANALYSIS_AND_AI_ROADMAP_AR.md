@@ -219,7 +219,7 @@
 - تخزين المال بوحدات صغيرة.
 - جدول checkout idempotency.
 
-تم قبول تصميم product variants/options في ADR 0013 وتنفيذ schema foundation للجداول والأعمدة nullable والقيود وtenant integrity tests، ثم إضافة طبقة models/factories/relationships، ثم إضافة Vendor Filament management foundation كموارد منفصلة، ثم refinement يمنع ربط option values بvariants من product مختلف داخل نفس tenant. يدعم checkout backend الآن `product_variant_id` اختيارياً مع variant pricing/reservation/order snapshot، وأصبح `inventory_items` يسمح بمخزون مستقل لكل sellable unit عبر partial unique indexes، كما أصبحت release/settlement/restock تستخدم مخزون الـ variant وتسجل `product_variant_id` في stock movements. product detail API يعرض active variants/options/availability، والـ storefront product detail يملك picker محدوداً يرسل `product_variant_id`. تمت إضافة `products.type` كمصدر الحقيقة للتمييز بين simple وvariable، ومع استمرار real staging كمسار جاهزية مستقل.
+تم قبول تصميم product variants/options في ADR 0013 وتنفيذ schema foundation للجداول والأعمدة nullable والقيود وtenant integrity tests، ثم إضافة طبقة models/factories/relationships، ثم إضافة Vendor Filament management foundation كموارد منفصلة، ثم refinement يمنع ربط option values بvariants من product مختلف داخل نفس tenant. يدعم checkout backend الآن `product_variant_id` اختيارياً مع variant pricing/reservation/order snapshot، وأصبح `inventory_items` يسمح بمخزون مستقل لكل sellable unit عبر partial unique indexes، كما أصبحت release/settlement/restock تستخدم مخزون الـ variant وتسجل `product_variant_id` في stock movements. product detail API يعرض active variants/options/availability، والـ storefront product detail يملك picker محدوداً يرسل `product_variant_id`. تمت إضافة `products.type` كمصدر الحقيقة للتمييز بين simple وvariable، وأضيفت طبقة `StoreReadinessChecker` للتحقق من جاهزية store/product قبل أي publish flow صريح، مع استمرار real staging كمسار جاهزية مستقل.
 
 ### 4.9 tenancy
 
@@ -300,13 +300,14 @@
 - trust badges.
 - contact/legal strip.
 - Arabic/French localization foundation.
+- readiness validation layer للمتجر والمنتجات simple/variable، بدون تغيير storefront UI أو checkout behavior.
 
 الناقص:
 
 - theme sections قابلة للتكوين أكثر.
 - media/image strategy.
 - accessibility audit.
-- storefront readiness gates قبل publish.
+- publish action صريح يربط `assertReady` عند تغيير status.
 
 ### 4.14 domains
 
@@ -483,7 +484,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 - caching/revalidation للـ storefront.
 - merchant onboarding wizard.
-- store readiness/publish gate.
+- publish action integration فوق store readiness validation layer.
 - manual inventory adjustment UI/API design.
 - product import/export.
 - bulk order operations.
@@ -567,8 +568,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 الهدف: جعل التاجر يستطيع الوصول إلى متجر قابل للنشر بدون مطور.
 
 - merchant onboarding wizard.
-- store readiness checklist.
-- publish gate.
+- store readiness validation موجودة؛ المتبقي publish gate flow صريح.
 - vendor dashboard.
 - admin dashboard.
 - support workflow.
@@ -716,7 +716,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 ### 11.2 Merchant
 
 - الحالة الحالية: vendor panel موجود مع catalog/orders/shipping/billing/settings/theme.
-- المطلوب: onboarding wizard، readiness checklist، store publish gate، dashboard يومي.
+- المطلوب: onboarding wizard، ربط readiness validation بـ publish action صريح، dashboard يومي.
 - الأولوية: P1.
 - معايير القبول: تاجر جديد يستطيع إكمال الحد الأدنى للنشر، وكل خطوة لها validation server-side.
 
@@ -938,8 +938,9 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 
 ```text
 المهمة: أضف store readiness checklist وpublish gate.
-المطلوب: تحقق من بيانات المتجر، الشحن، payment method، legal pages، منتج منشور.
-الاختبارات: policy + readiness action tests.
+الحالة: validation layer مكتمل محلياً عبر `StoreReadinessChecker` مع structured errors/warnings و`assertReady`/`assertProductReady`.
+المطلوب لاحقاً: publish action صريح يربط assertions عند تغيير status، بدون تحويل generic form status select إلى flow ضمني.
+الاختبارات: readiness action tests للمتجر، simple products، variable products، stable codes، وValidationException.
 ```
 
 #### Product variants
@@ -1073,7 +1074,7 @@ backend test suite قوي نسبياً لحالة pre-production: `154 passed (6
 7. `مكتمل 2026-05-09`: مراجعة tenant scoping الأساسية لـ `Store`، مع إبقائه exception موثقاً وfail-closed عند `forTenant(null)`.
 8. `مكتمل 2026-05-09`: إصلاح catalog pagination وsitemap حتى لا تختفي المنتجات بعد أول 48 منتج.
 9. security hardening: أضيف 2FA للوحات Filament الحساسة في 2026-05-16؛ المتبقي emergency reset، CSP، vulnerability review workflow، secrets rotation. تم إضافة secret hygiene وclean export baseline في 2026-05-09، وأضيف image vulnerability scanning إلى CI وpublish workflow في 2026-05-12.
-10. merchant onboarding + store readiness، ثم product variant models/vendor management، ثم checkout/storefront variants.
+10. merchant onboarding + publish action integration فوق store readiness validation layer، بعد إغلاق مسار product variants الحالي.
 
 هذا الترتيب يبدأ بالبنية والموثوقية قبل الميزات؛ لأن المشروع سيكبر عبر Codex، وأي ضعف في CI أو العزل أو التشغيل سيصبح مكلفاً لاحقاً.
 

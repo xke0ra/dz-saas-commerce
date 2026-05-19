@@ -70,7 +70,22 @@
 - backend checkout contract الحالي يبقى كما هو: `product_variant_id` اختياري ومدقق server-side، والواجهة لا ترسل السعر ولا يثق backend بأي سعر من العميل.
 - checkout responses يجب أن تحتوي order confirmation آمن، لا raw internal operational data.
 
-## 6. Security/Audit Contract
+## 6. Store Readiness Contract
+
+- `App\Support\Readiness\StoreReadinessChecker` هو طبقة domain validation للنشر، وليس دليلاً على production deployment أو staging جاهز.
+- نتيجة readiness يجب أن تبقى structured: `ready`, `errors`, `warnings`، مع codes مستقرة قابلة للاختبار.
+- جاهزية المتجر تتطلب tenant، و`subdomain`، واستهداف `StoreStatus::Active`، وأن يكون tenant `active` أو `trial`.
+- جاهزية المتجر تتطلب `StoreSetting` وactive `ThemeSetting`، وpayment method مفعل للمسار الحالي، وshipping rate مفعل للـ tenant.
+- لا يُشترط custom domain أو TLS أو production domain داخل readiness gate الحالي.
+- يجب وجود منتج واحد على الأقل visible on storefront وقابل للبيع حتى يكون المتجر ready.
+- جاهزية المنتج `simple` تتطلب `status=active`، و`published_at` غير مستقبلي، و`price_minor` غير سالب، و`InventoryItem` على مستوى المنتج (`product_variant_id IS NULL`) قابل للبيع.
+- simple inventory يعتبر قابلاً للبيع إذا كان untracked، أو يسمح بالـ backorders، أو `available = quantity - reserved_quantity` أكبر من صفر.
+- جاهزية المنتج `variable` تتطلب active variants، وكل active variant يجب أن يملك option values صالحة لنفس product.
+- المنتج `variable` لا يعتبر ready اعتماداً على parent inventory؛ يجب وجود variant-level inventory قابل للبيع لvariant واحد على الأقل.
+- الصور والlegal content warnings في هذه الطبقة، وليست errors تمنع readiness حالياً.
+- codes الأساسية المستقرة: `missing_payment_method`, `missing_shipping_rate`, `no_sellable_products`, `product_missing_inventory`, `variable_product_missing_variants`, `variable_product_missing_options`, `variable_product_no_sellable_variants`, `invalid_product_price`.
+
+## 7. Security/Audit Contract
 
 - العمليات الحساسة يجب أن تسجل `actor`, `action/event`, `auditable`, `old_values`, `new_values`, و`metadata` عند الحاجة.
 - لا تسجل PII raw مثل الهاتف أو IP في application logs؛ استخدم masking أو hashing عند الحاجة.
@@ -78,7 +93,7 @@
 - أي security-sensitive admin action يحتاج audit matrix entry قبل التنفيذ.
 - secrets لا توضع في docs أو tests أو committed config.
 
-## 7. Operations Contract
+## 8. Operations Contract
 
 - أي production-facing feature تحتاج health/readiness consideration.
 - إذا اعتمدت feature على queue أو scheduler أو storage أو search، يجب توثيق ذلك في docs/runbook.
