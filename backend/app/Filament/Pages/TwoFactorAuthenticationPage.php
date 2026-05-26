@@ -2,7 +2,10 @@
 
 namespace App\Filament\Pages;
 
+use App\Models\User;
+use App\Support\Auth\TwoFactorAuthentication;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Auth\MultiFactor\Contracts\MultiFactorAuthenticationProvider;
 use Filament\Facades\Filament;
 use Filament\Pages\Page;
@@ -28,6 +31,25 @@ class TwoFactorAuthenticationPage extends Page
     public function getSubheading(): string|Htmlable|null
     {
         return 'Use an authenticator app and recovery codes to protect access to this panel.';
+    }
+
+    public function getDefaultActionSuccessRedirectUrl(Action $action): ?string
+    {
+        if ($action->getName() !== 'setUpAppAuthentication') {
+            return parent::getDefaultActionSuccessRedirectUrl($action);
+        }
+
+        $user = Filament::auth()->user();
+
+        if (! $user instanceof User || ! $user->hasTwoFactorAuthenticationEnabled()) {
+            return null;
+        }
+
+        return app(TwoFactorAuthentication::class)->pullIntendedPanelUrl(
+            request(),
+            Filament::getCurrentPanel()?->getId(),
+            Filament::getUrl(),
+        );
     }
 
     public function content(Schema $schema): Schema

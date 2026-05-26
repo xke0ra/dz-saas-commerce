@@ -1,6 +1,6 @@
 # Production Readiness Runbook
 
-Last updated: 2026-05-19
+Last updated: 2026-05-26
 
 This runbook records the production foundation for `dz-saas-commerce`. It is not a deployment guarantee yet; it defines the required operating contract before beta or production.
 
@@ -38,15 +38,15 @@ Implemented in this foundation pass:
 - production logging example routes Laravel logs to `stderr` for container collection
 - staging deployment skeleton in `deploy/staging/`
 - self-contained ephemeral staging smoke overlay in `deploy/staging/docker-compose.staging.ephemeral.yml`
-- staging deployment runbook, readiness checklist, and smoke proof template for future real staging execution
+- staging deployment runbook, readiness checklist, and smoke proof template for real staging execution
+- external mayfairs.app staging host exists on DigitalOcean with Caddy TLS in front of internal Nginx edge
 
 Still required:
 
-- Provide VPS/provider or hosting platform and staging domain/temporary hostname
 - Populate the GitHub `staging` environment secret/variable contract
-- Execute the staging compose skeleton against real staging services through the manual staging smoke workflow or a staging host
+- Record a fresh external staging smoke proof after the 2FA fix is deployed
 - keep container image vulnerability scans green as base images and advisories change
-- reverse proxy deployment in staging and TLS/custom-domain validation
+- complete reverse proxy browser/e2e validation and Cloudflare Proxied-mode decision
 - deploy automated backup schedules and execute restore drill
 - queue and scheduler supervision deployment in staging/production
 - error tracking integration
@@ -81,7 +81,15 @@ Documentation refresh on 2026-05-19:
 
 - `docs/STAGING_DEPLOYMENT_RUNBOOK_AR.md`, `docs/STAGING_READINESS_CHECKLIST_AR.md`, and `docs/STAGING_SMOKE_PROOF_TEMPLATE_AR.md` define the next real staging execution path.
 - This refresh did not run a new external staging smoke and did not change application code.
-- Real staging remains pending until VPS/provider, domain or hostname, and staging secrets/variables are available.
+- This 2026-05-19 note is superseded by the 2026-05-26 external staging update below.
+
+External staging update on 2026-05-26:
+
+- DigitalOcean droplet `mayfair-vps` in FRA1 now hosts `/opt/mayfair`.
+- Domains `mayfairs.app`, `api.mayfairs.app`, `admin.mayfairs.app`, and `www.mayfairs.app` resolve to `46.101.178.27`.
+- Caddy terminates public HTTPS and forwards to the Docker Nginx edge bound to `127.0.0.1:8080`.
+- Local images `mayfair-backend:local` and `mayfair-storefront:local` are used for this staging host.
+- This is an external staging deployment in progress, not production readiness. It still needs a recorded smoke proof after the current 2FA fix, plus restore drill, monitoring, alerting, and backup schedule proof.
 
 ## Image Build Commands
 
@@ -453,9 +461,8 @@ Implemented baseline:
 
 Still required:
 
-- Staging deployment.
-- TLS termination validation.
-- Custom domain routing validation.
+- Fresh smoke proof after deployment of the current 2FA/session fix.
+- Cloudflare Proxied mode validation before enabling it.
 - Browser/e2e verification behind the proxy.
 - Final CSP/HSTS tuning after proxy deployment.
 

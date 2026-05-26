@@ -33,7 +33,9 @@ class EnsurePanelTwoFactor
 
         if ($user->hasTwoFactorAuthenticationEnabled()) {
             if (! $this->twoFactor->sessionIsConfirmed($request, $user)) {
-                return redirect()->guest(TwoFactorChallengePage::getUrl(panel: $panelId));
+                $this->twoFactor->rememberIntendedPanelUrl($request, $panelId);
+
+                return redirect()->to(TwoFactorChallengePage::getUrl(panel: $panelId));
             }
 
             return $next($request);
@@ -44,7 +46,9 @@ class EnsurePanelTwoFactor
                 return $next($request);
             }
 
-            return redirect()->guest(TwoFactorAuthenticationPage::getUrl(panel: $panelId));
+            $this->twoFactor->rememberIntendedPanelUrl($request, $panelId);
+
+            return redirect()->to(TwoFactorAuthenticationPage::getUrl(panel: $panelId));
         }
 
         return $next($request);

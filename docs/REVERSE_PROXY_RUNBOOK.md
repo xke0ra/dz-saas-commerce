@@ -1,6 +1,6 @@
 # Reverse Proxy Runbook
 
-Last updated: 2026-05-07
+Last updated: 2026-05-26
 
 This runbook defines the first reverse proxy strategy for `dz-saas-commerce`. It matches the current runtime shape: Laravel backend runs as PHP-FPM on port `9000`, while the Next.js storefront runs as an HTTP server on port `3000`.
 
@@ -13,13 +13,12 @@ Implemented:
 - Production env placeholder: `TRUSTED_PROXIES=`.
 - Backend test proving forwarded HTTPS is trusted only from configured proxies.
 - Nginx example syntax was checked with Docker using temporary host aliases for the upstream names.
+- Mayfairs staging currently uses Caddy as the public TLS proxy in front of the internal Nginx edge bound to `127.0.0.1:8080`.
 
 Not yet proven:
 
-- The Nginx config has not been deployed in staging.
-- TLS certificate automation is not configured in this repository.
-- Custom domain routing has not been exercised end to end in staging.
-- Browser/e2e validation behind the proxy is still required.
+- Browser/e2e validation behind Caddy + Nginx remains required after each deploy.
+- Cloudflare Proxied mode is not enabled yet; DNS only is used while Caddy certificate issuance and forwarded headers are validated.
 
 ## Recommended Topology
 
@@ -34,6 +33,19 @@ Internet
 ```
 
 This keeps TLS certificates and public IP management outside the application containers. If Nginx terminates TLS directly, adapt the example config to listen on `443 ssl http2` and keep the same upstream and header rules.
+
+Mayfairs staging currently uses this concrete topology:
+
+```text
+Internet
+  -> Caddy :80/:443 on mayfair-vps
+  -> 127.0.0.1:8080
+  -> Nginx edge container
+  -> Laravel PHP-FPM backend:9000 for API/Admin/Filament
+  -> Next.js storefront:3000 for public storefront
+```
+
+Keep Docker Compose `EDGE_PORT=127.0.0.1:8080` for this topology. Do not bind the internal Nginx edge to `0.0.0.0:8080` unless another private firewall layer prevents direct internet access.
 
 ## Host Routing
 
@@ -74,6 +86,17 @@ Laravel must trust only the private proxy/load-balancer IPs or CIDRs via `TRUSTE
 
 Do not set `TRUSTED_PROXIES=*` unless the backend is impossible to reach except through a trusted private proxy layer. Prefer explicit CIDRs.
 
+Caddy's `reverse_proxy` sends forwarded headers by default. The Nginx edge must preserve them when passing to PHP-FPM:
+
+```nginx
+fastcgi_param HTTP_X_FORWARDED_FOR $proxy_add_x_forwarded_for;
+fastcgi_param HTTP_X_FORWARDED_HOST $host;
+fastcgi_param HTTP_X_FORWARDED_PROTO $http_x_forwarded_proto;
+fastcgi_param HTTP_X_FORWARDED_PORT $http_x_forwarded_port;
+```
+
+For storefront proxying, preserve `Host`, `X-Forwarded-Host`, `X-Forwarded-Proto`, and `X-Forwarded-Port`.
+
 ## Security Headers
 
 Laravel and Next.js already emit baseline security headers. The reverse proxy should preserve them. Add edge-only headers only after checking they do not create duplicate or conflicting CSP/HSTS behavior.
@@ -83,6 +106,8 @@ HSTS depends on Laravel seeing the request as secure. Behind a proxy, this requi
 - TLS terminated before the application.
 - `X-Forwarded-Proto: https`.
 - `TRUSTED_PROXIES` configured correctly.
+- `APP_URL` and `ASSET_URL` use the external HTTPS backend host.
+- Filament and Livewire assets render with HTTPS URLs.
 
 ## Body Size And Uploads
 
@@ -131,10 +156,15 @@ php artisan test tests/Feature/Security/TrustedProxyTest.php
 Runtime smoke after staging deployment:
 
 ```bash
-curl -I https://api.example.com/api/system/health/live
-curl -I https://api.example.com/api/system/health/ready
-curl -I https://example.com
-curl -I https://demo.example.com
+curl -I https://mayfairs.app
+curl -I https://api.mayfairs.app
+curl -I https://admin.mayfairs.app
+curl -I https://api.mayfairs.app/api/system/health/live
+curl -I https://api.mayfairs.app/api/system/health/ready
+if curl -s https://api.mayfairs.app/admin/login | grep -oE '(href|src)="[^"]+"' | grep 'http://'; then
+  echo "mixed content asset URL found"
+  exit 1
+fi
 ```
 
 Expected:
@@ -143,6 +173,7 @@ Expected:
 - `Strict-Transport-Security` appears on HTTPS responses.
 - the storefront sees the original host.
 - admin/vendor/support routes remain on backend hosts.
+- no Filament or Livewire asset URL uses `http://`.
 
 ## Definition Of Done
 
@@ -150,7 +181,7 @@ This reverse proxy phase is complete only when:
 
 - Staging uses a documented proxy topology.
 - TLS termination is configured.
-- `TRUSTED_PROXIES` is set to explicit private proxy IPs/CIDRs.
+- `TRUSTED_PROXIES` is set to explicit private proxy IPs/CIDRs, or `*` only when the internal edge/backend are unreachable except through the trusted local proxy.
 - API/Admin/Filament routes reach Laravel through FastCGI.
 - Storefront and custom domains reach Next.js with the original `Host`.
 - Security headers are preserved and verified.

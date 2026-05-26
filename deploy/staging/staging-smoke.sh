@@ -124,6 +124,24 @@ check_failed_jobs() {
   echo "staging-smoke: failed-job check saved to ${output}"
 }
 
+default_edge_url() {
+  local edge_bind="${EDGE_PORT:-8080}"
+
+  if [[ "${edge_bind}" == *:* ]]; then
+    local edge_host="${edge_bind%:*}"
+    local edge_port="${edge_bind##*:}"
+
+    if [[ "${edge_host}" == "0.0.0.0" || "${edge_host}" == "::" ]]; then
+      edge_host="127.0.0.1"
+    fi
+
+    echo "http://${edge_host}:${edge_port}"
+    return
+  fi
+
+  echo "http://127.0.0.1:${edge_bind}"
+}
+
 validate() {
   require_command docker
   local compose_file
@@ -172,8 +190,7 @@ verify_stack() {
   require_command curl
   validate
 
-  local edge_port="${EDGE_PORT:-8080}"
-  local edge_url="${STAGING_EDGE_URL:-http://127.0.0.1:${edge_port}}"
+  local edge_url="${STAGING_EDGE_URL:-$(default_edge_url)}"
   local backend_host="${STAGING_BACKEND_HOST:-api.example.com}"
   local storefront_host="${STAGING_STOREFRONT_HOST:-example.com}"
 

@@ -39,8 +39,19 @@ it('does not clear two factor authentication in dry run mode', function (): void
         '--email' => $user->email,
         '--reason' => 'verified identity by support runbook',
         '--dry-run' => true,
-        '--confirm' => true,
     ])->assertExitCode(Command::SUCCESS);
+
+    expect($user->fresh()->hasTwoFactorAuthenticationEnabled())->toBeTrue()
+        ->and(AuditLog::query()->where('event', 'two_factor_reset_by_operator')->exists())->toBeFalse();
+});
+
+it('still requires a reason for dry run mode', function (): void {
+    $user = twoFactorResetCommandUser();
+
+    $this->artisan('security:reset-two-factor', [
+        '--email' => $user->email,
+        '--dry-run' => true,
+    ])->assertExitCode(Command::INVALID);
 
     expect($user->fresh()->hasTwoFactorAuthenticationEnabled())->toBeTrue()
         ->and(AuditLog::query()->where('event', 'two_factor_reset_by_operator')->exists())->toBeFalse();
