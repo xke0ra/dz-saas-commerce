@@ -9,12 +9,14 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Support\Auth\PanelAppAuthentication;
 use App\Support\Auth\TwoFactorAuthentication;
+use Filament\Actions\Testing\TestAction;
 use Illuminate\Http\Request;
 use Illuminate\Session\ArraySessionHandler;
 use Illuminate\Session\Store;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Livewire\Livewire;
 
 it('adds encrypted two factor fields to users and hides secrets from serialization', function (): void {
     expect(Schema::hasColumns('users', [
@@ -121,6 +123,134 @@ it('challenges users with enabled two factor authentication until this session p
         ->assertOk();
 });
 
+it('completes required admin two factor setup and confirms the current session', function (): void {
+    $user = User::factory()->superAdmin()->create();
+
+    $this->actingAs($user)
+        ->get('/admin')
+        ->assertRedirect(TwoFactorAuthenticationPage::getUrl(panel: 'admin'))
+        ->assertSessionHas('url.intended', adminPanelUrl());
+
+    $component = Livewire::actingAs($user)
+        ->test(TwoFactorAuthenticationPage::class)
+        ->mountAction(TestAction::make('setUpAppAuthentication')->schemaComponent());
+
+    $encryptedArguments = $component->instance()->mountedActions[0]['arguments']['encrypted'] ?? null;
+
+    expect($encryptedArguments)->toBeString();
+
+    $secret = decrypt($encryptedArguments)['secret'];
+
+    $component
+        ->setActionData([
+            'code' => app(PanelAppAuthentication::class)->getCurrentCode($user, $secret),
+        ])
+        ->callMountedAction()
+        ->assertHasNoActionErrors()
+        ->assertRedirect(adminPanelUrl())
+        ->assertSessionHas(TwoFactorAuthentication::SESSION_USER_ID, $user->id)
+        ->assertSessionHas(TwoFactorAuthentication::SESSION_CONFIRMED_AT);
+
+    $user = $user->fresh();
+
+    expect($user->two_factor_secret)->toBe($secret)
+        ->and($user->two_factor_confirmed_at)->not->toBeNull()
+        ->and($user->two_factor_enabled_at)->not->toBeNull()
+        ->and($user->getAppAuthenticationRecoveryCodes())->toBeArray();
+
+    $this->actingAs($user)
+        ->get('/admin')
+        ->assertOk();
+});
+
+it('passes enabled admin two factor challenge with totp and rejects invalid codes', function (): void {
+    $user = twoFactorUser(User::factory()->superAdmin()->create());
+
+    $this->actingAs($user)
+        ->get('/admin')
+        ->assertRedirect(TwoFactorChallengePage::getUrl(panel: 'admin'))
+        ->assertSessionHas('url.intended', adminPanelUrl());
+
+    Livewire::actingAs($user)
+        ->test(TwoFactorChallengePage::class)
+        ->set('code', '000000')
+        ->call('submit')
+        ->assertHasErrors(['code']);
+
+    Livewire::actingAs($user)
+        ->test(TwoFactorChallengePage::class)
+        ->set('code', app(PanelAppAuthentication::class)->getCurrentCode($user))
+        ->call('submit')
+        ->assertHasNoErrors()
+        ->assertRedirect(adminPanelUrl())
+        ->assertSessionHas(TwoFactorAuthentication::SESSION_USER_ID, $user->id)
+        ->assertSessionHas(TwoFactorAuthentication::SESSION_CONFIRMED_AT);
+
+    $this->actingAs($user->fresh())
+        ->get('/admin')
+        ->assertOk();
+});
+
+it('does not redirect back to two factor setup or challenge pages after success', function (): void {
+    $user = twoFactorUser(User::factory()->superAdmin()->create());
+
+    $this->withSession([
+        'url.intended' => TwoFactorAuthenticationPage::getUrl(panel: 'admin'),
+    ])->actingAs($user)
+        ->get('/admin/two-factor-authentication')
+        ->assertRedirect(TwoFactorChallengePage::getUrl(panel: 'admin'));
+
+    Livewire::actingAs($user)
+        ->test(TwoFactorChallengePage::class)
+        ->set('code', app(PanelAppAuthentication::class)->getCurrentCode($user))
+        ->call('submit')
+        ->assertHasNoErrors()
+        ->assertRedirect(adminPanelUrl());
+});
+
+it('passes enabled admin two factor challenge with a recovery code once', function (): void {
+    $recoveryCode = 'use-this-code-once';
+    $user = twoFactorUser(User::factory()->superAdmin()->create(), recoveryCodes: [$recoveryCode]);
+
+    $this->actingAs($user)
+        ->get('/admin')
+        ->assertRedirect(TwoFactorChallengePage::getUrl(panel: 'admin'));
+
+    Livewire::actingAs($user)
+        ->test(TwoFactorChallengePage::class)
+        ->set('useRecoveryCode', true)
+        ->set('recoveryCode', $recoveryCode)
+        ->call('submit')
+        ->assertHasNoErrors()
+        ->assertRedirect(adminPanelUrl());
+
+    expect($user->fresh()->getAppAuthenticationRecoveryCodes())->toBe([])
+        ->and(app(TwoFactorAuthentication::class)->verifyRecoveryCode($user->fresh(), $recoveryCode))->toBeFalse();
+});
+
+it('generates filament and livewire asset urls as https behind a trusted proxy', function (): void {
+    config([
+        'app.asset_url' => 'https://api.mayfairs.app',
+        'app.url' => 'https://api.mayfairs.app',
+        'trustedproxy.proxies' => '*',
+    ]);
+
+    $response = $this->withServerVariables([
+        'HTTP_HOST' => 'api.mayfairs.app',
+        'HTTP_X_FORWARDED_HOST' => 'api.mayfairs.app',
+        'HTTP_X_FORWARDED_PORT' => '443',
+        'HTTP_X_FORWARDED_PROTO' => 'https',
+        'REMOTE_ADDR' => '172.18.0.2',
+    ])->get('/admin/login');
+
+    $response->assertOk();
+
+    expect($response->getContent())
+        ->toContain('https://api.mayfairs.app')
+        ->toContain('https://api.mayfairs.app/livewire')
+        ->not->toContain('http://api.mayfairs.app');
+});
+
 it('verifies totp codes and rejects invalid totp codes', function (): void {
     $user = twoFactorUser();
     $appAuthentication = app(PanelAppAuthentication::class);
@@ -198,4 +328,9 @@ function twoFactorUser(?User $user = null, array $recoveryCodes = ['recovery-cod
     ])->save();
 
     return $user->fresh();
+}
+
+function adminPanelUrl(): string
+{
+    return url('/admin');
 }

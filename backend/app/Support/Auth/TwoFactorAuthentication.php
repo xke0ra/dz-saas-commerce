@@ -3,10 +3,13 @@
 namespace App\Support\Auth;
 
 use App\Enums\TenantRole;
+use App\Filament\Pages\TwoFactorAuthenticationPage;
+use App\Filament\Pages\TwoFactorChallengePage;
 use App\Models\User;
 use App\Support\Audit\AuditLogger;
 use App\Support\Tenancy\CurrentTenant;
 use Filament\Facades\Filament;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use PragmaRX\Google2FAQRCode\Google2FA;
@@ -16,6 +19,8 @@ class TwoFactorAuthentication
     public const SESSION_CONFIRMED_AT = 'auth.2fa.confirmed_at';
 
     public const SESSION_USER_ID = 'auth.2fa.user_id';
+
+    private const INTENDED_URL = 'url.intended';
 
     public function __construct(
         private readonly Google2FA $google2FA,
@@ -33,34 +38,76 @@ class TwoFactorAuthentication
 
     public function confirmSession(Request $request, User $user): void
     {
-        if (! $request->hasSession()) {
+        $session = $this->sessionStore($request);
+
+        if ($session === null) {
             return;
         }
 
-        $request->session()->put(self::SESSION_CONFIRMED_AT, now()->toISOString());
-        $request->session()->put(self::SESSION_USER_ID, $user->getAuthIdentifier());
+        $session->put(self::SESSION_CONFIRMED_AT, now()->toISOString());
+        $session->put(self::SESSION_USER_ID, $user->getAuthIdentifier());
     }
 
     public function sessionIsConfirmed(Request $request, User $user): bool
     {
-        if (! $request->hasSession()) {
+        $session = $this->sessionStore($request);
+
+        if ($session === null) {
             return false;
         }
 
-        return ((string) $request->session()->get(self::SESSION_USER_ID) === (string) $user->getAuthIdentifier())
-            && filled($request->session()->get(self::SESSION_CONFIRMED_AT));
+        return ((string) $session->get(self::SESSION_USER_ID) === (string) $user->getAuthIdentifier())
+            && filled($session->get(self::SESSION_CONFIRMED_AT));
     }
 
     public function forgetSession(Request $request): void
     {
-        if (! $request->hasSession()) {
+        $session = $this->sessionStore($request);
+
+        if ($session === null) {
             return;
         }
 
-        $request->session()->forget([
+        $session->forget([
             self::SESSION_CONFIRMED_AT,
             self::SESSION_USER_ID,
         ]);
+    }
+
+    public function rememberIntendedPanelUrl(Request $request, ?string $panelId): void
+    {
+        $session = $this->sessionStore($request);
+
+        if ($session === null) {
+            return;
+        }
+
+        $url = $request->fullUrl();
+
+        if ($this->isTwoFactorUrl($url, $panelId)) {
+            return;
+        }
+
+        $session->put(self::INTENDED_URL, $url);
+    }
+
+    public function pullIntendedPanelUrl(Request $request, ?string $panelId, ?string $default = null): string
+    {
+        $default ??= Filament::getUrl();
+
+        $session = $this->sessionStore($request);
+
+        if ($session === null) {
+            return $default;
+        }
+
+        $url = $session->pull(self::INTENDED_URL, $default);
+
+        if (! is_string($url) || $this->isTwoFactorUrl($url, $panelId)) {
+            return $default;
+        }
+
+        return $url;
     }
 
     public function verifyTotp(User $user, string $code, bool $shouldPreventCodeReuse = true): bool
@@ -224,6 +271,38 @@ class TwoFactorAuthentication
         }
 
         return $user->tenantRole($tenant) === TenantRole::Owner;
+    }
+
+    private function isTwoFactorUrl(string $url, ?string $panelId): bool
+    {
+        $path = parse_url($url, PHP_URL_PATH);
+
+        if (! is_string($path)) {
+            return false;
+        }
+
+        $path = '/'.ltrim($path, '/');
+
+        return in_array($path, [
+            $this->pathFor(TwoFactorAuthenticationPage::getUrl(panel: $panelId)),
+            $this->pathFor(TwoFactorChallengePage::getUrl(panel: $panelId)),
+        ], true);
+    }
+
+    private function pathFor(string $url): string
+    {
+        $path = parse_url($url, PHP_URL_PATH);
+
+        return is_string($path) ? '/'.ltrim($path, '/') : '/';
+    }
+
+    private function sessionStore(Request $request): ?Session
+    {
+        if ($request->hasSession()) {
+            return $request->session();
+        }
+
+        return app()->bound('session.store') ? app('session.store') : null;
     }
 
     private function maskEmail(string $email): string

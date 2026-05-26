@@ -1,8 +1,8 @@
 # Runbook نشر Staging
 
-آخر تحديث: 2026-05-19
+آخر تحديث: 2026-05-26
 
-هذه وثيقة تحضير لنشر staging حقيقي لاحقاً. لا تحتوي أسراراً، ولا تثبت أن staging منشور الآن. لا تستخدم هذه الوثيقة كدليل production readiness؛ هدفها أن تكون خطوات staging جاهزة فور توفر VPS أو منصة استضافة وdomain أو temporary hostname.
+هذه وثيقة تشغيل staging. لا تحتوي أسراراً، ولا تستخدم كدليل production readiness وحدها. اعتبار staging جاهزاً يتطلب smoke proof محدثاً ومرفقاً بنتائج أوامر فعلية.
 
 ## 1. الهدف والنطاق
 
@@ -11,12 +11,11 @@
 - تجهيز خطوات تشغيل staging غير إنتاجي لـ `dz-saas-commerce`.
 - توثيق متطلبات البيئة والخدمات.
 - توثيق env placeholders بدون قيم حقيقية.
-- توثيق smoke checks يمكن تنفيذها لاحقاً.
+- توثيق smoke checks التي يجب تنفيذها بعد كل نشر.
 - توثيق rollback notes وDefinition of Done.
 
 خارج النطاق:
 
-- لا نشر حقيقي في هذه الجولة.
 - لا أسرار داخل repository أو docs.
 - لا تغييرات في checkout أو storefront أو Filament أو business behavior.
 - لا migrations أو dependencies جديدة.
@@ -24,7 +23,7 @@
 
 ## 2. الوضع الحالي في المستودع
 
-المستودع يحتوي مسار staging جاهز للتنفيذ لاحقاً:
+المستودع يحتوي مسار staging التالي:
 
 - `deploy/staging/docker-compose.staging.example.yml`: backend PHP-FPM، queue worker، scheduler، storefront، وNginx edge.
 - `deploy/staging/docker-compose.staging.ephemeral.yml`: PostgreSQL وRedis وMeilisearch وMinIO وMailpit disposable للـ smoke المؤقت.
@@ -33,7 +32,57 @@
 - `.github/workflows/staging-smoke.yml`: workflow يدعم `target=environment` و`target=ephemeral`.
 - `deploy/staging/GITHUB_ENVIRONMENT.md`: عقد secrets/variables لبيئة GitHub `staging`.
 
-هذا يعني أن المشروع لديه deployment path موثق وسكربت smoke، لكنه لا يملك real staging environment الآن. real staging يبقى pending إلى أن تتوفر VPS/provider أو منصة استضافة، domain أو temporary hostname، وخدمات staging وأسرار غير إنتاجية.
+### 2.1 Snapshot النشر الحالي
+
+حسب تشغيل 2026-05-26، يوجد staging خارجي قيد التثبيت على DigitalOcean:
+
+- Provider: DigitalOcean.
+- Droplet: `mayfair-vps`.
+- Region: Frankfurt FRA1.
+- OS: Ubuntu 24.04 LTS.
+- Public IPv4: `46.101.178.27`.
+- Runtime user: `deploy`.
+- Docker: `29.5.2`.
+- Docker Compose: `v5.1.4`.
+- Kernel: `6.8.0-117-generic`.
+- Firewall: `ufw` يسمح بـ OpenSSH و80 و443 فقط.
+- Repo path على السيرفر: `/opt/mayfair`.
+- Domain routing:
+  - `mayfairs.app -> 46.101.178.27`
+  - `api.mayfairs.app -> 46.101.178.27`
+  - `admin.mayfairs.app -> 46.101.178.27`
+  - `www.mayfairs.app -> mayfairs.app`
+- Cloudflare Proxy: DNS only مؤقتاً أثناء إصدار Caddy للشهادات والتحقق من headers.
+
+الـ stack الحالي يستخدم images مبنية محلياً على السيرفر:
+
+- `mayfair-backend:local`
+- `mayfair-storefront:local`
+
+الخدمات المتوقعة في Docker Compose:
+
+- `staging-backend-1`
+- `staging-backend-queue-1`
+- `staging-backend-scheduler-1`
+- `staging-storefront-1`
+- `staging-edge-1`
+- `staging-postgres-1`
+- `staging-redis-1`
+- `staging-meilisearch-1`
+- `staging-minio-1`
+- `staging-mailpit-1`
+
+هذا snapshot لا يحتوي أسراراً. أي تغير في السيرفر أو DNS أو Caddyfile يجب أن يوثق في smoke proof التالي.
+
+### 2.2 Topology الحالي
+
+التدفق المنشور حالياً:
+
+```text
+Internet -> Caddy :80/:443 -> 127.0.0.1:8080 -> nginx edge -> backend/storefront
+```
+
+يجب إبقاء `EDGE_PORT=127.0.0.1:8080` عندما يكون Caddy على نفس السيرفر حتى لا يصبح Nginx الداخلي مكشوفاً مباشرة للإنترنت.
 
 ## 3. المتطلبات
 
@@ -90,6 +139,7 @@ APP_ENV=staging
 APP_KEY=<generated-staging-app-key>
 APP_DEBUG=false
 APP_URL=<staging-backend-url>
+ASSET_URL=<staging-backend-url>
 TRUSTED_PROXIES=<proxy-cidr-or-provider-value>
 
 LOG_CHANNEL=stack
@@ -108,6 +158,7 @@ CACHE_STORE=redis
 QUEUE_CONNECTION=redis
 SESSION_DRIVER=redis
 SESSION_ENCRYPT=true
+SESSION_DOMAIN=<shared-cookie-domain-if-needed>
 SESSION_SECURE_COOKIE=true
 SESSION_SAME_SITE=lax
 
@@ -158,9 +209,27 @@ Backend optional:
 - `AWS_ENDPOINT`
 - `AWS_USE_PATH_STYLE_ENDPOINT=true` عند استخدام MinIO أو provider يحتاج path-style.
 - `SCOUT_PREFIX` إذا كانت خدمة Meilisearch مشتركة مع index prefix واضح.
-- `SESSION_DOMAIN` عند الحاجة لربط cookies على domain محدد.
+- `SESSION_DOMAIN` عند الحاجة لربط cookies على domain محدد. في mayfairs staging استخدم `.mayfairs.app`.
 - `LOG_STDERR_FORMATTER` عند اعتماد formatter مركزي.
 - `DEFAULT_STORE_IDENTIFIER` للـ smoke فقط إذا كان مطلوباً.
+
+قيم mayfairs staging غير السرية التي يجب أن تبقى متسقة:
+
+```dotenv
+APP_ENV=staging
+APP_DEBUG=false
+APP_URL=https://api.mayfairs.app
+ASSET_URL=https://api.mayfairs.app
+TRUSTED_PROXIES=*
+SESSION_DOMAIN=.mayfairs.app
+SESSION_SECURE_COOKIE=true
+NEXT_PUBLIC_API_BASE_URL=https://api.mayfairs.app
+NEXT_PUBLIC_ASSET_BASE_URL=https://api.mayfairs.app
+NEXT_PUBLIC_STOREFRONT_BASE_URL=https://mayfairs.app
+STOREFRONT_BASE_URL=https://mayfairs.app
+```
+
+`TRUSTED_PROXIES=*` لا يستخدم إلا إذا كان backend/edge الداخلي غير قابل للوصول من الإنترنت إلا عبر Caddy أو proxy موثوق. عند توفر IP/CIDR ثابت للطبقة الداخلية، فضله على `*`.
 
 Storefront optional:
 
@@ -232,6 +301,79 @@ BACKEND_ENV_FILE=./backend.env
 STOREFRONT_ENV_FILE=./storefront.env
 EDGE_PORT=<internal-edge-port>
 ```
+
+في mayfairs staging الحالي عند البناء المحلي على السيرفر:
+
+```dotenv
+BACKEND_IMAGE=mayfair-backend:local
+STOREFRONT_IMAGE=mayfair-storefront:local
+BACKEND_ENV_FILE=./backend.env
+STOREFRONT_ENV_FILE=./storefront.env
+EDGE_PORT=127.0.0.1:8080
+```
+
+أوامر البناء المحلي على السيرفر:
+
+```bash
+cd /opt/mayfair
+docker build -t mayfair-backend:local ./backend
+docker build -t mayfair-storefront:local ./storefront
+```
+
+تشغيل stack الحالي:
+
+```bash
+cd /opt/mayfair/deploy/staging
+docker compose \
+  --env-file images.env \
+  -f docker-compose.staging.example.yml \
+  -f docker-compose.staging.ephemeral.yml \
+  up -d
+```
+
+إعادة إنشاء backend بعد تعديل Laravel:
+
+```bash
+cd /opt/mayfair
+docker build -t mayfair-backend:local ./backend
+
+cd /opt/mayfair/deploy/staging
+docker compose \
+  --env-file images.env \
+  -f docker-compose.staging.example.yml \
+  -f docker-compose.staging.ephemeral.yml \
+  up -d --force-recreate backend backend-queue backend-scheduler edge
+
+docker compose \
+  --env-file images.env \
+  -f docker-compose.staging.example.yml \
+  -f docker-compose.staging.ephemeral.yml \
+  exec backend php artisan optimize:clear
+```
+
+### 5.1 Caddy الخارجي
+
+Caddy يستقبل 80/443 ويرسل إلى Nginx الداخلي على `127.0.0.1:8080`:
+
+```caddyfile
+mayfairs.app {
+    reverse_proxy 127.0.0.1:8080
+}
+
+www.mayfairs.app {
+    reverse_proxy 127.0.0.1:8080
+}
+
+api.mayfairs.app {
+    reverse_proxy 127.0.0.1:8080
+}
+
+admin.mayfairs.app {
+    reverse_proxy 127.0.0.1:8080
+}
+```
+
+Caddy يمرر `X-Forwarded-*` افتراضياً. لا تفعل Cloudflare Proxied قبل توثيق أن HTTPS وheaders وasset URLs تعمل خلف الطبقتين.
 
 8. تحقق من contract قبل التشغيل:
 
@@ -418,6 +560,43 @@ curl -fsS --connect-timeout 5 --max-time 20 \
   "<staging-backend-url>/api/storefront/<store-identifier>/products/<product-slug>"
 ```
 
+Mayfairs HTTPS smoke:
+
+```bash
+curl -I https://mayfairs.app
+curl -I https://api.mayfairs.app
+curl -I https://admin.mayfairs.app
+```
+
+القيم المقبولة حالياً: `https://mayfairs.app`, `https://api.mayfairs.app`, و`https://admin.mayfairs.app` ترد عبر HTTP/2، وHTTP على `mayfairs.app` يعيد 308 إلى HTTPS.
+
+Filament/Livewire assets smoke:
+
+```bash
+curl -I https://api.mayfairs.app/css/filament/filament/app.css
+curl -I https://api.mayfairs.app/js/filament/filament/app.js
+
+curl -s https://api.mayfairs.app/admin/login | grep -oE 'href="[^"]+\.css[^"]*"' | head -20
+curl -s https://api.mayfairs.app/admin/login | grep -oE 'src="[^"]+\.js[^"]*"' | head -20
+if curl -s https://api.mayfairs.app/admin/login | grep -oE '(href|src)="[^"]+"' | grep 'http://'; then
+  echo "mixed content asset URL found"
+  exit 1
+fi
+```
+
+كل روابط Filament وLivewire يجب أن تكون HTTPS. إذا ظهر `http://api.mayfairs.app/livewire...` فافحص `TRUSTED_PROXIES`, `X-Forwarded-Proto`, `APP_URL`, و`ASSET_URL`.
+
+2FA smoke للوحة admin:
+
+1. افتح `https://api.mayfairs.app/admin/login`.
+2. سجل دخول super admin لا يملك 2FA مفعلاً.
+3. تحقق من forced setup.
+4. امسح QR وأدخل TOTP صحيحاً.
+5. يجب دخول dashboard مباشرة، لا الرجوع إلى setup أو challenge.
+6. سجل logout ثم login جديد.
+7. يجب ظهور challenge، TOTP الصحيح يدخل dashboard، وTOTP الخاطئ يظهر validation error.
+8. نفذ reset 2FA بحساب اختبار إداري ثم تحقق أن الدخول التالي يعود إلى setup.
+
 ### 7.3 Storefront
 
 ```bash
@@ -497,6 +676,10 @@ php artisan view:cache
 - اضبط `APP_ENV=staging`.
 - اضبط `APP_DEBUG=false`.
 - اضبط `SESSION_SECURE_COOKIE=true` عند وجود HTTPS.
+- اضبط `ASSET_URL` إلى HTTPS backend host حتى لا تولد Filament assets روابط mixed content.
+- لا تعرض `EDGE_PORT` للإنترنت. عند استخدام Caddy على نفس السيرفر، استخدم `127.0.0.1:8080`.
+- اترك Cloudflare DNS only أثناء إصدار Caddy للشهادات والتحقق من headers. فعّل Proxied لاحقاً فقط بعد smoke جديد.
+- أبق 2FA إلزامياً للأدوار المذكورة في `docs/TWO_FACTOR_AUTH_AR.md`.
 - لا تستخدم production secrets في staging.
 - اجعل object storage bucket منفصلاً عن production.
 - اجعل Meilisearch index prefix منفصلاً أو خدمة منفصلة.
@@ -515,6 +698,9 @@ php artisan view:cache
 - scheduler يعمل وبنسخة واحدة فقط.
 - storefront build ok.
 - storefront homepage reachable.
+- Filament login يحمّل CSS/JS/Livewire عبر HTTPS بدون mixed content.
+- 2FA setup الإلزامي ينجح end to end بدون redirect loop.
+- 2FA challenge بعد logout/login جديد ينجح، وTOTP الخاطئ يفشل برسالة واضحة.
 - product listing reachable.
 - product detail reachable.
 - checkout smoke موثق على test store/payment فقط.

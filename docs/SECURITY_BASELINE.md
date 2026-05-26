@@ -1,6 +1,6 @@
 # Security Baseline
 
-Last updated: 2026-05-19
+Last updated: 2026-05-26
 
 This document defines the minimum security posture expected as the platform moves toward commercial launch.
 
@@ -41,7 +41,9 @@ Currently present:
 - cross-tenant database constraints for important relationships
 - audit log domain foundation
 - Filament app-based 2FA for admin/support and tenant owners, using encrypted user fields and recovery codes
+- 2FA session confirmation keys for panel access: `auth.2fa.user_id` and `auth.2fa.confirmed_at`
 - emergency 2FA reset command for verified operator use, with required reason and audit logging
+- staging reverse proxy hardening: public Caddy on 80/443 forwards to internal Nginx edge bound to `127.0.0.1:8080`
 - store readiness validation for active tenant/store/payment/shipping/sellable product rules; this is a publish/domain guard, not a deployment proof
 - manual inventory adjustment action records both `StockMovement` and `AuditLog` event `inventory_manual_adjustment`
 - product type and variant checkout rules are enforced server-side; storefront variant picker is not trusted for final price or inventory
@@ -56,7 +58,7 @@ Current important gaps:
 - no formal vulnerability review workflow beyond dependency audits, image vulnerability scanning, and secret hygiene baseline
 - no production monitoring/error tracking integration or alert routing
 - production `.env.production.example` files exist, but real secret management and rotation are not implemented yet
-- staging deployment runbook/checklist/smoke proof template exist, but real external staging is still pending until VPS/provider, domain or hostname, and staging secrets/variables are available
+- real external staging now exists on DigitalOcean for mayfairs.app, but it still needs a fresh recorded smoke proof after each application fix before it can count as a production-readiness gate
 - `Store` remains a documented exception to the global tenant scope; new store queries still need explicit review
 
 ## Authentication
@@ -67,6 +69,7 @@ Required before production:
 - 2FA for support users: implemented for platform support
 - 2FA for tenant owners where practical: implemented for vendor panel when tenant owner context is resolved
 - emergency admin/support/tenant-owner 2FA reset procedure: implemented through `php artisan security:reset-two-factor`
+- never disable required 2FA through staging flags or role exceptions; fix setup/challenge/session flow instead
 - clear password reset configuration
 - session timeout policy for admin/vendor panels
 - device/session visibility or revocation for sensitive accounts
@@ -275,6 +278,14 @@ Before production, tighten and verify:
 - CSP with fewer broad allowances after browser/e2e validation
 - reverse proxy behavior does not remove or contradict application headers
 - HSTS behavior behind the real TLS/reverse proxy layer
+- no mixed content for Filament or Livewire assets behind the proxy
+
+Reverse proxy security requirements:
+
+- Public traffic terminates on 80/443 only.
+- Internal Nginx edge port `8080` must not be public; bind to `127.0.0.1:8080` when Caddy runs on the same host.
+- Cloudflare should remain DNS only until HTTPS, forwarded headers, session cookies, Filament assets, and 2FA flows pass smoke behind Caddy.
+- `TRUSTED_PROXIES=*` is acceptable only when the backend/edge cannot be reached except through the trusted local proxy path. Prefer explicit private CIDRs when stable.
 
 ## File Uploads
 
@@ -300,6 +311,7 @@ Required before commercial launch:
 - alerting for failed jobs and payment/billing failures
 - database connection least privilege
 - real staging smoke proof through an external environment before production launch
+- recorded 2FA smoke proof for required setup, challenge, failed TOTP, recovery code if consumed, and reset-to-setup behavior
 
 ## Security Review Checklist
 

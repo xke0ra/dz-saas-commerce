@@ -200,7 +200,7 @@ P0 areas:
 - scheduler registration and failed-jobs smoke checks when operating commands change
 - repository secret hygiene when env, deployment, CI, or ignore rules change
 - store readiness validation for simple and variable products
-- emergency 2FA reset behavior and audit metadata when security flows change
+- emergency 2FA reset behavior, dry-run semantics, required setup flow, challenge flow, recovery-code consumption, and audit metadata when security flows change
 
 P1 areas:
 

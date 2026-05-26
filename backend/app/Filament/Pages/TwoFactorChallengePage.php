@@ -32,13 +32,21 @@ class TwoFactorChallengePage extends Page
         $user = Filament::auth()->user();
 
         if (! $user instanceof User || ! $user->hasTwoFactorAuthenticationEnabled()) {
-            redirect()->intended(Filament::getUrl());
+            redirect()->to($twoFactor->pullIntendedPanelUrl(
+                request(),
+                Filament::getCurrentPanel()?->getId(),
+                Filament::getUrl(),
+            ));
 
             return;
         }
 
         if ($twoFactor->sessionIsConfirmed(request(), $user)) {
-            redirect()->intended(Filament::getUrl());
+            redirect()->to($twoFactor->pullIntendedPanelUrl(
+                request(),
+                Filament::getCurrentPanel()?->getId(),
+                Filament::getUrl(),
+            ));
         }
     }
 
@@ -93,6 +101,10 @@ class TwoFactorChallengePage extends Page
             ->success()
             ->send();
 
-        return redirect()->intended(Filament::getUrl());
+        return redirect()->to($twoFactor->pullIntendedPanelUrl(
+            request(),
+            Filament::getCurrentPanel()?->getId(),
+            Filament::getUrl(),
+        ));
     }
 }

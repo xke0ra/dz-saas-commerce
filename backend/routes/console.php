@@ -60,8 +60,9 @@ Artisan::command('security:reset-two-factor
     $email = trim((string) $this->option('email'));
     $actorId = trim((string) $this->option('actor-id'));
     $actorEmail = trim((string) $this->option('actor-email'));
+    $isDryRun = (bool) $this->option('dry-run');
 
-    if (! $this->option('confirm')) {
+    if (! $isDryRun && ! $this->option('confirm')) {
         $this->error('Refusing to reset two-factor authentication without --confirm.');
 
         return Command::INVALID;
@@ -118,7 +119,7 @@ Artisan::command('security:reset-two-factor
     $this->warn('This will clear the target user two-factor secret and recovery codes.');
     $this->warn('If their panel role requires 2FA, they will be redirected to setup on next panel access.');
 
-    if ($this->option('dry-run')) {
+    if ($isDryRun) {
         $this->info("Dry run only: 2FA would be reset for user ID {$target->id}.");
 
         return Command::SUCCESS;
