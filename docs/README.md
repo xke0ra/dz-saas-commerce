@@ -46,10 +46,11 @@
 ## Operations And Deployment
 
 - `PRODUCTION_READINESS.md`: حالة الجاهزية وما ينقص قبل beta/production.
-- `OPERATIONS_NEXT_STEPS_AR.md`: خطة real staging ثم restore drill ثم monitoring.
+- `OPERATIONS_NEXT_STEPS_AR.md`: خطة التشغيل التالية بعد إثبات staging الأساسي.
 - `STAGING_READINESS_CHECKLIST_AR.md`: checklist مختصرة قبل تشغيل real staging smoke.
-- `STAGING_DEPLOYMENT_RUNBOOK_AR.md`: خطوات نشر staging غير إنتاجي لاحقاً، بدون أسرار وبدون ادعاء تنفيذ staging خارجي حقيقي.
+- `STAGING_DEPLOYMENT_RUNBOOK_AR.md`: خطوات تشغيل staging غير إنتاجي على DigitalOcean/Caddy/nginx، بدون أسرار وبدون ادعاء production readiness.
 - `STAGING_SMOKE_PROOF_TEMPLATE_AR.md`: قالب يملأ بعد smoke حقيقي فقط.
+- `STAGING_SMOKE_PROOF_2026-05-26_AR.md`: proof خارجي فعلي لـ HTTPS، Caddy/nginx routing، 2FA، وstaging demo storefront.
 - `BACKUP_RESTORE_RUNBOOK.md`: backup/restore/runbook.
 - `BACKUP_RESTORE_DRILL_EVIDENCE_TEMPLATE.md`: قالب تسجيل evidence بعد restore drill حقيقي.
 - `MONITORING_ALERTING_RUNBOOK.md`: observability والalerts.

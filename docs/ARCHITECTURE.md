@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: 2026-05-19
+Last updated: 2026-05-27
 
 This document describes the current architecture of `dz-saas-commerce` based on the repository state. It is an execution reference, not a marketing overview.
 
@@ -99,7 +99,7 @@ Production container foundation now exists as a first baseline:
 - `deploy/staging/`
 - `deploy/backup/`
 
-This does not yet make production readiness complete. The ephemeral staging smoke proves the image/process contract against disposable PostgreSQL, Redis, Meilisearch, MinIO, and Mailpit services, but externally provisioned staging, TLS/custom-domain routing, deployed backup schedules, restore drill execution, process supervision deployment, centralized log aggregation, alert routing, and error tracking integration remain required before beta/production. Health/readiness, backup/restore documentation, backup automation examples, reverse proxy strategy, queue/scheduler supervision documentation, and monitoring/alerting documentation now exist as baselines.
+This does not yet make production readiness complete. The ephemeral staging smoke proves the image/process contract against disposable PostgreSQL, Redis, Meilisearch, MinIO, and Mailpit services. A real DigitalOcean staging host for mayfairs.app is now partially proven with Caddy public TLS, an internal Nginx edge bound to `127.0.0.1:8080`, HTTPS Filament/Livewire assets, mandatory 2FA setup/challenge, and a demo storefront. Deployed backup schedules, restore drill execution, monitoring/alerting, centralized log aggregation, error tracking, rollback proof, Cloudflare Proxied validation, and broader custom-domain/TLS automation remain required before beta/production. Health/readiness, backup/restore documentation, backup automation examples, reverse proxy strategy, queue/scheduler supervision documentation, and monitoring/alerting documentation now exist as baselines.
 
 ## Backend Domain Layout
 
@@ -274,7 +274,7 @@ The storefront currently favors correctness with `force-dynamic` pages and `cach
 
 Before commercial launch, the architecture must include:
 
-- 2FA for super admins, platform support, and tenant owners: implemented for current Filament panels
+- 2FA for super admins, platform support, and tenant owners: implemented for current Filament panels and verified on staging after the setup/challenge fix
 - stricter rate limits for sensitive actions
 - a green storefront dependency audit, maintained locally and in CI; as of 2026-05-12 the storefront is on Next `15.5.18`
 - security headers baseline and production CSP tightening

@@ -1,6 +1,6 @@
 # قالب إثبات Smoke للـ Staging
 
-آخر تحديث: 2026-05-26
+آخر تحديث: 2026-05-27
 
 هذه الوثيقة قالب يملؤه المشغل بعد كل staging smoke خارجي. لا تضع أسراراً هنا.
 
@@ -37,6 +37,8 @@
 | Filament CSS URL check |  |
 | Filament JS URL check |  |
 | Livewire asset URL HTTPS check |  |
+| Livewire `data-module-url` HTTPS check |  |
+| Livewire `data-update-uri` HTTPS check |  |
 | Mixed content grep result |  |
 | Failed jobs result |  |
 | Scheduler check |  |
@@ -71,6 +73,10 @@
 | Product listing smoke |  |
 | Product detail smoke |  |
 | Backend API connection from storefront |  |
+| Storefront resolve for demo/custom host |  |
+| COD payment method available |  |
+| Shipping rates available |  |
+| Products/inventory available |  |
 
 ## Checkout Smoke
 

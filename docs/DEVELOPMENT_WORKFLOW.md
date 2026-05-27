@@ -1,6 +1,6 @@
 # Development Workflow
 
-Last updated: 2026-05-12
+Last updated: 2026-05-27
 
 This document defines the working process for this project. It is optimized for careful, incremental development by a human or AI agent.
 
@@ -96,7 +96,7 @@ Required CI gates before broad AI/Codex development:
 
 Do not mark CI as complete after future workflow edits until a real GitHub Actions run proves these jobs again on the repository that receives pull requests.
 
-Do not mark real staging as proven until **Staging Smoke** has run with `target=environment` and `mode=all` against real staging backing services and the result is recorded in `docs/PRODUCTION_READINESS.md`. A successful `target=ephemeral` run proves image/process compatibility only.
+Do not mark real staging as proven from `target=ephemeral` alone. Real staging proof must be recorded either by **Staging Smoke** with `target=environment` / `mode=all` or by a sanitized operator proof against the external URLs. The current mayfairs.app proof is recorded in `docs/STAGING_SMOKE_PROOF_2026-05-26_AR.md` and covers HTTPS, Caddy/nginx routing, 2FA, and the demo storefront only; it does not prove backup/restore, monitoring, rollback, or production readiness.
 
 Run repository hygiene locally when env, deployment, CI, ignore rules, or release packaging changes:
 

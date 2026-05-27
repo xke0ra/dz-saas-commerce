@@ -2,28 +2,22 @@
 
 هذه الخطة لا تستبدل runbooks الموجودة. استخدمها كمسار تنفيذ مختصر يربط `PRODUCTION_READINESS.md`, `BACKUP_RESTORE_RUNBOOK.md`, `MONITORING_ALERTING_RUNBOOK.md`, `QUEUE_SCHEDULER_RUNBOOK.md`, و`REVERSE_PROXY_RUNBOOK.md`.
 
-## Phase A: Real Staging
+## الحالة المثبتة حالياً
 
-الهدف: إثبات staging حقيقي يشبه production بدون إطلاق عام.
+تم إنجاز جزء أساسي من real staging على mayfairs.app بعد نشر commit `045c264`:
 
-- أنشئ GitHub environment باسم `staging` مع variables/secrets الحقيقية المطلوبة.
-- استخدم `STAGING_READINESS_CHECKLIST_AR.md` كبوابة قصيرة قبل تشغيل smoke حقيقي.
-- استخدم PostgreSQL, Redis, Meilisearch, object storage, وSMTP منفصلة عن local/dev.
-- شغل backend, queue worker, scheduler, storefront, وreverse proxy بنفس topology الموثق.
-- فعّل TLS وhost routing للدومينات التجريبية.
-- شغل staging smoke ضد URL حقيقي، وليس فقط compose محلي.
-- ثبّت image tag أو digest المستخدم في تقرير smoke.
-- وثق rollback: آخر image صالح، أمر الإرجاع، وكيفية إيقاف traffic مؤقتاً.
-- لا تستخدم أسرار production في staging.
+- DigitalOcean droplet `mayfair-vps` يعمل كـ staging host.
+- Caddy يملك HTTPS public على 80/443 أمام nginx edge داخلي على `127.0.0.1:8080`.
+- Cloudflare ما زال DNS only.
+- `mayfairs.app`, `api.mayfairs.app`, و`admin.mayfairs.app` ترد HTTP/2 200.
+- Filament وLivewire assets تولد HTTPS بدون mixed content مرصود.
+- mandatory 2FA setup/challenge تم اختباره يدوياً بدون redirect loop.
+- demo tenant/store يعمل على `https://mayfairs.app` مع COD وshipping rates وproducts/inventory.
+- proof محفوظ في `docs/STAGING_SMOKE_PROOF_2026-05-26_AR.md`.
 
-معيار القبول:
+هذه الحالة لا تعني production readiness. ما زالت backup/restore وmonitoring والrollback وCloudflare Proxied غير مثبتة.
 
-- `system/health/live` و`system/health/ready` يمران عبر URL staging.
-- storefront يفتح ضد backend staging.
-- checkout smoke محدود ينجح ببيانات seed آمنة.
-- queue/scheduler يعملان ويمكن رصد failed jobs.
-
-## Phase B: Backup + Restore Drill
+## Phase A: Backup + Restore Drill
 
 الهدف: إثبات أن النسخ الاحتياطي قابل للاستعادة، لا أنه موجود فقط.
 
@@ -44,7 +38,7 @@
 - RPO/RTO مسجلان في runbook.
 - أي فشل في restore ينتج issue أو task واضح.
 
-## Phase C: Monitoring/Alerting
+## Phase B: Monitoring/Alerting
 
 الهدف: معرفة الفشل مبكراً قبل أن يتحول إلى خسارة أو incident.
 
@@ -68,3 +62,45 @@
 - كل alert له runbook مختصر.
 - logs لا تحتوي phone/IP raw إلا إذا كانت masked أو hashed.
 - يتم اختبار alert واحد على الأقل بشكل مقصود قبل اعتبار المرحلة مغلقة.
+
+## Phase C: Release And Rollback
+
+الهدف: جعل النشر قابلاً للتكرار والاسترجاع بدون قرارات مرتجلة.
+
+- وثق image tag أو commit SHA لكل نشر staging.
+- سجل آخر known-good release.
+- نفذ rollback smoke على staging بدون production data.
+- اربط rollback بخطة backup قبل migrations.
+- لا تستخدم `migrate:rollback` تلقائياً للتغييرات destructive.
+
+معيار القبول:
+
+- يوجد rollback reference موثق.
+- يوجد أمر استرجاع واضح للimages أو commit.
+- smoke بعد rollback موثق.
+- لا يوجد فقدان بيانات غير مقصود أثناء التمرين.
+
+## Phase D: Cloudflare Proxied Smoke
+
+الهدف: اتخاذ قرار Proxied بناءً على smoke، لا افتراض.
+
+- فعّل Proxied مؤقتاً في نافذة اختبار.
+- تحقق من HTTPS وHSTS و`X-Forwarded-*`.
+- تحقق من `SESSION_DOMAIN`, secure cookies، و2FA setup/challenge.
+- تحقق من Filament/Livewire assets و`data-update-uri`.
+- تحقق من storefront demo resolution.
+- ارجع إلى DNS only فوراً إذا ظهرت session أو mixed content أو redirect issues.
+
+معيار القبول:
+
+- proof مستقل يثبت headers/assets/session/2FA خلف Cloudflare.
+- قرار واضح: إبقاء DNS only أو اعتماد Proxied مع إعدادات موثقة.
+
+## Phase E: Custom Domains/TLS Design
+
+الهدف: تصميم مسار domain/TLS للتجار قبل تعميمه.
+
+- حدد هل Caddy يدير شهادات custom domains أم سيستخدم provider/CDN.
+- وثق domain verification flow وDNS requirements.
+- حدد حدود tenant isolation في host routing.
+- أضف smoke لدومين تاجر تجريبي قبل أي customer-facing rollout.

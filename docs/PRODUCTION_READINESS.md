@@ -1,6 +1,6 @@
 # Production Readiness Runbook
 
-Last updated: 2026-05-26
+Last updated: 2026-05-27
 
 This runbook records the production foundation for `dz-saas-commerce`. It is not a deployment guarantee yet; it defines the required operating contract before beta or production.
 
@@ -40,13 +40,14 @@ Implemented in this foundation pass:
 - self-contained ephemeral staging smoke overlay in `deploy/staging/docker-compose.staging.ephemeral.yml`
 - staging deployment runbook, readiness checklist, and smoke proof template for real staging execution
 - external mayfairs.app staging host exists on DigitalOcean with Caddy TLS in front of internal Nginx edge
+- recorded external staging smoke proof for HTTPS, Filament/Livewire assets, mandatory 2FA setup/challenge, and a demo storefront
 
 Still required:
 
-- Populate the GitHub `staging` environment secret/variable contract
-- Record a fresh external staging smoke proof after the 2FA fix is deployed
+- Keep the GitHub `staging` environment secret/variable contract aligned with the live staging host if the manual workflow is used
+- Record a fresh external staging smoke proof after every application, proxy, DNS, or env change
 - keep container image vulnerability scans green as base images and advisories change
-- complete reverse proxy browser/e2e validation and Cloudflare Proxied-mode decision
+- complete automated browser/e2e validation behind the reverse proxy and Cloudflare Proxied-mode decision
 - deploy automated backup schedules and execute restore drill
 - queue and scheduler supervision deployment in staging/production
 - error tracking integration
@@ -77,6 +78,14 @@ Latest local smoke verification: 2026-05-12.
 - GitHub **Staging Smoke** passed with `target=ephemeral` and `mode=all` on run `25756545567`, using the published `staging-20260512-096bc05` backend and storefront images.
 - This verification proves the Compose/process contract against disposable backing services. It still does not prove an externally provisioned staging deployment, TLS/custom-domain routing, restore drills, alert routing, or production-grade secret management.
 
+Latest backend verification for the deployed 2FA fix:
+
+- `composer audit --no-interaction`: no security vulnerability advisories found.
+- `php vendor/bin/pint --test`: PASS on 574 files.
+- `php artisan test tests/Feature/Security/TwoFactorAuthenticationTest.php tests/Feature/Security/TwoFactorResetCommandTest.php`: 24 passed, 136 assertions.
+- `php artisan test`: 292 passed, 1448 assertions.
+- `backend/composer.lock` was updated to resolve Symfony/Laravel dependency advisories, including Laravel framework and Symfony component updates.
+
 Documentation refresh on 2026-05-19:
 
 - `docs/STAGING_DEPLOYMENT_RUNBOOK_AR.md`, `docs/STAGING_READINESS_CHECKLIST_AR.md`, and `docs/STAGING_SMOKE_PROOF_TEMPLATE_AR.md` define the next real staging execution path.
@@ -89,7 +98,13 @@ External staging update on 2026-05-26:
 - Domains `mayfairs.app`, `api.mayfairs.app`, `admin.mayfairs.app`, and `www.mayfairs.app` resolve to `46.101.178.27`.
 - Caddy terminates public HTTPS and forwards to the Docker Nginx edge bound to `127.0.0.1:8080`.
 - Local images `mayfair-backend:local` and `mayfair-storefront:local` are used for this staging host.
-- This is an external staging deployment in progress, not production readiness. It still needs a recorded smoke proof after the current 2FA fix, plus restore drill, monitoring, alerting, and backup schedule proof.
+- Commit `045c264` (`Fix mandatory Filament 2FA setup flow (#36)`) was deployed and manually smoke-tested.
+- HTTPS checks returned HTTP/2 200 for `mayfairs.app`, `api.mayfairs.app`, and `admin.mayfairs.app`.
+- Filament CSS/JS and Livewire script/module/update URLs generated HTTPS URLs; no mixed content was observed in the smoke.
+- Mandatory 2FA setup and challenge passed on staging, including invalid TOTP rejection and safe no-op reset semantics for a target without enabled 2FA.
+- A staging demo tenant/store is reachable at `https://mayfairs.app`, linked to `mayfairs.app`, and has COD, shipping rates, products, inventory, and storefront resolution.
+- The proof is recorded in `docs/STAGING_SMOKE_PROOF_2026-05-26_AR.md`.
+- This is an external staging foundation proof, not production readiness. Restore drill, backup automation, monitoring/alerting, log aggregation, release rollback proof, Cloudflare Proxied validation, and custom-domain/TLS automation beyond the primary mayfairs.app domains remain pending.
 
 ## Image Build Commands
 
@@ -461,9 +476,9 @@ Implemented baseline:
 
 Still required:
 
-- Fresh smoke proof after deployment of the current 2FA/session fix.
+- Fresh smoke proof after any application/proxy/DNS/env change.
 - Cloudflare Proxied mode validation before enabling it.
-- Browser/e2e verification behind the proxy.
+- Automated browser/e2e verification behind the proxy.
 - Final CSP/HSTS tuning after proxy deployment.
 
 ## Minimum Beta Gate
