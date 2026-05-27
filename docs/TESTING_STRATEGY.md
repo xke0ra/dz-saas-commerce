@@ -1,6 +1,6 @@
 # Testing Strategy
 
-Last updated: 2026-05-19
+Last updated: 2026-05-27
 
 This document defines how the project should be tested as it grows into a commercial SaaS platform.
 
@@ -23,11 +23,13 @@ Frontend:
 
 ## Current Baseline
 
-Latest full recorded verification remains 2026-05-12. The 2026-05-19 pass was documentation-only and did not rerun full backend/storefront suites because application code did not change.
+Latest full backend verification for the deployed 2FA fix was recorded after commit `045c264`. Storefront Docker/e2e baseline remains the 2026-05-12 run unless rerun separately.
 
-- Backend historical full-suite baseline: `154 passed (629 assertions)`.
+- Backend full-suite baseline after the 2FA fix: `292 passed (1448 assertions)`.
+- Focused 2FA regression tests: `php artisan test tests/Feature/Security/TwoFactorAuthenticationTest.php tests/Feature/Security/TwoFactorResetCommandTest.php` passed with `24 passed (136 assertions)`.
 - Repository hygiene: `scripts/security/secret-hygiene.sh` and `scripts/release/clean-export-check.sh` passed.
-- Backend smoke checks passed: `composer audit --no-interaction`, `php vendor/bin/pint --test`, and `php artisan system:health --scope=ready --format=json`.
+- Backend smoke checks passed: `composer audit --no-interaction` reported no security vulnerability advisories, and `php vendor/bin/pint --test` passed on 574 files.
+- `backend/composer.lock` was updated to address Symfony/Laravel dependency advisories, including Laravel framework and Symfony component updates.
 - Storefront build: passed.
 - Storefront typecheck: passed when run sequentially after build.
 - Storefront Playwright e2e historical baseline: `6 passed` on 2026-05-12. The current spec now includes variant picker/simple-product/legacy-payload cases, but this docs-only pass did not rerun it.
@@ -112,6 +114,17 @@ deploy/staging/staging-ephemeral-smoke.sh all
 ```
 
 For local validation of an unpublished backend image, tag it with a staging-style immutable tag and set `SKIP_PULL=1`. A successful ephemeral smoke proves process and dependency compatibility only; real staging still needs `target=environment` against externally managed services.
+
+Current external staging smoke on mayfairs.app is recorded in `docs/STAGING_SMOKE_PROOF_2026-05-26_AR.md`. Future staging smoke must include at minimum:
+
+- forced 2FA setup for a required role without existing 2FA.
+- successful setup redirect to dashboard without setup/challenge loop.
+- challenge after logout/login.
+- invalid TOTP rejection.
+- HTTPS Filament CSS/JS and Livewire script/module/update URLs.
+- no mixed content in the admin login smoke.
+- storefront demo store resolution on `https://mayfairs.app`.
+- COD, shipping rates, products, and inventory present for the staging demo store.
 
 Run backup automation syntax checks when backup scripts or systemd examples change:
 

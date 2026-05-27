@@ -1,17 +1,18 @@
 # التحليل العميق وخارطة الطريق الاستراتيجية لمنصة dz-saas-commerce
 
-آخر تحديث: 2026-05-19
+آخر تحديث: 2026-05-27
 
 نوع الوثيقة: المرجع الاستراتيجي الأعلى لحالة المشروع، عقوده التنفيذية العامة، مستوى الجاهزية، وخارطة الطريق القريبة.
 
-قاعدة قراءة مهمة: هذه الوثيقة تحليل هندسي داخلي وليست valuation ولا ضمان إطلاق. أي نسبة اكتمال هنا تقديرية ومحافظة. real staging الخارجي لم ينفذ بعد، ولا يجوز تحويل runbooks أو smoke مؤقت إلى ادعاء production readiness.
+قاعدة قراءة مهمة: هذه الوثيقة تحليل هندسي داخلي وليست valuation ولا ضمان إطلاق. أي نسبة اكتمال هنا تقديرية ومحافظة. real staging الخارجي أصبح مثبتاً جزئياً لـ HTTPS/Caddy/nginx/2FA/demo storefront، لكن لا يجوز تحويل ذلك إلى ادعاء production readiness.
 
 مصادر هذه النسخة:
 
 - قراءة ملفات `backend/`, `storefront/`, `docs/`, `.github/workflows/`, و`deploy/`.
-- مطابقة الوثائق مع الكود الحالي بتاريخ 2026-05-19.
-- عدم تشغيل full backend/storefront suites في هذه الجولة لأنها docs-only ولم تغير التطبيق.
-- آخر baseline موثق سابقاً لاختبارات كاملة بقي مرجعاً تاريخياً فقط ما لم يعاد تشغيله.
+- مطابقة الوثائق مع الحالة التشغيلية الموثقة حتى 2026-05-27.
+- proof خارجي محفوظ في `docs/STAGING_SMOKE_PROOF_2026-05-26_AR.md`.
+- نتائج التحقق المحلية لإصلاح 2FA: Composer audit، Pint، focused 2FA tests، وfull backend suite.
+- Storefront e2e/Docker baseline بقي مرجعاً تاريخياً من 2026-05-12 ما لم يعاد تشغيله.
 
 ---
 
@@ -21,9 +22,9 @@
 
 أقوى جزء حالياً هو backend domain model: كثير من السلوك الحساس موضوع في Actions، مع policies، tenant scopes، composite constraints، وtests تغطي checkout/inventory/returns/security/readiness/variants. الواجهة أصبحت أكثر من proof-of-concept: تدعم product listing/detail، cart، quick checkout، track order، SEO/crawl routes، وvariant picker يرسل `product_variant_id`.
 
-التشغيل ما زال غير مكتمل. توجد Dockerfiles، CI quality gates، image publish workflow، staging smoke skeleton، health/readiness، runbooks للـ staging/backup/reverse-proxy/queue/monitoring، لكن real staging الخارجي لم ينفذ بسبب انتظار VPS/provider وdomain/hostname وقيم staging الحقيقية. لذلك المشروع pre-production قوي، وليس production-ready.
+التشغيل تحسن عملياً لكنه ما زال غير مكتمل. توجد Dockerfiles، CI quality gates، image publish workflow، health/readiness، runbooks للـ staging/backup/reverse-proxy/queue/monitoring، وتم إثبات staging خارجي على DigitalOcean لـ mayfairs.app مع HTTPS، Caddy أمام nginx edge داخلي، 2FA setup/challenge، وdemo storefront. مع ذلك لا توجد بعد backup automation، restore drill، monitoring/alerting، log aggregation، أو rollback proof، لذلك المشروع pre-production قوي وليس production-ready.
 
-النتيجة العملية: المشروع مناسب لمواصلة البناء المنظم، لكنه لا يصلح لإطلاق production أو بيع white-label ناضج قبل إثبات staging حقيقي، monitoring/observability، restore drill، hardening، وصقل UX/ops.
+النتيجة العملية: المشروع مناسب لمواصلة البناء المنظم وعرض demo staging مضبوط، لكنه لا يصلح لإطلاق production أو بيع white-label ناضج قبل backup/restore drill، monitoring/observability، rollback proof، hardening، وصقل UX/ops.
 
 ---
 
@@ -266,18 +267,18 @@ Store readiness موجودة عبر `StoreReadinessChecker`:
 - security headers middleware and Next headers.
 - production readiness safeguards for `APP_DEBUG`/`APP_KEY`.
 - encrypted 2FA fields and recovery codes.
-- 2FA challenge for sensitive panels.
+- 2FA setup/challenge for sensitive panels، وتم إثبات إصلاح setup/challenge على staging بعد commit `045c264`.
 - emergency `security:reset-two-factor` with required reason and audit.
 - AuditLog foundation and immutable policy.
 
 مهم:
 
 - emergency reset لا يلغي الجلسات النشطة حالياً.
-- CSP واسع عمداً حتى تتم validation حقيقية في staging/browser.
+- CSP واسع عمداً وفيه allowances permissive مثل `unsafe-inline`/`unsafe-eval` حتى تتم browser/e2e validation وتضييقه لاحقاً.
 - لا يوجد session/device management كامل.
 - لا يوجد secret rotation procedure كامل.
 - لا يوجد production error tracking أو alert routing.
-- real staging secrets غير مكونة داخل المستودع، ويجب ألا تضاف له.
+- staging secrets موجودة خارج المستودع ويجب ألا تضاف له.
 
 ---
 
@@ -324,19 +325,24 @@ Store readiness موجودة عبر `StoreReadinessChecker`:
 - contract and scripts for staging smoke.
 - local/ephemeral proof path documented.
 - image references documented historically.
+- external staging foundation on DigitalOcean for mayfairs.app.
+- Caddy public TLS -> `127.0.0.1:8080` -> nginx edge topology.
+- HTTPS checks for mayfairs.app/api/admin.
+- Filament/Livewire HTTPS assets smoke.
+- mandatory 2FA setup/challenge smoke after the fix.
+- staging demo storefront with COD, shipping rates, products, and inventory.
 
 ما هو pending:
 
-- VPS/provider or hosting platform.
-- domain/temporary hostname.
-- staging environment secrets/variables.
-- external staging smoke through real URL.
-- TLS/custom domain validation.
-- restore drill.
+- backup automation deployment.
+- restore drill evidence.
 - monitoring/alerting provider and routing.
 - centralized logging and error tracking.
+- release rollback proof.
+- Cloudflare Proxied decision/smoke.
+- custom domains/TLS automation beyond primary mayfairs.app domains.
 
-لا يوجد دليل على تنفيذ staging خارجي حقيقي.
+يوجد دليل على staging خارجي جزئي، لكنه لا يغطي backup/restore أو monitoring أو production hardening.
 
 ---
 
@@ -367,13 +373,13 @@ Storefront coverage strengths:
 Coverage gaps:
 
 - real integration e2e against live Laravel backend.
-- production-like staging smoke not executed externally.
+- production-like staging smoke now exists for HTTPS/2FA/demo storefront, but broader release/rollback/monitoring/restore proof is still missing.
 - monitoring/alert tests not integrated with a provider.
 - performance/load budgets.
 - accessibility audit.
 - full dashboard e2e for merchant/admin workflows.
 
-هذه الجولة لم تشغل full suites لأنها docs-only ولم تغير التطبيق.
+التحقق المحلي المسجل لإصلاح 2FA شمل `composer audit --no-interaction`, `php vendor/bin/pint --test`, focused 2FA tests (`24 passed`, `136 assertions`)، وfull backend suite (`292 passed`, `1448 assertions`). هذا لا يستبدل storefront e2e جديداً أو monitoring/restore proof.
 
 ---
 
@@ -390,10 +396,11 @@ Coverage gaps:
 
 ### 8.2 Missing Before Real Launch
 
-- real staging execution after VPS/domain.
 - production hardening review.
 - monitoring/observability.
 - restore drill and backup proof.
+- release rollback proof.
+- Cloudflare Proxied decision or documented DNS-only operating choice.
 - COD reconciliation.
 - operational playbooks tested by a human.
 
@@ -408,8 +415,7 @@ Coverage gaps:
 
 ### 8.4 Missing Before Investor/Demo Readiness
 
-- stable demo environment with seeded data.
-- real staging smoke proof and screenshots.
+- richer demo script and sanitized screenshots around the now-working staging demo.
 - concise product narrative and dashboard demos.
 - monitoring dashboard proof.
 - documented remaining risks without pretending production is done.
@@ -429,6 +435,7 @@ Coverage gaps:
 - reservation/release/settlement/restock stock movements.
 - manual inventory adjustment action with AuditLog.
 - 2FA for sensitive Filament panels.
+- 2FA staging setup/challenge fix deployed and verified on mayfairs staging.
 - emergency 2FA reset artisan command with audit.
 - product variants/options ADR and implementation chain.
 - vendor variant management.
@@ -440,20 +447,23 @@ Coverage gaps:
 - `ProductType` simple/variable enforcement.
 - store readiness validation checker.
 - staging deployment runbook/checklist/smoke proof template.
+- external staging proof for HTTPS, Caddy/nginx routing, 2FA, and demo storefront.
 - CI and image publish workflows documented.
 
 ---
 
 ## 10. Pending Milestones
 
-- real staging environment after VPS/domain.
 - COD reconciliation foundation.
 - production hardening review.
 - monitoring/observability foundation.
 - variant UX polish.
 - restore drill execution.
 - backup schedule deployment.
-- white-label packaging and demo readiness.
+- release rollback proof.
+- Cloudflare Proxied smoke/decision.
+- custom domains/TLS automation design.
+- white-label packaging beyond staging demo readiness.
 
 ---
 
@@ -467,11 +477,11 @@ Coverage gaps:
 | Catalog/variants | 78% | variants chain مكتملة وظيفياً، لكن UX polish/import/export/filters ناقصة. |
 | Checkout/order lifecycle | 76% | idempotency/reservation/status/payment جيدة، لكن reconciliation/observability/concurrency hardening أعمق ناقصة. |
 | Inventory/ledger | 74% | ledger وحركات lifecycle قوية، لكن UI/API للتعديل اليدوي والتنبيهات والتقارير ناقصة. |
-| Security/admin readiness | 66% | policies/2FA/audit/headers جيدة، لكن sessions/CSP/rotation/error tracking تحتاج hardening. |
+| Security/admin readiness | 70% | policies/2FA/audit/headers جيدة، و2FA مثبت على staging، لكن session/device management وCSP/rotation/error tracking تحتاج hardening. |
 | Storefront | 65% | storefront usable مع variants/cart/SEO، لكن UX/a11y/caching/integration e2e ناقصة. |
-| Ops/staging | 48% | runbooks وscripts موجودة، لكن real staging proof وrestore/monitoring غير منفذة. |
-| Production readiness | 42% | لا production launch قبل staging proof وmonitoring وhardening وrestore drill. |
-| Overall completion | 63% | foundation التجاري قوي، لكن التشغيل والجاهزية التجارية لا تزال مرحلة pre-production. |
+| Ops/staging | 58% | real staging foundation مثبت لـ HTTPS/2FA/demo، لكن backup/restore/monitoring/rollback وCloudflare Proxied غير منفذة. |
+| Production readiness | 45% | لا production launch قبل backup/restore، monitoring، rollback proof، hardening، وCloudflare/custom-domain decisions. |
+| Overall completion | 65% | foundation التجاري قوي وdemo staging أصبح حقيقياً، لكن التشغيل والجاهزية التجارية لا تزال مرحلة pre-production. |
 
 ---
 
@@ -479,10 +489,11 @@ Coverage gaps:
 
 ### يمنع production launch
 
-- real staging لم ينفذ بعد.
-- لا يوجد proof خارجي لـ TLS/custom domains/reverse proxy.
+- staging proof الحالي محدود بـ HTTPS/Caddy/nginx/2FA/demo store ولا يغطي production gates.
 - لا restore drill مسجل.
 - لا monitoring/alert routing/error tracking فعلي.
+- لا backup automation مثبتة.
+- لا rollback proof مسجل.
 - لا production hardening review مكتمل.
 - COD reconciliation غير موجود.
 
@@ -496,8 +507,7 @@ Coverage gaps:
 
 ### يمنع investor/demo readiness
 
-- لا demo/staging URL ثابت مثبت بالدليل.
-- لا smoke proof حقيقي مملوء.
+- demo/staging URL موجود ومثبت بالدليل، لكن يحتاج demo script وسرد مختصر وصور/لقطات sanitized.
 - لا monitoring proof.
 - لا سرد demo مختصر يفرق بين المنجز والpending.
 
@@ -517,11 +527,11 @@ Coverage gaps:
 
 ## 14. Recommended Next Tasks
 
-1. COD reconciliation foundation.
-2. Real staging execution after VPS/domain.
-3. Production hardening review.
-4. Monitoring/observability foundation.
-5. Product variant UX polish.
+1. Backup/restore drill على staging وتوثيق RPO/RTO.
+2. Monitoring/alerting baseline مع uptime/readiness/failed-jobs/TLS/backup-age.
+3. Release rollback proof على staging.
+4. Cloudflare Proxied smoke/decision.
+5. Custom domains/TLS automation design beyond primary mayfairs.app domains.
 
 ---
 
@@ -529,6 +539,6 @@ Coverage gaps:
 
 - أي تغيير يمس checkout, inventory, billing, tenancy, security, deploy, CI, أو storefront contracts يجب أن يحدث الوثائق المتخصصة.
 - لا تنقل منطق المال أو المخزون إلى storefront.
-- لا تعتبر staging جاهزاً إلا بعد proof خارجي محفوظ.
+- لا تعتبر أي staging gate جديداً جاهزاً إلا بعد proof خارجي محفوظ ومحدث.
 - لا تضف أسراراً إلى docs أو examples.
 - لا تغير business logic في جولات docs-only.

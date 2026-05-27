@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-Last updated: 2026-05-19
+Last updated: 2026-05-27
 
 This directory records architecture decisions that should not be changed casually by humans or AI agents.
 
@@ -24,5 +24,5 @@ Current ADRs:
 9. `0009-manual-payments-first.md`
 10. `0010-algerian-shipping-strategy.md`
 11. `0011-storefront-caching-revalidation.md`
-12. `0012-production-deployment-topology.md`
+12. `0012-production-deployment-topology.md` - proposed topology; mayfairs staging partially proves Caddy/nginx/2FA/demo, while backup/monitoring/rollback remain pending.
 13. `0013-product-variants-inventory-design.md` - accepted product variants/options and sellable-unit inventory design; implementation chain through product type enforcement is complete.

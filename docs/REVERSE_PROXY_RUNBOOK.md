@@ -1,6 +1,6 @@
 # Reverse Proxy Runbook
 
-Last updated: 2026-05-26
+Last updated: 2026-05-27
 
 This runbook defines the first reverse proxy strategy for `dz-saas-commerce`. It matches the current runtime shape: Laravel backend runs as PHP-FPM on port `9000`, while the Next.js storefront runs as an HTTP server on port `3000`.
 
@@ -14,11 +14,12 @@ Implemented:
 - Backend test proving forwarded HTTPS is trusted only from configured proxies.
 - Nginx example syntax was checked with Docker using temporary host aliases for the upstream names.
 - Mayfairs staging currently uses Caddy as the public TLS proxy in front of the internal Nginx edge bound to `127.0.0.1:8080`.
+- HTTPS, Filament/Livewire asset URL generation, mandatory 2FA setup/challenge, and the demo storefront were manually verified after deploying commit `045c264`.
 
 Not yet proven:
 
-- Browser/e2e validation behind Caddy + Nginx remains required after each deploy.
-- Cloudflare Proxied mode is not enabled yet; DNS only is used while Caddy certificate issuance and forwarded headers are validated.
+- Full automated browser/e2e validation behind Caddy + Nginx remains required after each relevant deploy.
+- Cloudflare Proxied mode is not enabled yet; DNS only remains the current mode until a separate Cloudflare smoke validates forwarded headers, assets, sessions, and 2FA.
 
 ## Recommended Topology
 
@@ -46,6 +47,15 @@ Internet
 ```
 
 Keep Docker Compose `EDGE_PORT=127.0.0.1:8080` for this topology. Do not bind the internal Nginx edge to `0.0.0.0:8080` unless another private firewall layer prevents direct internet access.
+
+Current public hosts on mayfairs staging:
+
+- `mayfairs.app`
+- `www.mayfairs.app`
+- `api.mayfairs.app`
+- `admin.mayfairs.app`
+
+Caddy receives all four hosts on 80/443 and proxies to `127.0.0.1:8080`.
 
 ## Host Routing
 
@@ -109,6 +119,18 @@ HSTS depends on Laravel seeing the request as secure. Behind a proxy, this requi
 - `APP_URL` and `ASSET_URL` use the external HTTPS backend host.
 - Filament and Livewire assets render with HTTPS URLs.
 
+Current mayfairs staging values:
+
+```dotenv
+APP_URL=https://api.mayfairs.app
+ASSET_URL=https://api.mayfairs.app
+TRUSTED_PROXIES=*
+SESSION_DOMAIN=.mayfairs.app
+SESSION_SECURE_COOKIE=true
+```
+
+`TRUSTED_PROXIES=*` is acceptable here only because the backend/edge are not directly public and the Docker Nginx edge is bound to `127.0.0.1:8080`. Prefer explicit private CIDRs when the deployment has stable proxy addresses.
+
 ## Body Size And Uploads
 
 The example Nginx config sets:
@@ -161,6 +183,7 @@ curl -I https://api.mayfairs.app
 curl -I https://admin.mayfairs.app
 curl -I https://api.mayfairs.app/api/system/health/live
 curl -I https://api.mayfairs.app/api/system/health/ready
+curl -s https://api.mayfairs.app/admin/login | grep -oE 'data-module-url="[^"]+"|data-update-uri="[^"]+"' | head -20
 if curl -s https://api.mayfairs.app/admin/login | grep -oE '(href|src)="[^"]+"' | grep 'http://'; then
   echo "mixed content asset URL found"
   exit 1
@@ -173,7 +196,9 @@ Expected:
 - `Strict-Transport-Security` appears on HTTPS responses.
 - the storefront sees the original host.
 - admin/vendor/support routes remain on backend hosts.
-- no Filament or Livewire asset URL uses `http://`.
+- no Filament or Livewire asset URL uses `http://`, including Livewire `data-module-url` and `data-update-uri`.
+
+Current mayfairs proof recorded HTTP/2 200 for `mayfairs.app`, `api.mayfairs.app`, and `admin.mayfairs.app`, with Filament and Livewire URLs generated over HTTPS.
 
 ## Definition Of Done
 

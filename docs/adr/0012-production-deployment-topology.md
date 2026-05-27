@@ -1,12 +1,12 @@
 # ADR 0012: Production Deployment Topology
 
-Date: 2026-05-07
+Date: 2026-05-27
 
 Status: Proposed
 
 ## Context
 
-Production foundation now includes Dockerfiles, env production examples, health/readiness checks, reverse proxy examples, queue/scheduler supervision examples, backup automation examples, and monitoring runbooks. Staging deployment is not yet proven.
+Production foundation now includes Dockerfiles, env production examples, health/readiness checks, reverse proxy examples, queue/scheduler supervision examples, backup automation examples, and monitoring runbooks. Staging is partially proven on DigitalOcean for mayfairs.app with Caddy public TLS, an internal Nginx edge bound to `127.0.0.1:8080`, HTTPS Filament/Livewire assets, mandatory 2FA setup/challenge, and a demo storefront. Backup/restore, monitoring/alerting, centralized logs, rollback proof, Cloudflare Proxied mode, and broader custom-domain/TLS automation are not yet proven.
 
 ## Decision
 

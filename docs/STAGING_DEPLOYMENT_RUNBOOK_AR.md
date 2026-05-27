@@ -1,8 +1,8 @@
 # Runbook نشر Staging
 
-آخر تحديث: 2026-05-26
+آخر تحديث: 2026-05-27
 
-هذه وثيقة تشغيل staging. لا تحتوي أسراراً، ولا تستخدم كدليل production readiness وحدها. اعتبار staging جاهزاً يتطلب smoke proof محدثاً ومرفقاً بنتائج أوامر فعلية.
+هذه وثيقة تشغيل staging. لا تحتوي أسراراً، ولا تستخدم كدليل production readiness وحدها. يوجد proof خارجي حالي لـ mayfairs.app في `docs/STAGING_SMOKE_PROOF_2026-05-26_AR.md`، وأي نشر لاحق يحتاج smoke proof محدثاً.
 
 ## 1. الهدف والنطاق
 
@@ -19,7 +19,7 @@
 - لا أسرار داخل repository أو docs.
 - لا تغييرات في checkout أو storefront أو Filament أو business behavior.
 - لا migrations أو dependencies جديدة.
-- لا ادعاء أن staging الخارجي يعمل حتى يتم تنفيذ smoke proof حقيقي.
+- لا ادعاء production readiness من تشغيل staging أو smoke واحد.
 
 ## 2. الوضع الحالي في المستودع
 
@@ -34,7 +34,7 @@
 
 ### 2.1 Snapshot النشر الحالي
 
-حسب تشغيل 2026-05-26، يوجد staging خارجي قيد التثبيت على DigitalOcean:
+حسب تشغيل 2026-05-26، مسار staging الخارجي المستخدم حالياً هو DigitalOcean:
 
 - Provider: DigitalOcean.
 - Droplet: `mayfair-vps`.
@@ -42,9 +42,8 @@
 - OS: Ubuntu 24.04 LTS.
 - Public IPv4: `46.101.178.27`.
 - Runtime user: `deploy`.
-- Docker: `29.5.2`.
-- Docker Compose: `v5.1.4`.
-- Kernel: `6.8.0-117-generic`.
+- Docker: installed and running.
+- Docker Compose: installed and running.
 - Firewall: `ufw` يسمح بـ OpenSSH و80 و443 فقط.
 - Repo path على السيرفر: `/opt/mayfair`.
 - Domain routing:
@@ -52,7 +51,8 @@
   - `api.mayfairs.app -> 46.101.178.27`
   - `admin.mayfairs.app -> 46.101.178.27`
   - `www.mayfairs.app -> mayfairs.app`
-- Cloudflare Proxy: DNS only مؤقتاً أثناء إصدار Caddy للشهادات والتحقق من headers.
+- Cloudflare mode: DNS only حالياً، وليس Proxied.
+- Last deployed commit: `045c264` (`Fix mandatory Filament 2FA setup flow (#36)`).
 
 الـ stack الحالي يستخدم images مبنية محلياً على السيرفر:
 
@@ -73,6 +73,21 @@
 - `staging-mailpit-1`
 
 هذا snapshot لا يحتوي أسراراً. أي تغير في السيرفر أو DNS أو Caddyfile يجب أن يوثق في smoke proof التالي.
+
+الخدمات المسجلة بعد نشر إصلاح 2FA:
+
+- `staging-backend-1`: healthy.
+- `staging-backend-queue-1`: healthy.
+- `staging-backend-scheduler-1`: healthy.
+- `staging-edge-1`: up.
+- `staging-postgres-1`: healthy.
+- `staging-redis-1`: healthy.
+- `staging-storefront-1`: up.
+- `staging-meilisearch-1`: up.
+- `staging-minio-1`: up.
+- `staging-mailpit-1`: healthy.
+
+إثبات smoke الحالي محفوظ في `docs/STAGING_SMOKE_PROOF_2026-05-26_AR.md`.
 
 ### 2.2 Topology الحالي
 
@@ -353,7 +368,7 @@ docker compose \
 
 ### 5.1 Caddy الخارجي
 
-Caddy يستقبل 80/443 ويرسل إلى Nginx الداخلي على `127.0.0.1:8080`:
+Caddy هو public TLS reverse proxy الحالي. يستقبل 80/443 ويرسل إلى Nginx الداخلي فقط على `127.0.0.1:8080`:
 
 ```caddyfile
 mayfairs.app {
@@ -373,7 +388,7 @@ admin.mayfairs.app {
 }
 ```
 
-Caddy يمرر `X-Forwarded-*` افتراضياً. لا تفعل Cloudflare Proxied قبل توثيق أن HTTPS وheaders وasset URLs تعمل خلف الطبقتين.
+Caddy يمرر `X-Forwarded-*` افتراضياً. لا تفعل Cloudflare Proxied قبل smoke جديد يوثق أن HTTPS وheaders وasset URLs وsessions و2FA تعمل خلف Caddy + Cloudflare.
 
 8. تحقق من contract قبل التشغيل:
 
@@ -568,7 +583,7 @@ curl -I https://api.mayfairs.app
 curl -I https://admin.mayfairs.app
 ```
 
-القيم المقبولة حالياً: `https://mayfairs.app`, `https://api.mayfairs.app`, و`https://admin.mayfairs.app` ترد عبر HTTP/2، وHTTP على `mayfairs.app` يعيد 308 إلى HTTPS.
+القيم المقبولة في proof الحالي: `https://mayfairs.app`, `https://api.mayfairs.app`, و`https://admin.mayfairs.app` ترد عبر HTTP/2 200.
 
 Filament/Livewire assets smoke:
 
@@ -578,13 +593,21 @@ curl -I https://api.mayfairs.app/js/filament/filament/app.js
 
 curl -s https://api.mayfairs.app/admin/login | grep -oE 'href="[^"]+\.css[^"]*"' | head -20
 curl -s https://api.mayfairs.app/admin/login | grep -oE 'src="[^"]+\.js[^"]*"' | head -20
+curl -s https://api.mayfairs.app/admin/login | grep -oE 'data-module-url="[^"]+"|data-update-uri="[^"]+"' | head -20
 if curl -s https://api.mayfairs.app/admin/login | grep -oE '(href|src)="[^"]+"' | grep 'http://'; then
   echo "mixed content asset URL found"
   exit 1
 fi
 ```
 
-كل روابط Filament وLivewire يجب أن تكون HTTPS. إذا ظهر `http://api.mayfairs.app/livewire...` فافحص `TRUSTED_PROXIES`, `X-Forwarded-Proto`, `APP_URL`, و`ASSET_URL`.
+كل روابط Filament وLivewire يجب أن تكون HTTPS، بما في ذلك `data-module-url` و`data-update-uri`. إذا ظهر `http://api.mayfairs.app/livewire...` فافحص `TRUSTED_PROXIES`, `X-Forwarded-Proto`, `APP_URL`, و`ASSET_URL`.
+
+الأمثلة الصحيحة المسجلة في proof الحالي:
+
+- `https://api.mayfairs.app/css/filament/filament/app.css`
+- `https://api.mayfairs.app/js/filament/filament/app.js`
+- `https://api.mayfairs.app/livewire-9718984b/livewire.min.js`
+- `https://api.mayfairs.app/livewire-9718984b/update`
 
 2FA smoke للوحة admin:
 
@@ -595,7 +618,9 @@ fi
 5. يجب دخول dashboard مباشرة، لا الرجوع إلى setup أو challenge.
 6. سجل logout ثم login جديد.
 7. يجب ظهور challenge، TOTP الصحيح يدخل dashboard، وTOTP الخاطئ يظهر validation error.
-8. نفذ reset 2FA بحساب اختبار إداري ثم تحقق أن الدخول التالي يعود إلى setup.
+8. افحص command reset على حساب اختبار حسب الحالة:
+   - إذا لم يكن لدى الهدف 2FA مفعل، يجب أن يرجع safe no-op: `No reset performed: target user does not have two-factor authentication enabled.`
+   - إذا نفذت reset فعلياً لحساب لديه 2FA مفعل، تحقق أن الدخول التالي يعود إلى setup.
 
 ### 7.3 Storefront
 
@@ -613,6 +638,17 @@ Manual browser smoke:
 - variant picker يعمل إذا كان product variable.
 - quick checkout smoke فقط على test store/payment وبيانات staging آمنة.
 - لا تستخدم production customer data أو production payment/shipping integrations.
+
+Mayfairs demo store smoke الحالي:
+
+- demo tenant/store موجود.
+- storefront يعمل على `https://mayfairs.app`.
+- المتجر مرتبط بدومين `mayfairs.app`.
+- COD payment method متاح.
+- shipping rates موجودة.
+- products/inventory موجودة.
+- storefront resolve يعمل.
+- هذا store يصلح كـ staging demo smoke فقط، وليس production store أو store عميل حقيقي.
 
 ### 7.4 Docker Smoke Runner
 
@@ -678,7 +714,7 @@ php artisan view:cache
 - اضبط `SESSION_SECURE_COOKIE=true` عند وجود HTTPS.
 - اضبط `ASSET_URL` إلى HTTPS backend host حتى لا تولد Filament assets روابط mixed content.
 - لا تعرض `EDGE_PORT` للإنترنت. عند استخدام Caddy على نفس السيرفر، استخدم `127.0.0.1:8080`.
-- اترك Cloudflare DNS only أثناء إصدار Caddy للشهادات والتحقق من headers. فعّل Proxied لاحقاً فقط بعد smoke جديد.
+- اترك Cloudflare DNS only حالياً. فعّل Proxied لاحقاً فقط بعد smoke جديد يغطي headers/assets/session/2FA خلف Cloudflare.
 - أبق 2FA إلزامياً للأدوار المذكورة في `docs/TWO_FACTOR_AUTH_AR.md`.
 - لا تستخدم production secrets في staging.
 - اجعل object storage bucket منفصلاً عن production.
@@ -689,7 +725,7 @@ php artisan view:cache
 
 ## 10. Definition Of Done
 
-لا يعتبر real staging جاهزاً إلا عند تحقق كل البنود التالية:
+لا يعتبر staging gate كاملاً بعد أي نشر إلا عند تحقق كل البنود التالية:
 
 - live health ok عبر URL staging.
 - ready health ok عبر URL staging ويغطي PostgreSQL وRedis/cache/queue/storage/search عند تفعيلها.
@@ -707,7 +743,7 @@ php artisan view:cache
 - image tag أو commit SHA المستخدم موثق.
 - migration status موثق.
 - لا أسرار committed.
-- نتيجة smoke محفوظة في `docs/STAGING_SMOKE_PROOF_TEMPLATE_AR.md` أو سجل عمليات خارجي.
+- نتيجة smoke محفوظة في proof مؤرخ مثل `docs/STAGING_SMOKE_PROOF_2026-05-26_AR.md`، أو سجل عمليات خارجي Sanitized.
 
 ## 11. مراجع مرتبطة
 
@@ -715,6 +751,7 @@ php artisan view:cache
 - `deploy/staging/GITHUB_ENVIRONMENT.md`
 - `docs/STAGING_READINESS_CHECKLIST_AR.md`
 - `docs/STAGING_SMOKE_PROOF_TEMPLATE_AR.md`
+- `docs/STAGING_SMOKE_PROOF_2026-05-26_AR.md`
 - `docs/REVERSE_PROXY_RUNBOOK.md`
 - `docs/QUEUE_SCHEDULER_RUNBOOK.md`
 - `docs/BACKUP_RESTORE_RUNBOOK.md`

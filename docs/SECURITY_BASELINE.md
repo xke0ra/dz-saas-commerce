@@ -1,6 +1,6 @@
 # Security Baseline
 
-Last updated: 2026-05-26
+Last updated: 2026-05-27
 
 This document defines the minimum security posture expected as the platform moves toward commercial launch.
 
@@ -42,8 +42,10 @@ Currently present:
 - audit log domain foundation
 - Filament app-based 2FA for admin/support and tenant owners, using encrypted user fields and recovery codes
 - 2FA session confirmation keys for panel access: `auth.2fa.user_id` and `auth.2fa.confirmed_at`
+- mandatory 2FA setup and challenge for required Filament roles is deployed and manually verified on staging after commit `045c264`
 - emergency 2FA reset command for verified operator use, with required reason and audit logging
 - staging reverse proxy hardening: public Caddy on 80/443 forwards to internal Nginx edge bound to `127.0.0.1:8080`
+- staging session settings recorded for mayfairs.app: `SESSION_DOMAIN=.mayfairs.app` and `SESSION_SECURE_COOKIE=true`
 - store readiness validation for active tenant/store/payment/shipping/sellable product rules; this is a publish/domain guard, not a deployment proof
 - manual inventory adjustment action records both `StockMovement` and `AuditLog` event `inventory_manual_adjustment`
 - product type and variant checkout rules are enforced server-side; storefront variant picker is not trusted for final price or inventory
@@ -52,13 +54,13 @@ Current important gaps:
 
 - no full session/device management
 - emergency 2FA reset does not revoke already active sessions; required users are forced back to setup on next panel access
-- CSP baseline is intentionally broad for Filament/Livewire/storefront compatibility and still needs production tightening after browser/e2e validation
+- CSP baseline is intentionally broad for Filament/Livewire/storefront compatibility, still includes permissive allowances such as `unsafe-inline` / `unsafe-eval`, and is not production-grade until tightened after browser/e2e validation
 - backup/restore runbook and automation examples exist, but no deployed backup schedule or executed staging restore drill is recorded yet
 - no completed secrets rotation procedure
 - no formal vulnerability review workflow beyond dependency audits, image vulnerability scanning, and secret hygiene baseline
 - no production monitoring/error tracking integration or alert routing
 - production `.env.production.example` files exist, but real secret management and rotation are not implemented yet
-- real external staging now exists on DigitalOcean for mayfairs.app, but it still needs a fresh recorded smoke proof after each application fix before it can count as a production-readiness gate
+- real external staging now exists on DigitalOcean for mayfairs.app, with proof for HTTPS, Caddy/nginx routing, mandatory 2FA, and a demo storefront; it still does not count as production readiness because backup/restore, monitoring, rollback proof, and production hardening remain pending
 - `Store` remains a documented exception to the global tenant scope; new store queries still need explicit review
 
 ## Authentication
@@ -211,8 +213,19 @@ Before launch, document:
 2026-05-19 documentation refresh:
 
 - `docs/STAGING_DEPLOYMENT_RUNBOOK_AR.md`, `docs/STAGING_READINESS_CHECKLIST_AR.md`, and `docs/STAGING_SMOKE_PROOF_TEMPLATE_AR.md` were reviewed as staging preparation docs only.
-- No real staging deployment is recorded.
+- At that date no real staging deployment was recorded; this is superseded by the 2026-05-26 staging security smoke below.
 - Root `README.md` now points developers to the canonical docs and explicitly states that production launch is not proven.
+
+2026-05-26 staging security smoke:
+
+- Commit `045c264` was deployed to the DigitalOcean staging host.
+- HTTPS checks returned HTTP/2 200 for `mayfairs.app`, `api.mayfairs.app`, and `admin.mayfairs.app`.
+- Filament CSS/JS and Livewire script/module/update URLs generated HTTPS URLs through `ASSET_URL=https://api.mayfairs.app`.
+- `EDGE_PORT=127.0.0.1:8080` keeps the Docker Nginx edge local-only behind Caddy.
+- Cloudflare remains DNS only; Proxied mode must not be enabled until headers, assets, session cookies, and 2FA pass smoke behind Cloudflare.
+- Mandatory 2FA setup/challenge passed for a staging super admin without recording any password, TOTP secret, or recovery code.
+- Staging demo store smoke passed for storefront resolution, COD availability, shipping rates, products, and inventory.
+- Backup/restore drill evidence and monitoring/alerting implementation are still pending.
 
 2026-05-12 security verification:
 
@@ -221,7 +234,7 @@ Before launch, document:
 - `composer audit --no-interaction` reported no backend advisories.
 - `pnpm audit --audit-level moderate` reported no known storefront vulnerabilities after updating Next to `15.5.18`.
 - The same audit was proven inside GitHub Actions on PR #1 / run `25743248405`, and main branch protection now requires the Quality Gates checks.
-- The GitHub `staging` environment exists but currently has no secrets or variables configured; staging smoke is blocked until that contract is populated.
+- The GitHub `staging` environment note from 2026-05-12 is historical. The current mayfairs.app staging proof was recorded manually against the external host; if the GitHub staging workflow is used again, its secret/variable contract must be reconciled with the live staging configuration without committing values.
 - Trivy `0.70.0` image scanning runs in `Dockerfile Checks` for backend and storefront CI images, failing on fixed `HIGH` and `CRITICAL` OS/library vulnerabilities.
 - The GHCR publish workflow uses the same scan policy before pushing image tags.
 - A local ephemeral staging smoke with disposable PostgreSQL, Redis, Meilisearch, MinIO, and Mailpit exposed a missing production S3 dependency; adding `league/flysystem-aws-s3-v3` made Laravel storage readiness pass against S3/MinIO.
@@ -310,8 +323,8 @@ Required before commercial launch:
 - error tracking provider and PII redaction must be selected and verified
 - alerting for failed jobs and payment/billing failures
 - database connection least privilege
-- real staging smoke proof through an external environment before production launch
-- recorded 2FA smoke proof for required setup, challenge, failed TOTP, recovery code if consumed, and reset-to-setup behavior
+- fresh external staging smoke proof for the release being promoted, not only the historical mayfairs.app proof
+- recorded 2FA smoke proof for required setup, challenge, failed TOTP, and recovery-code/reset-to-setup behavior when those paths are intentionally exercised
 
 ## Security Review Checklist
 

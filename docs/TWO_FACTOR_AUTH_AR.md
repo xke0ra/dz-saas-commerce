@@ -1,15 +1,31 @@
 # المصادقة الثنائية للوحات Filament
 
-آخر تحديث: 2026-05-26
+آخر تحديث: 2026-05-27
 
 هذه الوثيقة تصف حالة 2FA الحالية للـ admin/vendor/support فقط. لا توجد customer accounts في storefront حالياً، ولا تطبق 2FA على checkout أو public storefront routes أو health endpoints.
+
+## حالة Staging الحالية
+
+تم نشر إصلاح 2FA على staging في commit `045c264` (`Fix mandatory Filament 2FA setup flow (#36)`) وتم اختباره يدوياً على `https://api.mayfairs.app`.
+
+نتيجة smoke الحالية:
+
+- مستخدم `super_admin` بدون 2FA أُجبر على setup.
+- TOTP صحيح أثناء setup فعّل 2FA وأكد session.
+- بعد setup تم الوصول إلى dashboard مباشرة بدون loop إلى setup أو challenge.
+- بعد logout/login جديد ظهر challenge.
+- TOTP الصحيح في challenge أدخل dashboard.
+- TOTP الخاطئ رُفض.
+- reset command لحالة target لا يملك 2FA مفعل يرجع safe no-op: `No reset performed: target user does not have two-factor authentication enabled.`
+
+لا توثق كلمات مرور، TOTP secrets، أو recovery codes في docs أو logs.
 
 ## من يجب عليه تفعيل 2FA؟
 
 - إلزامي: super admin في لوحة `admin`.
 - إلزامي: super admin وplatform support في لوحة `support`.
 - إلزامي: tenant owner في لوحة `vendor` عند وجود tenant current context.
-- اختياري في هذه الجولة: vendor store admin وstore staff الأقل صلاحية.
+- غير إلزامي في هذه الجولة: vendor store admin وstore staff الأقل صلاحية.
 
 إذا كان لدى أي مستخدم 2FA مفعلاً اختيارياً، فسيتم challenge عند الدخول للوحة حتى لو لم يكن الدور مطلوباً.
 
@@ -103,6 +119,12 @@ php artisan tinker --execute='dump(App\Models\User::where("email", "user@example
 3. session الحالية: يجب أن تحتوي `auth.2fa.user_id` و`auth.2fa.confirmed_at` بعد setup أو challenge الناجح.
 4. intended URL: يجب ألا تكون `*/two-factor-authentication` أو `*/two-factor-challenge` بعد النجاح.
 5. تأكد من تشغيل الكود الذي يستخدم `TwoFactorAuthentication::pullIntendedPanelUrl()` في صفحات 2FA.
+6. في staging خلف Caddy/nginx، افحص cookies/proxy وLivewire HTTPS:
+   - `SESSION_DOMAIN` مثل `.mayfairs.app`.
+   - `SESSION_SECURE_COOKIE=true`.
+   - `TRUSTED_PROXIES` يثق بطبقة proxy فقط.
+   - `APP_URL` و`ASSET_URL` يستخدمان HTTPS backend host.
+   - Livewire script و`data-module-url` و`data-update-uri` يجب أن تكون HTTPS.
 
 ### reset 2FA
 
