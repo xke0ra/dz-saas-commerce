@@ -313,12 +313,12 @@ Implemented:
 
 Readiness checks:
 
-  - production runtime safeguards
-  - PostgreSQL connectivity
-  - Redis connectivity
-  - queue backend connectivity
-  - storage disk connectivity
-  - Meilisearch connectivity when search is enabled
+- production runtime safeguards
+- PostgreSQL connectivity
+- Redis connectivity
+- queue backend connectivity
+- storage disk connectivity
+- Meilisearch connectivity when search is enabled
 
 Local smoke command:
 
@@ -435,17 +435,29 @@ After migration:
 
 ## Backup And Restore
 
-Documented:
+Documented and improved (PR #43):
 
-- `docs/BACKUP_RESTORE_RUNBOOK.md`
+- `docs/BACKUP_RESTORE_RUNBOOK.md` with safer restore drill guidance
+- `deploy/backup/bin/staging-restore-drill.sh.example` with multi-layered validation:
+  - Enforces restore to temporary database only (naming pattern `dz_saas_restore_drill_*`)
+  - Refuses to run unless `ALLOW_STAGING_RESTORE=true`
+  - Rejects any URL appearing to reference production
+  - Requires explicit dual confirmation for cleanup
+- `deploy/backup/backup.env.example` documenting:
+  - `STAGING_ADMIN_DATABASE_URL` for admin-only CREATE/DROP operations
+  - `RESTORE_DRILL_DATABASE` for the temporary drill database name
+  - `RESTORE_DRILL_DATABASE_URL` for full connection to the drill database
+  - `CLEANUP_RESTORE_DRILL_DATABASE` and `CONFIRM_DROP_RESTORE_DRILL_DATABASE` for dual-confirmation cleanup
 
 Required before production:
 
-- Automated PostgreSQL backups deployed from the provided examples or a managed provider.
-- Object storage backup/replication policy deployed.
-- Execute and record restore procedure against staging.
-- Restore drill against staging at least once.
-- Backup encryption and access controls.
+- Deploy automated PostgreSQL backups from the provided examples or a managed provider.
+- Deploy object storage backup/replication policy.
+- Execute and record restore drill procedure against a temporary staging database.
+- Document and monitor backup completion/age.
+- Implement backup encryption and access controls.
+
+Note: Restore drill tooling and safer procedures exist. Actual backup schedule deployment, drill execution, and evidence recording remain pending.
 
 ## Maintenance Mode And Store Availability
 
@@ -489,7 +501,7 @@ Before beta:
 - `APP_DEBUG=false` and `APP_KEY` verified through readiness in staging/production.
 - Queue worker and scheduler supervised in staging/production.
 - Basic health/readiness checks exist.
-- Backup and restore documented; restore drill executed at least once.
+- Backup and restore documented; restore drill executed at least once against an isolated temporary staging database and evidence recorded before beta.
 - Reverse proxy deployed and verified in staging.
 - Monitoring and alerting configured at least for readiness, failed jobs, queue/scheduler processes, and critical 5xx spikes.
 - Security headers baseline exists.
