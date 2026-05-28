@@ -125,14 +125,30 @@ Local MinIO in `docker-compose.yml` is for development only and is not a product
 
 The repository includes deployable examples, not active production configuration:
 
+### Generic PostgreSQL Backup (VM-style host with local PostgreSQL tools)
+
 - `deploy/backup/bin/postgres-backup.sh.example`
-- `deploy/backup/bin/object-storage-sync.sh.example`
-- `deploy/backup/bin/staging-restore-drill.sh.example`
-- `deploy/backup/backup.env.example`
 - `deploy/backup/systemd/dz-saas-commerce-postgres-backup.service.example`
 - `deploy/backup/systemd/dz-saas-commerce-postgres-backup.timer.example`
+
+### Docker Compose Staging PostgreSQL Backup (VPS deployment with Compose)
+
+For VPS deployments where PostgreSQL tools are inside the Docker Compose postgres service:
+
+- `deploy/backup/bin/staging-postgres-backup.sh.example` – Backup script using `docker compose exec` to invoke `pg_dump` inside the postgres container. Suitable for staging environment backups.
+- `deploy/backup/systemd/mayfair-staging-postgres-backup.service.example` – Systemd service for Mayfair staging backup.
+- `deploy/backup/systemd/mayfair-staging-postgres-backup.timer.example` – Systemd timer to schedule daily staging backup.
+
+### Object Storage Backup
+
+- `deploy/backup/bin/object-storage-sync.sh.example`
 - `deploy/backup/systemd/dz-saas-commerce-object-storage-backup.service.example`
 - `deploy/backup/systemd/dz-saas-commerce-object-storage-backup.timer.example`
+
+### Staging Restore Drill
+
+- `deploy/backup/bin/staging-restore-drill.sh.example`
+- `deploy/backup/backup.env.example`
 
 Operator installation shape for a VM-style deployment:
 
@@ -146,6 +162,36 @@ sudo install -m 0755 deploy/backup/bin/staging-restore-drill.sh.example /opt/dz-
 ```
 
 Then fill `/etc/dz-saas-commerce/backup.env` from the secret manager. Do not store real secrets in the repository.
+
+### Docker Compose Staging Installation (Mayfair VPS)
+
+For Mayfair VPS with Docker Compose staging environment:
+
+```bash
+sudo install -d -m 0750 -o root -g deploy /etc/mayfair
+sudo install -m 0640 -o root -g deploy deploy/backup/backup.env.example /etc/mayfair/backup.env
+sudo install -d -m 0755 /opt/mayfair/deploy/backup/bin
+sudo install -m 0755 deploy/backup/bin/staging-postgres-backup.sh.example /opt/mayfair/deploy/backup/bin/staging-postgres-backup.sh
+```
+
+Then fill `/etc/mayfair/backup.env` with appropriate `BACKUP_DIR` and other staging-specific variables. Ensure the `deploy` user can write to the backup directory.
+
+Install the systemd service and timer:
+
+```bash
+sudo cp deploy/backup/systemd/mayfair-staging-postgres-backup.service.example /etc/systemd/system/mayfair-staging-postgres-backup.service
+sudo cp deploy/backup/systemd/mayfair-staging-postgres-backup.timer.example /etc/systemd/system/mayfair-staging-postgres-backup.timer
+sudo systemctl daemon-reload
+sudo systemctl enable --now mayfair-staging-postgres-backup.timer
+```
+
+Manual smoke test before enabling the timer:
+
+```bash
+sudo systemctl start mayfair-staging-postgres-backup.service
+sudo systemctl status mayfair-staging-postgres-backup.service
+sudo systemctl list-timers 'mayfair-staging-postgres-backup*'
+```
 
 Systemd example installation:
 
