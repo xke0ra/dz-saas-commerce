@@ -175,40 +175,77 @@ The database script writes:
 
 The restore drill script refuses to run unless `ALLOW_STAGING_RESTORE=true` and the target database URL does not appear to reference production.
 
-## Restore To Staging
+## Restore Drill To Temporary Staging Database
 
-Never test restore by overwriting production.
+**This procedure creates an isolated, temporary database for testing restore procedures. The live staging application database is not overwritten.**
 
-Create a clean staging database:
+Use the provided `deploy/backup/bin/staging-restore-drill.sh.example` script to execute restore drills. It enforces all safety requirements:
+
+- Multi-layered validation to prevent production overwrites
+- Naming convention enforcement (`dz_saas_restore_drill_*`)
+- Admin-only database creation/teardown
+- Explicit cleanup confirmation
+
+Required environment variables:
+
+- **`ALLOW_STAGING_RESTORE`**: Must be set to `true` to enable any restore attempt.
+- **`STAGING_ADMIN_DATABASE_URL`**: Administrative connection (e.g., `postgres://user:pass@host:5432/postgres`) used only to CREATE and DROP the temporary drill database. Must not reference production.
+- **`RESTORE_DRILL_DATABASE`**: Temporary database name, enforced to start with `dz_saas_restore_drill_` (e.g., `dz_saas_restore_drill_20260528_120000`). This naming convention prevents accidental overwrites of live databases.
+- **`RESTORE_DRILL_DATABASE_URL`**: Full connection URL to the temporary database (e.g., `postgres://user:pass@host:5432/dz_saas_restore_drill_20260528_120000`).
+- **`BACKUP_FILE`**: Path to a PostgreSQL custom-format `.dump` backup file to restore.
+
+Cleanup is disabled by default and requires explicit dual confirmation:
+
+- **`CLEANUP_RESTORE_DRILL_DATABASE`**: Set to `true` to enable cleanup mode.
+- **`CONFIRM_DROP_RESTORE_DRILL_DATABASE`**: Must be set to the exact value of `RESTORE_DRILL_DATABASE`. If the strings do not match exactly, cleanup is refused.
+
+Example execution:
 
 ```bash
-createdb "$STAGING_RESTORE_DATABASE"
+source /etc/dz-saas-commerce/backup.env
+export ALLOW_STAGING_RESTORE=true
+export RESTORE_DRILL_DATABASE="dz_saas_restore_drill_$(date -u +%Y%m%d_%H%M%S)"
+export RESTORE_DRILL_DATABASE_URL="postgres://USER:PASSWORD@HOST:5432/${RESTORE_DRILL_DATABASE}"
+
+bash deploy/backup/bin/staging-restore-drill.sh.example
 ```
 
-Restore:
+After successful database restore, verify the drill database using read-only `psql` queries against `RESTORE_DRILL_DATABASE_URL`:
 
 ```bash
-pg_restore \
-  --verbose \
-  --clean \
-  --if-exists \
-  --no-owner \
-  --no-acl \
-  --dbname="$STAGING_DATABASE_URL" \
-  "$BACKUP_FILE"
+# Extract database credentials from RESTORE_DRILL_DATABASE_URL if necessary
+# Example: postgres://user:password@host:5432/dz_saas_restore_drill_20260528_120000
+
+psql "$RESTORE_DRILL_DATABASE_URL" -c "SELECT COUNT(*) as user_count FROM users;"
+psql "$RESTORE_DRILL_DATABASE_URL" -c "SELECT COUNT(*) as tenant_count FROM tenants;"
+psql "$RESTORE_DRILL_DATABASE_URL" -c "SELECT COUNT(*) as store_count FROM stores;"
+psql "$RESTORE_DRILL_DATABASE_URL" -c "SELECT COUNT(*) as product_count FROM products;"
+psql "$RESTORE_DRILL_DATABASE_URL" -c "SELECT COUNT(*) as order_count FROM orders;"
 ```
 
-After database restore:
+If using restored object storage data, point the temporary drill environment to a staging-only bucket copy, not the production bucket.
+
+To test application-level verification (optional), temporarily point the backend `DATABASE_URL` to the drill database in a non-production environment, then run:
 
 ```bash
 cd backend
-php artisan optimize:clear
 php artisan migrate:status
 php artisan system:health --scope=ready --format=json
 php artisan route:list
 ```
 
-If using restored object storage data, point staging to a staging bucket copy, not the production bucket.
+Do not run these commands against the live staging database. Always verify drill database connectivity before running application commands.
+
+To clean up the temporary database after verification:
+
+```bash
+export CLEANUP_RESTORE_DRILL_DATABASE=true
+export CONFIRM_DROP_RESTORE_DRILL_DATABASE="$RESTORE_DRILL_DATABASE"
+
+bash deploy/backup/bin/staging-restore-drill.sh.example
+```
+
+The script will drop the temporary database and exit. The dual-confirmation requirement (`CLEANUP_RESTORE_DRILL_DATABASE=true` AND exact database name match) ensures accidental cleanup is impossible.
 
 ## Restore Drill Checklist
 
