@@ -2,7 +2,8 @@ FROM mcr.microsoft.com/devcontainers/php:1-8.3-bookworm
 
 USER root
 
-RUN apt-get update \
+RUN rm -f /etc/apt/sources.list.d/yarn.list /etc/apt/sources.list.d/yarn.list.save \
+    && apt-get update \
     && apt-get install -y --no-install-recommends \
         git \
         unzip \
