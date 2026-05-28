@@ -48,7 +48,7 @@ Still required:
 - Record a fresh external staging smoke proof after every application, proxy, DNS, or env change
 - keep container image vulnerability scans green as base images and advisories change
 - complete automated browser/e2e validation behind the reverse proxy and Cloudflare Proxied-mode decision
-- deploy automated backup schedules and execute restore drill
+- staging automated backup schedules deployed and scheduled (2026-05-28; see `STAGING_POSTGRES_BACKUP_AUTOMATION_PROOF_2026-05-28.md`); restore drill scheduling and execution monitoring still pending for production
 - queue and scheduler supervision deployment in staging/production
 - error tracking integration
 - real uptime checks, alert routing, and centralized log aggregation
