@@ -103,8 +103,20 @@ php artisan migrate --force
 echo "==> Seeding demo data if StorefrontDemoSeeder exists"
 php artisan db:seed --class=StorefrontDemoSeeder --force || true
 
-echo "==> Installing storefront dependencies"
+echo "==> Preparing storefront .env.local for Codespaces"
 cd "$ROOT/storefront"
+if [ ! -f .env.local ]; then
+  cat > .env.local <<'ENV'
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
+NEXT_PUBLIC_ASSET_BASE_URL=http://127.0.0.1:8000
+NEXT_PUBLIC_DEFAULT_STORE=demo-store
+DEFAULT_STORE_IDENTIFIER=demo-store
+NEXT_PUBLIC_STOREFRONT_BASE_URL=http://127.0.0.1:3000
+STOREFRONT_BASE_URL=http://127.0.0.1:3000
+ENV
+fi
+
+echo "==> Installing storefront dependencies"
 corepack enable
 corepack prepare pnpm@11.1.2 --activate
 pnpm install --frozen-lockfile
