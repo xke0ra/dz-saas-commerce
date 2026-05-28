@@ -10,17 +10,61 @@ require_var() {
   fi
 }
 
-require_var BACKUP_FILE
-require_var STAGING_DATABASE_URL
-require_var ALLOW_STAGING_RESTORE
+quote_ident() {
+  local value="$1"
+  printf '"%s"' "${value//\"/\"\"}"
+}
 
-if [[ "$ALLOW_STAGING_RESTORE" != "true" ]]; then
-  echo "Refusing restore: set ALLOW_STAGING_RESTORE=true for an intentional staging drill." >&2
+require_var STAGING_ADMIN_DATABASE_URL
+require_var RESTORE_DRILL_DATABASE
+
+if [[ "${ALLOW_STAGING_RESTORE:-false}" != "true" ]]; then
+  echo "Refusing restore drill: set ALLOW_STAGING_RESTORE=true for an intentional staging drill." >&2
   exit 2
 fi
 
-if [[ "$STAGING_DATABASE_URL" =~ prod|production ]]; then
-  echo "Refusing restore: STAGING_DATABASE_URL appears to reference production." >&2
+if [[ "$STAGING_ADMIN_DATABASE_URL" =~ prod|production ]]; then
+  echo "Refusing restore drill: STAGING_ADMIN_DATABASE_URL appears to reference production." >&2
+  exit 2
+fi
+
+if [[ "$RESTORE_DRILL_DATABASE" =~ prod|production ]]; then
+  echo "Refusing restore drill: RESTORE_DRILL_DATABASE appears unsafe." >&2
+  exit 2
+fi
+
+if [[ "${CLEANUP_RESTORE_DRILL_DATABASE:-false}" == "true" ]]; then
+  if [[ "${CONFIRM_DROP_RESTORE_DRILL_DATABASE:-}" != "$RESTORE_DRILL_DATABASE" ]]; then
+    echo "Refusing cleanup: CONFIRM_DROP_RESTORE_DRILL_DATABASE must exactly equal ${RESTORE_DRILL_DATABASE}." >&2
+    exit 2
+  fi
+
+  if [[ ! "$RESTORE_DRILL_DATABASE" =~ ^dz_saas_restore_drill_[A-Za-z0-9_]+$ ]]; then
+    echo "Refusing cleanup: RESTORE_DRILL_DATABASE must start with dz_saas_restore_drill_." >&2
+    exit 2
+  fi
+
+  RESTORE_DRILL_DATABASE_IDENT="$(quote_ident "$RESTORE_DRILL_DATABASE")"
+
+  echo "==> Dropping temporary restore drill database: ${RESTORE_DRILL_DATABASE}"
+  psql "$STAGING_ADMIN_DATABASE_URL" \
+    --set=ON_ERROR_STOP=1 \
+    --command="DROP DATABASE ${RESTORE_DRILL_DATABASE_IDENT};"
+
+  echo "Cleanup completed for: ${RESTORE_DRILL_DATABASE}"
+  exit 0
+fi
+
+require_var BACKUP_FILE
+require_var RESTORE_DRILL_DATABASE_URL
+
+if [[ "$RESTORE_DRILL_DATABASE_URL" =~ prod|production ]]; then
+  echo "Refusing restore drill: RESTORE_DRILL_DATABASE_URL appears to reference production." >&2
+  exit 2
+fi
+
+if [[ ! "$RESTORE_DRILL_DATABASE" =~ ^dz_saas_restore_drill_[A-Za-z0-9_]+$ ]]; then
+  echo "Refusing restore drill: RESTORE_DRILL_DATABASE must start with dz_saas_restore_drill_." >&2
   exit 2
 fi
 
@@ -41,22 +85,70 @@ if [[ -f "$CHECKSUM_FILE" ]]; then
   )
 fi
 
-pg_restore --list "$BACKUP_FILE" >/tmp/dz_saas_restore_drill_list.txt
+RESTORE_LIST_PATH="${RESTORE_LIST_PATH:-/tmp/dz_saas_restore_drill_list.txt}"
+pg_restore --list "$BACKUP_FILE" > "$RESTORE_LIST_PATH"
 
+RESTORE_DRILL_DATABASE_IDENT="$(quote_ident "$RESTORE_DRILL_DATABASE")"
+
+echo "==> Creating temporary restore drill database: ${RESTORE_DRILL_DATABASE}"
+psql "$STAGING_ADMIN_DATABASE_URL" \
+  --set=ON_ERROR_STOP=1 \
+  --command="CREATE DATABASE ${RESTORE_DRILL_DATABASE_IDENT};"
+
+cleanup_on_error() {
+  local exit_code=$?
+
+  if [[ "$exit_code" -ne 0 ]]; then
+    echo "Restore drill failed. Temporary database was left for inspection: ${RESTORE_DRILL_DATABASE}" >&2
+  fi
+
+  exit "$exit_code"
+}
+
+trap cleanup_on_error EXIT
+
+echo "==> Restoring backup into temporary database"
 pg_restore \
   --verbose \
-  --clean \
-  --if-exists \
   --no-owner \
   --no-acl \
-  --dbname="$STAGING_DATABASE_URL" \
+  --dbname="$RESTORE_DRILL_DATABASE_URL" \
   "$BACKUP_FILE"
 
-if [[ -n "${BACKEND_DIR:-}" ]]; then
-  cd "$BACKEND_DIR"
-  php artisan optimize:clear
-  php artisan migrate:status
-  php artisan system:health --scope=ready --format=json
-fi
+echo "==> Running read-only verification queries"
+psql "$RESTORE_DRILL_DATABASE_URL" \
+  --set=ON_ERROR_STOP=1 \
+  --tuples-only \
+  --no-align <<'SQL'
+SELECT 'users_count=' || COUNT(*) FROM users;
+SELECT 'tenants_count=' || COUNT(*) FROM tenants;
+SELECT 'stores_count=' || COUNT(*) FROM stores;
+SELECT 'products_count=' || COUNT(*) FROM products;
+SELECT 'orders_count=' || COUNT(*) FROM orders;
+SELECT 'active_stores_count=' || COUNT(*) FROM stores WHERE status = 'active';
+SQL
 
-echo "Staging restore drill completed for: ${BACKUP_FILE}"
+cat <<MSG
+
+Restore drill completed against temporary database:
+
+  ${RESTORE_DRILL_DATABASE}
+
+The live staging database was not overwritten.
+
+Evidence to record:
+  - backup file path or redacted name
+  - checksum result
+  - restore target database
+  - verification query output
+  - start/end time
+  - cleanup status
+  - final PASS/FAIL decision
+
+Cleanup:
+  To drop the temporary restore drill database, run this script again with:
+
+  CLEANUP_RESTORE_DRILL_DATABASE=true
+  CONFIRM_DROP_RESTORE_DRILL_DATABASE=${RESTORE_DRILL_DATABASE}
+
+MSG
