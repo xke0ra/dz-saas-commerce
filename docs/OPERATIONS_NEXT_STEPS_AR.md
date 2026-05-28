@@ -21,13 +21,23 @@
 
 الهدف: إثبات أن النسخ الاحتياطي قابل للاستعادة، لا أنه موجود فقط.
 
-- جدولة backup لقاعدة PostgreSQL.
+**المُنجز من PR #43:**
+
+- `deploy/backup/bin/staging-restore-drill.sh.example` يفرض restore آمن إلى database مؤقت فقط لا يلمس live staging.
+- Database مؤقت يجب أن يبدأ بـ `dz_saas_restore_drill_`.
+- `deploy/backup/backup.env.example` يوثّق جميع متغيرات الـ restore drill بما فيها:
+  - `STAGING_ADMIN_DATABASE_URL` (اتصال إداري فقط للـ CREATE/DROP)
+  - `RESTORE_DRILL_DATABASE` (اسم database مؤقت)
+  - `RESTORE_DRILL_DATABASE_URL` (URL اتصال الـ drill)
+  - `CLEANUP_RESTORE_DRILL_DATABASE` و`CONFIRM_DROP_RESTORE_DRILL_DATABASE` (تنظيف يتطلب تأكيد مزدوج)
+- `docs/BACKUP_RESTORE_RUNBOOK.md` لا توثّق بعد الآن direct restore إلى live staging وتركز على الـ drill الآمن.
+
+**ما زال معلّق (لم يتم إنجازه):**
+
+- جدولة backup مؤتمتة لقاعدة PostgreSQL.
 - جدولة backup للـ object storage أو توثيق replication/snapshot strategy.
-- استرجع backup إلى database منفصلة لا تلمس staging الأصلي.
-- شغل migrations/status checks المناسبة بعد restore.
-- شغل health checks ضد البيئة المستعادة.
-- شغل smoke checkout محدود بعد restore إن كانت البيانات تسمح.
-- وثق RPO وRTO بالأرقام بعد أول drill.
+- تنفيذ فعلي لـ restore drill وتسجيل الدليل.
+- وثق RPO وRTO بالأرقام بعد أول drill فعلي.
 - سجل الدليل في `BACKUP_RESTORE_DRILL_EVIDENCE_TEMPLATE.md` أو نسخة منه داخل issue/operations log.
 - وثق owner وتكرار drill الشهري أو قبل تغييرات كبيرة.
 
