@@ -1,0 +1,17 @@
+[Unit]
+Description=Mayfair staging PostgreSQL backup
+Documentation=file:/opt/mayfair/docs/BACKUP_RESTORE_RUNBOOK.md
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=deploy
+Group=deploy
+EnvironmentFile=/etc/mayfair/backup.env
+ExecStart=/usr/bin/env bash /opt/mayfair/deploy/backup/bin/staging-postgres-backup.sh
+Nice=5
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+PrivateTmp=true
+NoNewPrivileges=true

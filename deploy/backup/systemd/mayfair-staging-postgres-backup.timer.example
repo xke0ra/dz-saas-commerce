@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Mayfair staging PostgreSQL backup daily
+
+[Timer]
+OnCalendar=*-*-* 01:15:00 UTC
+Persistent=true
+RandomizedDelaySec=15m
+Unit=mayfair-staging-postgres-backup.service
+
+[Install]
+WantedBy=timers.target
