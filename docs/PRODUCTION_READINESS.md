@@ -449,15 +449,22 @@ Documented and improved (PR #43):
   - `RESTORE_DRILL_DATABASE_URL` for full connection to the drill database
   - `CLEANUP_RESTORE_DRILL_DATABASE` and `CONFIRM_DROP_RESTORE_DRILL_DATABASE` for dual-confirmation cleanup
 
+Completed (2026-05-28):
+
+- Manual staging PostgreSQL restore drill executed against isolated temporary database.
+- Backup verification: checksum passed; restore completed successfully.
+- Verification queries confirmed data integrity (users, tenants, stores, products, orders).
+- Temporary database cleaned up successfully.
+- Evidence recorded in `docs/BACKUP_RESTORE_DRILL_PROOF_2026-05-28.md`.
+
 Required before production:
 
 - Deploy automated PostgreSQL backups from the provided examples or a managed provider.
 - Deploy object storage backup/replication policy.
-- Execute and record restore drill procedure against a temporary staging database.
+- Implement backup monitoring and alerting.
+- Establish recurring restore drill cadence (at least monthly).
 - Document and monitor backup completion/age.
 - Implement backup encryption and access controls.
-
-Note: Restore drill tooling and safer procedures exist. Actual backup schedule deployment, drill execution, and evidence recording remain pending.
 
 ## Maintenance Mode And Store Availability
 

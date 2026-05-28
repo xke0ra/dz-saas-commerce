@@ -32,14 +32,20 @@
   - `CLEANUP_RESTORE_DRILL_DATABASE` و`CONFIRM_DROP_RESTORE_DRILL_DATABASE` (تنظيف يتطلب تأكيد مزدوج)
 - `docs/BACKUP_RESTORE_RUNBOOK.md` لا توثّق بعد الآن direct restore إلى live staging وتركز على الـ drill الآمن.
 
+**المُنجز بعد PR #43 - 2026-05-28:**
+
+- تنفيذ restore drill يدوي على قاعدة بيانات مؤقتة معزولة داخل PostgreSQL staging.
+- التحقق من البيانات المستعادة (users, tenants, stores, products, orders).
+- تسجيل الدليل في `BACKUP_RESTORE_DRILL_PROOF_2026-05-28.md`.
+- تنظيف قاعدة البيانات المؤقتة بنجاح.
+
 **ما زال معلّق (لم يتم إنجازه):**
 
 - جدولة backup مؤتمتة لقاعدة PostgreSQL.
 - جدولة backup للـ object storage أو توثيق replication/snapshot strategy.
-- تنفيذ فعلي لـ restore drill وتسجيل الدليل.
-- وثق RPO وRTO بالأرقام بعد أول drill فعلي.
-- سجل الدليل في `BACKUP_RESTORE_DRILL_EVIDENCE_TEMPLATE.md` أو نسخة منه داخل issue/operations log.
-- وثق owner وتكرار drill الشهري أو قبل تغييرات كبيرة.
+- مراقبة backup وalerts عند الفشل.
+- تكرار drill شهري أو قبل تغييرات كبيرة.
+- وثق owner وسياسة الاحتفاظ بالنسخ الاحتياطية.
 
 معيار القبول:
 
