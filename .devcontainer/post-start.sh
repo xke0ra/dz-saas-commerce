@@ -19,7 +19,7 @@ Storefront:
   cd storefront
   corepack enable
   corepack prepare pnpm@11.1.2 --activate
-  pnpm dev --host 0.0.0.0 --port 3000
+  pnpm dev --hostname 0.0.0.0 --port 3000
 
 Useful checks:
   bash scripts/dev/backend-test.sh
