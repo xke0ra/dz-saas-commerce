@@ -74,3 +74,6 @@ build/
 
 .idea/
 .vscode/
+
+# Local pnpm store used by Codespaces/devcontainer
+.pnpm-store/
