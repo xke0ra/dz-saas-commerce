@@ -38,10 +38,10 @@
 - التحقق من البيانات المستعادة (users, tenants, stores, products, orders).
 - تسجيل الدليل في `BACKUP_RESTORE_DRILL_PROOF_2026-05-28.md`.
 - تنظيف قاعدة البيانات المؤقتة بنجاح.
+- جدولة backup مؤتمتة لقاعدة PostgreSQL على staging (2026-05-28; see `STAGING_POSTGRES_BACKUP_AUTOMATION_PROOF_2026-05-28.md`).
 
 **ما زال معلّق (لم يتم إنجازه):**
 
-- جدولة backup مؤتمتة لقاعدة PostgreSQL.
 - جدولة backup للـ object storage أو توثيق replication/snapshot strategy.
 - مراقبة backup وalerts عند الفشل.
 - تكرار drill شهري أو قبل تغييرات كبيرة.

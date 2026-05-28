@@ -54,6 +54,7 @@
 - `BACKUP_RESTORE_RUNBOOK.md`: backup/restore/runbook.
 - `BACKUP_RESTORE_DRILL_EVIDENCE_TEMPLATE.md`: قالب تسجيل evidence بعد restore drill حقيقي.
 - `BACKUP_RESTORE_DRILL_PROOF_2026-05-28.md`: recorded evidence من restore drill الذي تم تنفيذه على 2026-05-28.
+- `STAGING_POSTGRES_BACKUP_AUTOMATION_PROOF_2026-05-28.md`: recorded proof that staging PostgreSQL backup automation was installed, smoke-tested, and scheduled on 2026-05-28.
 - `MONITORING_ALERTING_RUNBOOK.md`: observability والalerts.
 - `MONITORING_BASELINE_MATRIX_AR.md`: matrix status/threshold/action للـ monitoring baseline.
 - `QUEUE_SCHEDULER_RUNBOOK.md`: queue/scheduler supervision.
