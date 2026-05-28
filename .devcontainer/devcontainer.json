@@ -1,0 +1,67 @@
+{
+  "name": "dz-saas-commerce",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/dz-saas-commerce",
+  "shutdownAction": "stopCompose",
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "postStartCommand": "bash .devcontainer/post-start.sh",
+  "forwardPorts": [3000, 8000, 7700, 8025, 9001],
+  "portsAttributes": {
+    "3000": {
+      "label": "Storefront Next.js",
+      "onAutoForward": "notify"
+    },
+    "8000": {
+      "label": "Laravel Backend",
+      "onAutoForward": "notify"
+    },
+    "7700": {
+      "label": "Meilisearch",
+      "onAutoForward": "silent"
+    },
+    "8025": {
+      "label": "Mailpit",
+      "onAutoForward": "silent"
+    },
+    "9001": {
+      "label": "MinIO Console",
+      "onAutoForward": "silent"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "bmewburn.vscode-intelephense-client",
+        "xdebug.php-debug",
+        "recca0120.vscode-phpunit",
+        "open-southeners.laravel-pint",
+        "onecentlin.laravel-blade",
+        "shufo.vscode-blade-formatter",
+        "bradlc.vscode-tailwindcss",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-azuretools.vscode-docker",
+        "GitHub.vscode-github-actions",
+        "GitHub.copilot",
+        "GitHub.copilot-chat",
+        "EditorConfig.EditorConfig",
+        "redhat.vscode-yaml",
+        "streetsidesoftware.code-spell-checker"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "editor.formatOnSave": false,
+        "files.eol": "\n",
+        "php.validate.executablePath": "/usr/local/bin/php",
+        "intelephense.environment.phpVersion": "8.3.0",
+        "tailwindCSS.includeLanguages": {
+          "blade": "html"
+        }
+      }
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  }
+}

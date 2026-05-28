@@ -1,0 +1,84 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - ..:/workspaces/dz-saas-commerce:cached
+      - backend-vendor:/workspaces/dz-saas-commerce/backend/vendor
+      - storefront-node-modules:/workspaces/dz-saas-commerce/storefront/node_modules
+      - composer-cache:/home/vscode/.composer/cache
+      - pnpm-store:/home/vscode/.local/share/pnpm/store
+    command: sleep infinity
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      meilisearch:
+        condition: service_started
+      minio:
+        condition: service_started
+      mailpit:
+        condition: service_started
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: dz_saas_commerce
+      POSTGRES_USER: dz_user
+      POSTGRES_PASSWORD: dz_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dz_user -d dz_saas_commerce"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.12
+    environment:
+      MEILI_ENV: development
+      MEILI_MASTER_KEY: dz_meili_master_key
+    volumes:
+      - meili-data:/meili_data
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: dz_minio
+      MINIO_ROOT_PASSWORD: dz_minio_password
+    volumes:
+      - minio-data:/data
+
+  minio-create-bucket:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      mc alias set local http://minio:9000 dz_minio dz_minio_password;
+      mc mb -p local/dz-saas-commerce-local || true;
+      mc anonymous set download local/dz-saas-commerce-local || true;
+      "
+
+  mailpit:
+    image: axllent/mailpit:latest
+
+volumes:
+  backend-vendor:
+  storefront-node-modules:
+  composer-cache:
+  pnpm-store:
+  postgres-data:
+  redis-data:
+  meili-data:
+  minio-data:
