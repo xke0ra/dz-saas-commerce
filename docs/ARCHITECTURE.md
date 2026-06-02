@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: 2026-05-27
+Last updated: 2026-05-31
 
 This document describes the current architecture of `dz-saas-commerce` based on the repository state. It is an execution reference, not a marketing overview.
 
@@ -99,7 +99,7 @@ Production container foundation now exists as a first baseline:
 - `deploy/staging/`
 - `deploy/backup/`
 
-This does not yet make production readiness complete. The ephemeral staging smoke proves the image/process contract against disposable PostgreSQL, Redis, Meilisearch, MinIO, and Mailpit services. A real DigitalOcean staging host for mayfairs.app is now partially proven with Caddy public TLS, an internal Nginx edge bound to `127.0.0.1:8080`, HTTPS Filament/Livewire assets, mandatory 2FA setup/challenge, and a demo storefront. Deployed backup schedules, restore drill execution, monitoring/alerting, centralized log aggregation, error tracking, rollback proof, Cloudflare Proxied validation, and broader custom-domain/TLS automation remain required before beta/production. Health/readiness, backup/restore documentation, backup automation examples, reverse proxy strategy, queue/scheduler supervision documentation, and monitoring/alerting documentation now exist as baselines.
+This does not yet make production readiness complete. The ephemeral staging smoke proves the image/process contract against disposable PostgreSQL, Redis, Meilisearch, MinIO, and Mailpit services. A real DigitalOcean staging host for mayfairs.app is proven with Caddy public TLS, an internal Nginx edge bound to `127.0.0.1:8080`, HTTPS Filament/Livewire assets, mandatory 2FA setup/challenge, a demo storefront, automated PostgreSQL backup scheduling, and a staging restore drill executed on 2026-05-28 (see `docs/evidence/`). Monitoring/alerting integration, centralized log aggregation, error tracking, rollback proof, Cloudflare Proxied validation, and broader custom-domain/TLS automation remain required before beta/production.
 
 ## Backend Domain Layout
 
@@ -279,14 +279,14 @@ Before commercial launch, the architecture must include:
 - a green storefront dependency audit, maintained locally and in CI; as of 2026-05-12 the storefront is on Next `15.5.18`
 - security headers baseline and production CSP tightening
 - trusted proxy configuration for forwarded HTTPS/IP headers
-- tested backup and restore process; runbook exists but drill execution is still required
+- tested backup and restore process: runbook exists, staging backup automation deployed 2026-05-28, and staging restore drill executed and recorded in `docs/evidence/`
 - explicit audit trails for financial, tenant, order, and staff actions
 - least-privilege production credentials
 - emergency 2FA reset procedure: implemented through `security:reset-two-factor`; active session revocation is still missing
 
 ## Architecture Change Rule
 
-Any future structural change must update this file and `docs/PROJECT_DEEP_ANALYSIS_AND_AI_ROADMAP_AR.md` when it changes one of these:
+Any future structural change must update this file when it changes one of these:
 
 - module boundaries
 - tenancy behavior
@@ -294,3 +294,5 @@ Any future structural change must update this file and `docs/PROJECT_DEEP_ANALYS
 - API contracts
 - storage/search/queue behavior
 - deployment or verification workflow
+
+Also update `CHANGELOG.md` with a summary entry, and update any domain-specific doc that is affected (`docs/TENANCY_RULES.md`, `docs/SECURITY_BASELINE.md`, `docs/DOMAIN_CONTRACTS_SUMMARY.md`, `docs/PRODUCTION_READINESS.md`, the relevant ADR).

@@ -1,6 +1,6 @@
 # Algeria Geography
 
-Last updated: 2026-04-28
+Last updated: 2026-05-31
 
 This document defines how Algerian geography data is handled for checkout and shipping.
 
@@ -62,7 +62,7 @@ Before switching production data to 69 wilayas:
 4. Verify shipping rates can target the new wilaya IDs.
 5. Add a migration or data command for existing merchants with rates on old wilaya IDs.
 6. Update storefront copy and docs.
-7. Update `PROJECT_DEEP_ANALYSIS_AND_AI_ROADMAP_AR.md`.
+7. Add entry to `CHANGELOG.md` and update `docs/ARCHITECTURE.md` geography section.
 
 ## Product Rule
 

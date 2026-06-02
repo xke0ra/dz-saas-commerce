@@ -1,6 +1,6 @@
 # Audit Matrix
 
-Last updated: 2026-05-19
+Last updated: 2026-05-31
 
 Status is conservative. `implemented` means the code or tests showed a concrete audit path. `partial` means some related path exists but coverage is incomplete. `unknown` means no claim is made yet.
 
@@ -28,7 +28,7 @@ Note: `stock_movements` is an operational inventory ledger. Inventory adjustment
 
 ## Observed Audit Event Names
 
-هذه القائمة مبنية على events الموجودة في الكود والاختبارات عند تحديث 2026-05-19. لا تضف event جديداً إلى الوثائق إلا إذا كان موجوداً في كود audit فعلي أو test يثبته.
+This list is built from events present in code and tests as of 2026-05-31. Do not add a new event to documentation unless it is present in actual audit code or a test that proves it.
 
 Tenant/store/staff:
 
@@ -78,3 +78,4 @@ Known conservative gaps:
 - Domain verification status changes exist as behavior, but an AuditLogger path was not verified in this pass.
 - Shipment histories exist, but AuditLog coverage for shipment status changes remains partial.
 - Return/refund/restock workflow exists, but AuditLog coverage beyond inventory/payment side effects needs a focused review before claiming full audit coverage.
+- Product variant create/update/delete: ADR 0013 added `product_variants`, `product_options`, and `product_option_values` tables (2026-05-18). Audit coverage for variant-level operations has not been verified. Add to a focused audit review before beta.

@@ -1,12 +1,40 @@
 # Monitoring And Alerting Runbook
 
-Last updated: 2026-05-07
+Last updated: 2026-05-31
 
 This runbook defines the first monitoring, alerting, logging, and error tracking contract for `dz-saas-commerce`.
 
 It documents what can be monitored with the current codebase and what still requires an external monitoring stack. It does not claim that production monitoring is already implemented.
 
-Use `docs/MONITORING_BASELINE_MATRIX_AR.md` as the implementation matrix for current source, status, first thresholds, severity, and action when a check fails.
+> **Note:** `docs/MONITORING_BASELINE_MATRIX_AR.md` contains an Arabic version of the threshold matrix below. The English table in this runbook is authoritative. Both documents should stay in sync.
+
+## Monitoring Baseline Matrix
+
+PII rules for all monitoring/logging:
+- No raw phone numbers, full names, or addresses in logs or error events.
+- No tokens, cookies, Authorization headers, or payment proof private URLs.
+- Use masking or hashing when operational correlation is required.
+
+| Check | Status | Source | Threshold | Severity | Action On Failure |
+|-------|--------|--------|-----------|----------|------------------|
+| Backend liveness | ✅ Available | `GET /api/system/health/live` · `php artisan system:health --scope=live` | Fail 2 consecutive 1m checks | P0 | Restart/roll back app process; inspect deploy logs |
+| Backend readiness | ✅ Available | `GET /api/system/health/ready` · `php artisan system:health --scope=ready` | Fail 1-2 consecutive 1m checks | P0 | Inspect database/cache/queue/storage/search; freeze deploys if persistent |
+| Storefront availability | ⚠️ Partial | HTTP smoke through edge/storefront URL | Non-2xx/3xx for 2 consecutive 1m checks | P0 | Check Next.js process, edge routing, backend API base URL — see `docs/REVERSE_PROXY_RUNBOOK.md` |
+| Backend 5xx rate | ❌ External required | Proxy/app logs, provider metrics | >1% for 5m or any sustained spike | P0 | Inspect release, Laravel logs, database, queue pressure |
+| Storefront 5xx rate | ❌ External required | Edge/platform logs | >1% for 5m | P0 | Inspect Next.js runtime, upstream API, edge logs |
+| Checkout failure rate | ❌ External required | Sanitized logs/metrics around checkout | Abnormal spike over baseline or sustained 5xx | P0 | Check backend readiness, inventory/payment/shipping errors, rate limits — see `docs/STOREFRONT_CART.md` |
+| Failed jobs | ⚠️ Partial | `php artisan queue:failed` · staging smoke check | Count > 0 for billing/domain/payment/shipping/notification jobs | P0 | Inspect failed job class, fix root cause, retry or forget after review — see `docs/QUEUE_SCHEDULER_RUNBOOK.md` |
+| Queue latency | ❌ Missing | No metric source yet | Warning >60s, critical >300s | P1 | Scale workers only after root cause review; inspect Redis |
+| Scheduler last run | ❌ Missing | Process supervision + future heartbeat | No successful tick in 5m | P0 | Ensure exactly one scheduler process; inspect logs |
+| Database connectivity | ✅ Available | Readiness database check | Any ready failure | P0 | Inspect PostgreSQL health, network, credentials, connection pool |
+| Redis/cache connectivity | ✅ Available when configured | Readiness redis/cache checks | Any ready failure when Redis is required | P0 | Inspect Redis health, password, network, queue/cache config |
+| Meilisearch readiness | ✅ Available when enabled | Readiness search check | Any ready failure when `SCOUT_DRIVER=meilisearch` | P1 | Inspect Meilisearch health/key/indexing jobs |
+| Object storage readiness | ✅ Available | Readiness storage write/read/delete check | Any ready failure | P0 | Inspect bucket credentials, endpoint, permissions, disk config — see `docs/BACKUP_RESTORE_RUNBOOK.md` |
+| Mail failures | ❌ External required | Mail provider logs, queue failures | Failed send spike or provider rejection | P1 | Pause affected notifications; inspect SMTP/provider status |
+| TLS expiry | ❌ External required | Uptime/TLS monitor | Warning <21 days, critical <7 days | P0 | Renew cert; inspect proxy/load balancer automation — see `docs/REVERSE_PROXY_RUNBOOK.md` |
+| Backup age | ❌ External required | Backup job logs/object metadata | Warning >24h, critical >36h for daily backup | P0 | Freeze destructive migrations; run backup manually; fix scheduler/provider — see `docs/BACKUP_RESTORE_RUNBOOK.md` |
+| Error tracking | ❌ Missing | Provider not selected (ADR 0014) | P0/P1 alerts routed by severity after integration | P1 | Select provider via ADR 0014; enable PII scrubber before production |
+| PII/log redaction | ⚠️ Partial | Documented policy; implementation provider-dependent | Any raw phone/IP/token/private URL in logs is an incident | P0 | Redact source; rotate exposed secret if needed; document incident |
 
 ## Current Status
 

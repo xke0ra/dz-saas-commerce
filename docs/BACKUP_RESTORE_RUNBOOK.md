@@ -1,31 +1,34 @@
 # Backup And Restore Runbook
 
-Last updated: 2026-05-07
+Last updated: 2026-05-31
 
-This runbook defines the first operational backup and restore contract for `dz-saas-commerce`. It is a documented procedure, not proof that a restore drill has already been executed.
+This runbook defines the operational backup and restore contract for `dz-saas-commerce`.
 
 ## Current Status
 
-Implemented:
+### Proven (staging)
 
-- PostgreSQL backup and restore procedure is documented.
+- PostgreSQL backup and restore procedure is documented and tested.
 - S3-compatible object storage backup direction is documented.
 - Restore drill checklist is documented.
 - Pre-migration backup requirement is linked to production readiness.
-- Example PostgreSQL backup script exists: `deploy/backup/bin/postgres-backup.sh.example`.
-- Example object storage backup sync script exists: `deploy/backup/bin/object-storage-sync.sh.example`.
-- Example staging restore drill script exists with explicit safeguards: `deploy/backup/bin/staging-restore-drill.sh.example`.
-- Example systemd backup services/timers exist under `deploy/backup/systemd/`.
-- Example backup environment template exists: `deploy/backup/backup.env.example`.
+- Example PostgreSQL backup script: `deploy/backup/bin/postgres-backup.sh.example`.
+- Example object storage backup sync script: `deploy/backup/bin/object-storage-sync.sh.example`.
+- Example staging restore drill script with safety guards: `deploy/backup/bin/staging-restore-drill.sh.example`.
+- Example systemd backup services/timers: `deploy/backup/systemd/`.
+- Example backup environment template: `deploy/backup/backup.env.example`.
+- **Staging PostgreSQL backup automation installed and scheduled** via systemd timer on `mayfair-vps` (2026-05-28). See `docs/evidence/STAGING_POSTGRES_BACKUP_AUTOMATION_PROOF_2026-05-28.md`.
+- **Staging restore drill executed and passed** (2026-05-28) — isolated temporary database, checksum verified, read-only verification queries passed, drill database dropped cleanly. See `docs/evidence/BACKUP_RESTORE_DRILL_PROOF_2026-05-28.md`.
 
-Not yet proven:
+### Not yet proven (required before production)
 
-- Automated production backup schedule deployment.
+- Automated production backup schedule deployment (distinct from staging).
 - Managed PostgreSQL point-in-time recovery configuration.
 - Object storage replication/lifecycle policy.
 - Encrypted offsite backup storage.
-- Staging restore drill execution.
 - Backup monitoring and failed-backup alerting.
+- Recurring restore drill cadence (monthly or before major changes).
+- Off-host/off-provider backup retention policy documented and enforced.
 
 ## Backup Scope
 
@@ -135,9 +138,9 @@ The repository includes deployable examples, not active production configuration
 
 For VPS deployments where PostgreSQL tools are inside the Docker Compose postgres service:
 
-- `deploy/backup/bin/staging-postgres-backup.sh.example` – Backup script using `docker compose exec` to invoke `pg_dump` inside the postgres container. Suitable for staging environment backups.
-- `deploy/backup/systemd/mayfair-staging-postgres-backup.service.example` – Systemd service for Mayfair staging backup.
-- `deploy/backup/systemd/mayfair-staging-postgres-backup.timer.example` – Systemd timer to schedule daily staging backup.
+- `deploy/backup/bin/staging-postgres-backup.sh.example`
+- `deploy/backup/systemd/mayfair-staging-postgres-backup.service.example`
+- `deploy/backup/systemd/mayfair-staging-postgres-backup.timer.example`
 
 ### Object Storage Backup
 
@@ -150,82 +153,11 @@ For VPS deployments where PostgreSQL tools are inside the Docker Compose postgre
 - `deploy/backup/bin/staging-restore-drill.sh.example`
 - `deploy/backup/backup.env.example`
 
-Operator installation shape for a VM-style deployment:
-
-```bash
-sudo install -d -m 0750 -o root -g www-data /etc/dz-saas-commerce
-sudo install -m 0640 -o root -g www-data deploy/backup/backup.env.example /etc/dz-saas-commerce/backup.env
-sudo install -d -m 0755 /opt/dz-saas-commerce/deploy/backup/bin
-sudo install -m 0755 deploy/backup/bin/postgres-backup.sh.example /opt/dz-saas-commerce/deploy/backup/bin/postgres-backup.sh
-sudo install -m 0755 deploy/backup/bin/object-storage-sync.sh.example /opt/dz-saas-commerce/deploy/backup/bin/object-storage-sync.sh
-sudo install -m 0755 deploy/backup/bin/staging-restore-drill.sh.example /opt/dz-saas-commerce/deploy/backup/bin/staging-restore-drill.sh
-```
-
-Then fill `/etc/dz-saas-commerce/backup.env` from the secret manager. Do not store real secrets in the repository.
-
-### Docker Compose Staging Installation (Mayfair VPS)
-
-For Mayfair VPS with Docker Compose staging environment:
-
-```bash
-sudo install -d -m 0750 -o root -g deploy /etc/mayfair
-sudo install -m 0640 -o root -g deploy deploy/backup/backup.env.example /etc/mayfair/backup.env
-sudo install -d -m 0755 /opt/mayfair/deploy/backup/bin
-sudo install -m 0755 deploy/backup/bin/staging-postgres-backup.sh.example /opt/mayfair/deploy/backup/bin/staging-postgres-backup.sh
-```
-
-Then fill `/etc/mayfair/backup.env` with appropriate `BACKUP_DIR` and other staging-specific variables. Ensure the `deploy` user can write to the backup directory.
-
-Install the systemd service and timer:
-
-```bash
-sudo cp deploy/backup/systemd/mayfair-staging-postgres-backup.service.example /etc/systemd/system/mayfair-staging-postgres-backup.service
-sudo cp deploy/backup/systemd/mayfair-staging-postgres-backup.timer.example /etc/systemd/system/mayfair-staging-postgres-backup.timer
-sudo systemctl daemon-reload
-sudo systemctl enable --now mayfair-staging-postgres-backup.timer
-```
-
-Manual smoke test before enabling the timer:
-
-```bash
-sudo systemctl start mayfair-staging-postgres-backup.service
-sudo systemctl status mayfair-staging-postgres-backup.service
-sudo systemctl list-timers 'mayfair-staging-postgres-backup*'
-```
-
-Systemd example installation:
-
-```bash
-sudo cp deploy/backup/systemd/dz-saas-commerce-postgres-backup.service.example /etc/systemd/system/dz-saas-commerce-postgres-backup.service
-sudo cp deploy/backup/systemd/dz-saas-commerce-postgres-backup.timer.example /etc/systemd/system/dz-saas-commerce-postgres-backup.timer
-sudo cp deploy/backup/systemd/dz-saas-commerce-object-storage-backup.service.example /etc/systemd/system/dz-saas-commerce-object-storage-backup.service
-sudo cp deploy/backup/systemd/dz-saas-commerce-object-storage-backup.timer.example /etc/systemd/system/dz-saas-commerce-object-storage-backup.timer
-sudo systemctl daemon-reload
-sudo systemctl enable --now dz-saas-commerce-postgres-backup.timer
-sudo systemctl enable --now dz-saas-commerce-object-storage-backup.timer
-```
-
-Manual smoke before enabling timers:
-
-```bash
-sudo systemctl start dz-saas-commerce-postgres-backup.service
-sudo systemctl start dz-saas-commerce-object-storage-backup.service
-sudo systemctl list-timers 'dz-saas-commerce-*backup*'
-```
-
-The database script writes:
-
-- `.dump` PostgreSQL custom-format backup.
-- `.dump.list` restore listing generated by `pg_restore --list`.
-- `.dump.sha256` checksum.
-
-The restore drill script refuses to run unless `ALLOW_STAGING_RESTORE=true` and the target database URL does not appear to reference production.
-
 ## Restore Drill To Temporary Staging Database
 
 **This procedure creates an isolated, temporary database for testing restore procedures. The live staging application database is not overwritten.**
 
-Use the provided `deploy/backup/bin/staging-restore-drill.sh.example` script to execute restore drills. It enforces all safety requirements:
+Use `deploy/backup/bin/staging-restore-drill.sh.example`. It enforces:
 
 - Multi-layered validation to prevent production overwrites
 - Naming convention enforcement (`dz_saas_restore_drill_*`)
@@ -234,16 +166,16 @@ Use the provided `deploy/backup/bin/staging-restore-drill.sh.example` script to 
 
 Required environment variables:
 
-- **`ALLOW_STAGING_RESTORE`**: Must be set to `true` to enable any restore attempt.
-- **`STAGING_ADMIN_DATABASE_URL`**: Administrative connection (e.g., `postgres://user:pass@host:5432/postgres`) used only to CREATE and DROP the temporary drill database. Must not reference production.
-- **`RESTORE_DRILL_DATABASE`**: Temporary database name, enforced to start with `dz_saas_restore_drill_` (e.g., `dz_saas_restore_drill_20260528_120000`). This naming convention prevents accidental overwrites of live databases.
-- **`RESTORE_DRILL_DATABASE_URL`**: Full connection URL to the temporary database (e.g., `postgres://user:pass@host:5432/dz_saas_restore_drill_20260528_120000`).
-- **`BACKUP_FILE`**: Path to a PostgreSQL custom-format `.dump` backup file to restore.
+- **`ALLOW_STAGING_RESTORE`**: Must be `true`.
+- **`STAGING_ADMIN_DATABASE_URL`**: Administrative connection used only to CREATE and DROP the temporary drill database.
+- **`RESTORE_DRILL_DATABASE`**: Temporary database name, must start with `dz_saas_restore_drill_`.
+- **`RESTORE_DRILL_DATABASE_URL`**: Full connection URL to the temporary database.
+- **`BACKUP_FILE`**: Path to a PostgreSQL custom-format `.dump` backup file.
 
-Cleanup is disabled by default and requires explicit dual confirmation:
+Cleanup requires dual confirmation:
 
-- **`CLEANUP_RESTORE_DRILL_DATABASE`**: Set to `true` to enable cleanup mode.
-- **`CONFIRM_DROP_RESTORE_DRILL_DATABASE`**: Must be set to the exact value of `RESTORE_DRILL_DATABASE`. If the strings do not match exactly, cleanup is refused.
+- **`CLEANUP_RESTORE_DRILL_DATABASE`**: Set to `true`.
+- **`CONFIRM_DROP_RESTORE_DRILL_DATABASE`**: Must exactly match `RESTORE_DRILL_DATABASE`.
 
 Example execution:
 
@@ -256,46 +188,29 @@ export RESTORE_DRILL_DATABASE_URL="postgres://USER:PASSWORD@HOST:5432/${RESTORE_
 bash deploy/backup/bin/staging-restore-drill.sh.example
 ```
 
-After successful database restore, verify the drill database using read-only `psql` queries against `RESTORE_DRILL_DATABASE_URL`:
+After restore, verify with read-only queries:
 
 ```bash
-# Extract database credentials from RESTORE_DRILL_DATABASE_URL if necessary
-# Example: postgres://user:password@host:5432/dz_saas_restore_drill_20260528_120000
-
-psql "$RESTORE_DRILL_DATABASE_URL" -c "SELECT COUNT(*) as user_count FROM users;"
-psql "$RESTORE_DRILL_DATABASE_URL" -c "SELECT COUNT(*) as tenant_count FROM tenants;"
-psql "$RESTORE_DRILL_DATABASE_URL" -c "SELECT COUNT(*) as store_count FROM stores;"
-psql "$RESTORE_DRILL_DATABASE_URL" -c "SELECT COUNT(*) as product_count FROM products;"
-psql "$RESTORE_DRILL_DATABASE_URL" -c "SELECT COUNT(*) as order_count FROM orders;"
+psql "$RESTORE_DRILL_DATABASE_URL" -c "SELECT COUNT(*) as users FROM users;"
+psql "$RESTORE_DRILL_DATABASE_URL" -c "SELECT COUNT(*) as tenants FROM tenants;"
+psql "$RESTORE_DRILL_DATABASE_URL" -c "SELECT COUNT(*) as stores FROM stores;"
+psql "$RESTORE_DRILL_DATABASE_URL" -c "SELECT COUNT(*) as products FROM products;"
+psql "$RESTORE_DRILL_DATABASE_URL" -c "SELECT COUNT(*) as orders FROM orders;"
 ```
 
-If using restored object storage data, point the temporary drill environment to a staging-only bucket copy, not the production bucket.
+Record the result in `docs/templates/BACKUP_RESTORE_DRILL_EVIDENCE_TEMPLATE.md` (copy to a new file under `docs/evidence/`).
 
-To test application-level verification (optional), temporarily point the backend `DATABASE_URL` to the drill database in a non-production environment, then run:
-
-```bash
-cd backend
-php artisan migrate:status
-php artisan system:health --scope=ready --format=json
-php artisan route:list
-```
-
-Do not run these commands against the live staging database. Always verify drill database connectivity before running application commands.
-
-To clean up the temporary database after verification:
+Cleanup:
 
 ```bash
 export CLEANUP_RESTORE_DRILL_DATABASE=true
 export CONFIRM_DROP_RESTORE_DRILL_DATABASE="$RESTORE_DRILL_DATABASE"
-
 bash deploy/backup/bin/staging-restore-drill.sh.example
 ```
 
-The script will drop the temporary database and exit. The dual-confirmation requirement (`CLEANUP_RESTORE_DRILL_DATABASE=true` AND exact database name match) ensures accidental cleanup is impossible.
-
 ## Restore Drill Checklist
 
-Run this before beta and then on a recurring operational schedule.
+Run before beta and on a recurring schedule (monthly or before major changes).
 
 1. Select the latest production-like backup.
 2. Verify checksum exists and matches.
@@ -308,17 +223,15 @@ Run this before beta and then on a recurring operational schedule.
 9. Run a storefront smoke check against staging.
 10. Verify one tenant, one store, one product image, one order, and one invoice can be read.
 11. Verify no production email/SMS/payment/shipping integrations are live in staging.
-12. Record:
-    - backup timestamp
-    - restore start/end time
-    - backup file size
-    - checksum result
-    - operator
-    - issues found
-    - RTO observed
-    - RPO observed
+12. Record RPO and RTO observed.
+13. Copy `docs/templates/BACKUP_RESTORE_DRILL_EVIDENCE_TEMPLATE.md` to `docs/evidence/BACKUP_RESTORE_DRILL_PROOF_{DATE}.md` and fill it in.
 
-Use `docs/BACKUP_RESTORE_DRILL_EVIDENCE_TEMPLATE.md` to record the first real drill. The template is intentionally separate so it can be copied into an issue, incident record, or operations log without duplicating this runbook.
+## Evidence Archive
+
+Past drill records are in `docs/evidence/`:
+
+- `docs/evidence/BACKUP_RESTORE_DRILL_PROOF_2026-05-28.md` — first staging restore drill (PASS)
+- `docs/evidence/STAGING_POSTGRES_BACKUP_AUTOMATION_PROOF_2026-05-28.md` — backup automation installation (PASS)
 
 ## Pre-Migration Backup Gate
 
@@ -355,9 +268,10 @@ If backup fails:
 
 The backup/restore phase is complete only when:
 
-- Automated database backups are deployed and monitored.
+- Automated database backups are deployed and monitored in production.
 - Object storage backup/replication is deployed and monitored.
 - Backup artifacts are encrypted or stored with provider-side encryption.
-- A staging restore drill has been executed and recorded.
+- A restore drill has been executed at least once and recorded.
 - Readiness checks pass after restore.
 - The observed RTO/RPO are documented.
+- Backup monitoring alerts are configured and tested.
