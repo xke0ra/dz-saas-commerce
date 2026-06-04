@@ -62,7 +62,8 @@ RUN apk add --no-cache \
         pcntl \
         pdo_pgsql \
         zip \
-    && pecl install redis \
+    && pecl channel-update pecl.php.net \
+    && printf "\n" | pecl install redis-6.3.0 \
     && docker-php-ext-enable redis \
     && apk del .build-deps
 
