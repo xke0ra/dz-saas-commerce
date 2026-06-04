@@ -1,6 +1,6 @@
 # Development Workflow
 
-Last updated: 2026-05-27
+Last updated: 2026-05-31
 
 This document defines the working process for this project. It is optimized for careful, incremental development by a human or AI agent.
 
@@ -8,9 +8,11 @@ This document defines the working process for this project. It is optimized for 
 
 Never make broad uncontrolled rewrites. Inspect first, change narrowly, verify, then update the living roadmap when the project state changes.
 
-The living roadmap is:
+The living operational status lives in:
 
-- `docs/PROJECT_DEEP_ANALYSIS_AND_AI_ROADMAP_AR.md`
+- `docs/PRODUCTION_READINESS.md` — production prerequisites, current proven/pending status
+- `docs/OPERATIONS_NEXT_STEPS_AR.md` — next phase operational plan
+- `CHANGELOG.md` — record of every significant milestone or change
 
 Architecture decisions live in:
 
@@ -309,24 +311,26 @@ Do not use outdated Filament 3 syntax without checking compatibility.
 
 ## Documentation Update Rule
 
-Update `docs/PROJECT_DEEP_ANALYSIS_AND_AI_ROADMAP_AR.md` after a change when any of these are true:
+Update the relevant domain doc after any change that affects its scope:
 
-- milestone status changed
-- next priority changed
-- a new risk was discovered
-- a risk was closed
-- a domain rule changed
-- verification results changed
-- a new mandatory workflow rule was introduced
-
-Update the relevant domain doc too:
-
+- operational status or milestones: `docs/PRODUCTION_READINESS.md` + `CHANGELOG.md`
+- domain behavioral rules: `docs/DOMAIN_CONTRACTS_SUMMARY.md`
 - architecture: `docs/ARCHITECTURE.md`
 - tenancy: `docs/TENANCY_RULES.md`
 - tests: `docs/TESTING_STRATEGY.md`
 - security: `docs/SECURITY_BASELINE.md`
 - local setup: `docs/LOCAL_DEVELOPMENT.md`
 - production setup: `docs/PRODUCTION_READINESS.md`
+- audit coverage: `docs/AUDIT_MATRIX.md`
+
+Always add a `CHANGELOG.md` entry when any of these are true:
+
+- milestone status changed
+- next priority changed
+- a new risk was discovered or closed
+- a domain rule changed
+- verification results changed
+- a new mandatory workflow rule was introduced
 
 ## Repository Hygiene Rule
 

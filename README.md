@@ -12,13 +12,14 @@ Current shape:
 Start with:
 
 1. `docs/README.md`
-2. `docs/PROJECT_DEEP_ANALYSIS_AND_AI_ROADMAP_AR.md`
-3. `docs/DOMAIN_CONTRACTS_AR.md`
+2. `docs/ARCHITECTURE.md`
+3. `docs/DOMAIN_CONTRACTS_SUMMARY.md`
 4. `docs/TESTING_STRATEGY.md`
 5. `docs/PRODUCTION_READINESS.md`
 
 Important status:
 
-- Real external staging is still pending until VPS/provider, domain or hostname, and staging secrets/variables are available.
-- Production launch is not proven yet. Staging proof, monitoring, restore drill, and hardening remain required.
+- External staging is proven on DigitalOcean `mayfair-vps` (FRA1) at `mayfairs.app` as of 2026-05-26. See `docs/evidence/STAGING_SMOKE_PROOF_2026-05-26_AR.md`.
+- Staging PostgreSQL backup automation deployed and restore drill executed 2026-05-28. See `docs/evidence/`.
+- Production launch is not proven yet. Monitoring/alerting integration, error tracking, rollback proof, and production hardening remain required.
 - Business logic, checkout, inventory lifecycle, migrations, dependencies, deploy scripts, and CI should not be changed during documentation-only audit rounds.

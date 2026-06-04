@@ -1,6 +1,6 @@
 # Security Baseline
 
-Last updated: 2026-05-27
+Last updated: 2026-05-31
 
 This document defines the minimum security posture expected as the platform moves toward commercial launch.
 
@@ -55,12 +55,12 @@ Current important gaps:
 - no full session/device management
 - emergency 2FA reset does not revoke already active sessions; required users are forced back to setup on next panel access
 - CSP baseline is intentionally broad for Filament/Livewire/storefront compatibility, still includes permissive allowances such as `unsafe-inline` / `unsafe-eval`, and is not production-grade until tightened after browser/e2e validation
-- backup/restore runbook and automation examples exist, but no deployed backup schedule or executed staging restore drill is recorded yet
+- staging backup automation deployed 2026-05-28 and staging restore drill executed and recorded in `docs/evidence/`; production automated backup deployment is still required
 - no completed secrets rotation procedure
 - no formal vulnerability review workflow beyond dependency audits, image vulnerability scanning, and secret hygiene baseline
 - no production monitoring/error tracking integration or alert routing
 - production `.env.production.example` files exist, but real secret management and rotation are not implemented yet
-- real external staging now exists on DigitalOcean for mayfairs.app, with proof for HTTPS, Caddy/nginx routing, mandatory 2FA, and a demo storefront; it still does not count as production readiness because backup/restore, monitoring, rollback proof, and production hardening remain pending
+- real external staging exists on DigitalOcean for mayfairs.app, with proof for HTTPS, Caddy/nginx routing, mandatory 2FA, demo storefront, backup automation, and restore drill; it does not count as production readiness because monitoring, rollback proof, and production hardening remain pending
 - `Store` remains a documented exception to the global tenant scope; new store queries still need explicit review
 
 ## Authentication
@@ -225,7 +225,7 @@ Before launch, document:
 - Cloudflare remains DNS only; Proxied mode must not be enabled until headers, assets, session cookies, and 2FA pass smoke behind Cloudflare.
 - Mandatory 2FA setup/challenge passed for a staging super admin without recording any password, TOTP secret, or recovery code.
 - Staging demo store smoke passed for storefront resolution, COD availability, shipping rates, products, and inventory.
-- Backup/restore drill evidence and monitoring/alerting implementation are still pending.
+- Staging backup automation deployed and restore drill executed 2026-05-28; see `docs/evidence/`. Monitoring/alerting integration remains pending.
 
 2026-05-12 security verification:
 
@@ -315,7 +315,7 @@ Before enabling broader uploads:
 
 Required before commercial launch:
 
-- automated backups deployed from the examples or managed provider and a recorded staging restore drill
+- automated backups deployed to staging and staging restore drill recorded; production backup deployment and monitoring still required
 - queue worker supervision runbook exists; staging/production supervision is not proven yet
 - scheduler supervision runbook exists; staging/production supervision is not proven yet
 - production logging without sensitive data leakage

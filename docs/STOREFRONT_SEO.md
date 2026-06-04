@@ -1,6 +1,6 @@
 # Storefront SEO And Crawl Contract
 
-Last updated: 2026-05-12
+Last updated: 2026-05-31
 
 This document defines the current public storefront SEO contract.
 
@@ -11,6 +11,7 @@ Each tenant storefront must expose crawlable, store-specific metadata without tr
 ## Current Files
 
 - `storefront/src/lib/seo.ts`
+- `storefront/src/lib/structured-data.ts`
 - `storefront/src/app/sitemap.ts`
 - `storefront/src/app/robots.ts`
 - `storefront/src/app/page.tsx`
@@ -27,7 +28,7 @@ Each tenant storefront must expose crawlable, store-specific metadata without tr
 - Sitemap includes:
   - store home
   - product listing
-  - product detail pages
+  - product detail pages (simple and variable — one URL per product, not per variant)
   - category pages
   - enabled legal pages with content
 - Product URLs are collected through the paginated products API instead of assuming one oversized page. This removes the previous effective 48-product sitemap cap.
@@ -40,6 +41,16 @@ Each tenant storefront must expose crawlable, store-specific metadata without tr
 - Product detail pages generate OpenGraph article metadata.
 - Home and product detail pages expose basic JSON-LD structured data.
 - Search, cart, and track order pages are marked `noindex`.
+
+## Variable Product SEO Rules (ADR 0013)
+
+Variable products share a single canonical URL at `/products/{slug}`. Variants are not separate SEO pages.
+
+- The product detail page renders one canonical URL regardless of which variant is selected in the UI.
+- Structured data (`Product` JSON-LD) uses the product base price or the first active variant price when the product is variable and has variants.
+- `product.type` is exposed by the API and used by the storefront only for rendering; it has no effect on canonical URL structure.
+- Variant option selections are client-side state only — they must not appear in canonical URLs or sitemap entries.
+- `availability` in Product JSON-LD reflects `InStock` when any active variant has available inventory; `OutOfStock` otherwise.
 
 ## Base URL Rules
 
@@ -84,6 +95,7 @@ pnpm test:e2e
 
 - Add product-specific SEO fields in the backend when catalog maturity requires them.
 - Add product image OpenGraph coverage when real product media is consistently seeded.
-- Expand structured data JSON-LD for organization, legal pages, and richer product fields.
+- Expand structured data JSON-LD: organization, legal pages, richer product fields, variant availability per JSON-LD `hasVariant` if warranted.
 - Add sitemap index support if stores can exceed the safe per-sitemap URL limit.
 - Add SEO smoke checks for custom domains once domain routing is exercised end to end.
+- Validate structured data output for variable products with Google Rich Results Test.

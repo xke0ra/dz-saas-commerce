@@ -5,8 +5,8 @@ WORKDIR /app
 
 RUN apk add --no-cache icu-libs \
     && apk add --no-cache --virtual .composer-build-deps \
-        $PHPIZE_DEPS \
-        icu-dev \
+    $PHPIZE_DEPS \
+    icu-dev \
     && docker-php-ext-install intl \
     && apk del .composer-build-deps
 
@@ -25,10 +25,10 @@ COPY database database
 COPY routes routes
 COPY artisan artisan
 RUN mkdir -p \
-        storage/framework/cache/data \
-        storage/framework/sessions \
-        storage/framework/views \
-        bootstrap/cache
+    storage/framework/cache/data \
+    storage/framework/sessions \
+    storage/framework/views \
+    bootstrap/cache
 RUN composer dump-autoload --no-dev --optimize
 
 FROM node:24-alpine AS assets
@@ -43,26 +43,30 @@ RUN npm run build
 FROM php:8.3-fpm-alpine AS runtime
 WORKDIR /var/www/html
 
-RUN apk add --no-cache \
-        bash \
-        curl \
-        icu-libs \
-        libpq \
-        libzip \
-        oniguruma \
+RUN apk update \
+    && apk upgrade \
+    && apk add --no-cache \
+    'libxml2=2.13.9-r1' \
+    bash \
+    curl \
+    icu-libs \
+    libpq \
+    libzip \
+    oniguruma \
     && apk add --no-cache --virtual .build-deps \
-        $PHPIZE_DEPS \
-        icu-dev \
-        libzip-dev \
-        postgresql-dev \
+    $PHPIZE_DEPS \
+    icu-dev \
+    libzip-dev \
+    postgresql-dev \
     && docker-php-ext-install \
-        bcmath \
-        intl \
-        opcache \
-        pcntl \
-        pdo_pgsql \
-        zip \
-    && pecl install redis \
+    bcmath \
+    intl \
+    opcache \
+    pcntl \
+    pdo_pgsql \
+    zip \
+    && pecl channel-update pecl.php.net \
+    && printf "\n" | pecl install redis-6.3.0 \
     && docker-php-ext-enable redis \
     && apk del .build-deps
 
@@ -73,14 +77,14 @@ COPY --from=vendor --chown=www-data:www-data /app/vendor ./vendor
 COPY --from=assets --chown=www-data:www-data /app/public/build ./public/build
 
 RUN mkdir -p \
-        storage/app/private \
-        storage/app/public \
-        storage/framework/cache \
-        storage/framework/sessions \
-        storage/framework/testing \
-        storage/framework/views \
-        storage/logs \
-        bootstrap/cache \
+    storage/app/private \
+    storage/app/public \
+    storage/framework/cache \
+    storage/framework/sessions \
+    storage/framework/testing \
+    storage/framework/views \
+    storage/logs \
+    bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache
 
 USER www-data

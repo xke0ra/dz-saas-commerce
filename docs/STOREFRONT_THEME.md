@@ -1,6 +1,6 @@
 # Storefront Theme Sections
 
-Last updated: 2026-04-28
+Last updated: 2026-05-31
 
 This document defines the current customer storefront presentation layer.
 
@@ -49,6 +49,36 @@ The contact strip uses `store_setting` fields:
 
 Legal links only render when the page is enabled in store settings.
 
+## Product Detail And Variant Picker
+
+Added in ADR 0013 (2026-05-18). The product detail page renders two distinct flows depending on `product.type`:
+
+### Simple Products
+
+- No variant picker rendered.
+- A single "Quick Order" form is shown directly.
+- `product_variant_id` is never sent in the checkout payload for simple products.
+- Quick-order form sends: `product_id`, `quantity`, customer fields, wilaya/commune, payment method.
+
+### Variable Products
+
+- `product-variant-purchase-panel.tsx` renders options (size, color, etc.) as selectable buttons.
+- The panel resolves the active variant from the selected combination of option values.
+- Displayed price updates to `variant.price_minor` when the variant has an override; falls back to product base price.
+- Availability indicator shows `available_quantity` from variant-level inventory.
+- Add-to-cart sends: `product_id` + `product_variant_id` + `quantity`.
+- Checkout rejects invalid combinations server-side regardless of what the picker displays.
+
+Current files:
+
+- `storefront/src/app/products/[slug]/page.tsx`
+- `storefront/src/components/storefront/product-variant-purchase-panel.tsx`
+- `storefront/src/components/storefront/quick-order-form.tsx`
+- `storefront/src/components/storefront/cart-checkout.tsx`
+- `storefront/src/components/storefront/cart-provider.tsx`
+
+Cart sellable unit key: `product_id + product_variant_id` (null for simple products). The cart must not allow the same sellable unit twice — duplicate detection happens at both the cart provider and at the checkout request validation layer.
+
 ## Mobile Checkout Polish
 
 Current mobile-oriented improvements:
@@ -57,6 +87,7 @@ Current mobile-oriented improvements:
 - cart page shows selected item count
 - cart page includes a mobile CTA that jumps to the checkout form
 - quick order submit button is full width for easier tapping
+- variant option buttons are touch-friendly with adequate tap target size
 
 ## Testing
 
@@ -85,3 +116,5 @@ pnpm test:e2e
 - optional promotional sections
 - better product media presentation
 - mobile checkout step grouping if the form becomes longer
+- variant sold-out state UI (disabled picker + "out of stock" label)
+- variant image switching when a variant has its own image

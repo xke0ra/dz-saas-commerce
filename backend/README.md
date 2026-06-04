@@ -1,58 +1,182 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# dz-saas-commerce — Backend
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Laravel 13 backend for a multi-tenant Algerian SaaS commerce platform.
 
-## About Laravel
+> Full project documentation lives in [`docs/`](../docs/README.md). This file is a quick entry point for backend work only.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Stack
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+| Layer | Technology |
+|-------|-----------|
+| Framework | Laravel 13, PHP 8.3 |
+| Admin Panels | Filament 5.6 (admin / vendor / support) |
+| Database | PostgreSQL 16 |
+| Cache / Sessions / Queue | Redis |
+| Search | Meilisearch (via Laravel Scout) |
+| Object Storage | S3-compatible (MinIO locally) |
+| Auth | Filament-native + mandatory TOTP 2FA |
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Quick Start (Local)
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+See [`docs/LOCAL_DEVELOPMENT.md`](../docs/LOCAL_DEVELOPMENT.md) for the full setup contract.
 
 ```bash
-composer require laravel/boost --dev
+# 1. Start services
+docker compose up -d postgres redis meilisearch minio mailpit
 
-php artisan boost:install
+# 2. Install dependencies
+cd backend
+composer install
+
+# 3. Prepare environment
+cp .env.example .env
+php artisan key:generate
+
+# 4. Migrate and seed
+php artisan migrate
+php artisan db:seed
+
+# 5. Run tests
+php artisan test
+
+# 6. Start queue worker (separate terminal)
+php artisan queue:work redis --tries=3 --timeout=90 --sleep=3
+
+# 7. Start scheduler (separate terminal)
+php artisan schedule:work
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+All credentials in `.env.example` and `docker-compose.yml` are local dummy values. Do not use them outside local development.
 
-## Contributing
+---
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Project Structure
 
-## Code of Conduct
+```
+backend/app/
+├── Actions/          # Business operations (46 files) — core domain logic
+│   ├── Billing/      # Subscription lifecycle
+│   ├── Checkout/     # Order creation, idempotency, abuse guard
+│   ├── Inventory/    # Stock movements, settlements
+│   ├── Orders/       # Status transitions
+│   ├── Shipping/     # Shipment lifecycle
+│   └── ...           # Returns, Coupons, Domains, Support, Tenancy
+├── Data/             # Typed DTOs
+├── Enums/            # Domain constants (27 files)
+├── Filament/         # Admin / Vendor / Support panels (227 files)
+├── Http/             # Thin controllers (4), middleware, requests, resources
+├── Jobs/             # Background jobs
+├── Models/           # Eloquent models (44 files)
+├── Observers/        # Side effects and audit hooks
+├── Policies/         # Authorization (30 files, 55 permissions)
+└── Support/          # Domain support classes
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+**Pattern:** Thin controllers — all business logic in `app/Actions/{Domain}/`.
 
-## Security Vulnerabilities
+---
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Key Domains
 
-## License
+| Domain | Entry Action | Notes |
+|--------|-------------|-------|
+| Checkout | `CreateQuickOrder` | Idempotency + abuse guard + inventory lock |
+| Billing | `ProcessBillingLifecycle` | Grace periods, renewal, suspension |
+| Inventory | `AdjustInventoryManually`, `SettleOrderInventory` | Append-only ledger |
+| Orders | `TransitionOrderStatus` | State machine with allowed transitions |
+| Shipping | `TransitionShipmentStatus` | Wilaya/commune-based rates |
+| Tenancy | `InviteUserToTenant` | RBAC with 55 granular permissions |
+| Catalog | `SearchStorefrontProducts` | Meilisearch via Scout |
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
+
+## Tenant Isolation
+
+Three-layer isolation — **read [`docs/TENANCY_RULES.md`](../docs/TENANCY_RULES.md) before touching any tenant-scoped code:**
+
+1. **Application:** `BelongsToTenant` Eloquent global scope on all tenant models
+2. **Middleware:** `ResolveTenantFromRequest` with `try/finally` cleanup
+3. **Database:** Composite FK constraints (e.g., `orders(tenant_id, store_id) → stores(tenant_id, id)`)
+
+Rule: every use of `withoutGlobalScope('current_tenant')` **must** add `->where('tenant_id', $tenantId)`.
+
+---
+
+## Security
+
+- Mandatory TOTP 2FA for: `super_admin`, `platform_support`, `tenant_owner`
+- Recovery codes: encrypted `array` cast in DB
+- Emergency reset: `php artisan security:reset-two-factor {user}`
+- All financial CHECK constraints at DB level (`total = subtotal + tax`, `paid <= total`)
+- Money stored as integer minor units (no floating-point)
+
+See [`docs/SECURITY_BASELINE.md`](../docs/SECURITY_BASELINE.md).
+
+---
+
+## Health Checks
+
+```bash
+# Liveness (process alive)
+php artisan system:health --scope=live --format=json
+curl http://localhost/api/system/health/live
+
+# Readiness (all dependencies healthy)
+php artisan system:health --scope=ready --format=json
+curl http://localhost/api/system/health/ready
+```
+
+Readiness checks: PostgreSQL, Redis, queue backend, storage disk, Meilisearch. Fails if `APP_DEBUG=true` or `APP_KEY` is missing.
+
+---
+
+## Tests
+
+```bash
+php artisan test                          # Full suite
+php artisan test --filter=QuickCheckout   # Single test class
+php artisan test --parallel               # Parallel (requires ParaTest)
+```
+
+Current baseline: **292 passed, 1448 assertions** (after commit `045c264`).
+
+Coverage areas: checkout, billing lifecycle, tenant isolation, security headers, 2FA, inventory ledger, product variants, order fulfillment, payment workflow.
+
+See [`docs/TESTING_STRATEGY.md`](../docs/TESTING_STRATEGY.md) for the full strategy and required coverage rules.
+
+---
+
+## CI
+
+Five quality gates in `.github/workflows/quality.yml`:
+
+1. **Repository hygiene** — secret scan, clean export check
+2. **Backend** — `composer validate` → `composer audit` → Pint → migrate → readiness → test → `route:list`
+3. **Storefront** — `pnpm audit` → typecheck → build
+4. **Dockerfile checks** — buildx lint + build smoke + Trivy vulnerability scan
+5. **Storefront E2E** — Playwright Chromium tests
+
+---
+
+## Key Read-Before-Edit Rules
+
+| Changing... | Read first |
+|-------------|-----------|
+| Checkout / order creation | `docs/STOREFRONT_CART.md`, `docs/DOMAIN_CONTRACTS_SUMMARY.md`, `docs/adr/0005-*.md`, `docs/adr/0006-*.md` |
+| Inventory / stock movements | `docs/DOMAIN_CONTRACTS_SUMMARY.md`, `docs/AUDIT_MATRIX.md`, `docs/TENANCY_RULES.md` |
+| Tenancy / `withoutGlobalScope` | `docs/TENANCY_RULES.md`, `docs/adr/0002-*.md` |
+| Billing / subscriptions | `docs/DOMAIN_CONTRACTS_SUMMARY.md`, `docs/SECURITY_BASELINE.md` |
+| Product variants | `docs/DOMAIN_CONTRACTS_SUMMARY.md`, `docs/adr/0013-*.md` |
+| Architecture | `docs/ARCHITECTURE.md`, `docs/adr/` |
+| Security | `docs/SECURITY_BASELINE.md`, `docs/TENANCY_RULES.md` |
+| Deployment | `docs/PRODUCTION_READINESS.md`, `docs/adr/0012-*.md` |
+
+---
+
+## Reporting Security Vulnerabilities
+
+Do **not** open a public GitHub issue. See [`SECURITY.md`](../SECURITY.md) at the project root.
