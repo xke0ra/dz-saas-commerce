@@ -4,6 +4,8 @@ packages:
 allowBuilds:
   sharp: true
 
-auditConfig:
-  ignoreGhsas:
-    - GHSA-qx2v-qp2m-jg93
+# Security floor: force every postcss instance (including next's exact-pinned
+# nested copy) to the patched release. Overrides in package.json were not
+# honored by the resolver; workspace-level overrides are.
+overrides:
+  postcss: 8.5.28

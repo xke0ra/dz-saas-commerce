@@ -46,7 +46,7 @@ WORKDIR /var/www/html
 RUN apk update \
     && apk upgrade \
     && apk add --no-cache \
-    'libxml2=2.13.9-r1' \
+    'libxml2>=2.13.9-r2' \
     bash \
     curl \
     icu-libs \

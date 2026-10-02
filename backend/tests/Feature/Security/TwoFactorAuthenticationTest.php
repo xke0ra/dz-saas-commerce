@@ -144,6 +144,9 @@ it('completes required admin two factor setup and confirms the current session',
     $component
         ->setActionData([
             'code' => app(PanelAppAuthentication::class)->getCurrentCode($user, $secret),
+            // Filament >= 5.7 requires current-password confirmation when
+            // setting up app MFA (upstream MFA hardening; real UI renders it).
+            'password' => 'password',
         ])
         ->callMountedAction()
         ->assertHasNoActionErrors()
