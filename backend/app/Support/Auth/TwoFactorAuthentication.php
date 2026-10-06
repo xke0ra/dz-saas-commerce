@@ -11,7 +11,9 @@ use App\Support\Tenancy\CurrentTenant;
 use Filament\Facades\Filament;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use PragmaRX\Google2FAQRCode\Google2FA;
 
 class TwoFactorAuthentication
@@ -185,6 +187,13 @@ class TwoFactorAuthentication
     {
         $resetAt = now();
 
+        // Invalidate all active database sessions for the target user
+        $deletedSessions = DB::table('sessions')
+            ->where('user_id', $target->getKey())
+            ->delete();
+
+        // Cycle remember_token to invalidate "remember me" persistent authentication
+        $newRememberToken = Str::random(60);
         $target->forceFill([
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
@@ -192,6 +201,7 @@ class TwoFactorAuthentication
             'two_factor_enabled_at' => null,
             'two_factor_disabled_at' => $resetAt,
             'two_factor_last_challenged_at' => null,
+            'remember_token' => $newRememberToken,
         ])->save();
 
         $this->auditLogger->record(
@@ -205,6 +215,8 @@ class TwoFactorAuthentication
                 'reason' => $reason,
                 'source' => $source,
                 'reset_at' => $resetAt->toISOString(),
+                'sessions_invalidated' => $deletedSessions,
+                'remember_token_cycled' => true,
             ],
         );
     }
