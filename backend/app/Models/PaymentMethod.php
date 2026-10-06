@@ -5,13 +5,13 @@ namespace App\Models;
 use App\Enums\PaymentMethodType;
 use App\Models\Concerns\BelongsToTenant;
 use Database\Factories\PaymentMethodFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['tenant_id', 'type', 'name', 'is_active', 'instructions', 'settings'])]
+#[Fillable(['type', 'name', 'is_active', 'instructions', 'settings'])]
 class PaymentMethod extends Model
 {
     /** @use HasFactory<PaymentMethodFactory> */

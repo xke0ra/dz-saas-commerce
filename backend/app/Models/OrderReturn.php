@@ -6,16 +6,14 @@ use App\Enums\OrderReturnStatus;
 use App\Models\Concerns\BelongsToTenant;
 use App\Observers\OrderReturnObserver;
 use Database\Factories\OrderReturnFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable([
-    'tenant_id',
-    'order_id',
+#[Fillable(['order_id',
     'customer_id',
     'return_number',
     'status',

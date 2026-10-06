@@ -4,16 +4,16 @@ namespace App\Models;
 
 use App\Enums\StockMovementType;
 use App\Models\Concerns\BelongsToTenant;
+use App\Support\Inventory\StockMovementRequestHasher;
 use Database\Factories\StockMovementFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use JsonException;
 
-#[Fillable([
-    'tenant_id',
-    'product_id',
+#[Fillable(['product_id',
     'product_variant_id',
     'inventory_item_id',
     'order_id',
@@ -28,6 +28,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'reason',
     'metadata',
     'occurred_at',
+    'request_hash',
 ])]
 class StockMovement extends Model
 {
@@ -104,5 +105,55 @@ class StockMovement extends Model
     public function actor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'actor_id');
+    }
+
+    /**
+     * Generate a deterministic SHA-256 request hash for stock movement deduplication.
+     *
+     * @param  array<string, mixed>  $payload
+     *
+     * @throws JsonException
+     */
+    public static function generateRequestHash(array $payload): string
+    {
+        $hasher = new StockMovementRequestHasher();
+
+        return $hasher->hash($payload);
+    }
+
+    /**
+     * Build the payload array for generating a stock movement request hash.
+     * This includes all fields that uniquely identify a stock movement request.
+     *
+     * @return array<string, mixed>
+     */
+    public static function buildRequestHashPayload(
+        string $tenantId,
+        string $productId,
+        string $inventoryItemId,
+        StockMovementType $type,
+        ?string $productVariantId = null,
+        ?string $orderId = null,
+        ?string $orderItemId = null,
+        ?string $orderReturnId = null,
+        ?int $actorId = null,
+        int $quantityDelta = 0,
+        int $reservedDelta = 0,
+        string $reason = '',
+    ): array {
+        return [
+            'tenant_id' => $tenantId,
+            'product_id' => $productId,
+            'inventory_item_id' => $inventoryItemId,
+            'product_variant_id' => $productVariantId,
+            'order_id' => $orderId,
+            'order_item_id' => $orderItemId,
+            'order_return_id' => $orderReturnId,
+            'actor_id' => $actorId,
+            'type' => $type->value,
+            'quantity_delta' => $quantityDelta,
+            'reserved_delta' => $reservedDelta,
+            'reason' => trim($reason),
+        ];
     }
 }

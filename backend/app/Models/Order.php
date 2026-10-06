@@ -8,18 +8,16 @@ use App\Enums\PaymentStatus;
 use App\Models\Concerns\BelongsToTenant;
 use App\Observers\OrderObserver;
 use Database\Factories\OrderFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable([
-    'tenant_id',
-    'store_id',
+#[Fillable(['store_id',
     'customer_id',
     'coupon_id',
     'order_number',
@@ -37,6 +35,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'currency',
     'confirmed_at',
     'metadata',
+    'customer_name',
+    'customer_phone',
+    'customer_wilaya_id',
+    'customer_commune_id',
+    'customer_address',
 ])]
 #[ObservedBy([OrderObserver::class])]
 class Order extends Model

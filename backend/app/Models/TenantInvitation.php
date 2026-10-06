@@ -5,14 +5,11 @@ namespace App\Models;
 use App\Enums\TenantInvitationStatus;
 use App\Enums\TenantRole;
 use App\Models\Concerns\BelongsToTenant;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable([
-    'tenant_id',
-    'invited_by_id',
+#[Fillable(['invited_by_id',
     'accepted_user_id',
     'email',
     'role',
