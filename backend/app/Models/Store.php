@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\StoreStatus;
+use App\Models\Concerns\BelongsToTenant;
 use App\Observers\StoreObserver;
 use Database\Factories\StoreFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -15,12 +16,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-#[Fillable(['tenant_id', 'name', 'slug', 'domain', 'subdomain', 'status', 'locale', 'currency', 'settings'])]
+#[Fillable(['name', 'slug', 'domain', 'subdomain', 'status', 'locale', 'currency', 'settings'])]
 #[ObservedBy([StoreObserver::class])]
 class Store extends Model
 {
     /** @use HasFactory<StoreFactory> */
-    use HasFactory, HasUlids;
+    use HasFactory, HasUlids, BelongsToTenant;
 
     /**
      * Get the attributes that should be cast.
