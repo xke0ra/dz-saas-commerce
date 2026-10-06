@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Enums\StoreStatus;
 use App\Models\Store;
-use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -24,7 +23,6 @@ class StoreFactory extends Factory
         $slug = Str::slug($name).'-'.Str::lower(Str::random(6));
 
         return [
-            'tenant_id' => Tenant::factory(),
             'name' => $name,
             'slug' => $slug,
             'domain' => null,
