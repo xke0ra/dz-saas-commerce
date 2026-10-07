@@ -16,6 +16,7 @@ trait BelongsToTenant
             $tenantId = app(CurrentTenant::class)->id();
 
             if ($tenantId === null) {
+                $builder->whereRaw('1 = 0');
                 return;
             }
 

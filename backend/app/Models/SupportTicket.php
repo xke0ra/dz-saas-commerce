@@ -8,18 +8,16 @@ use App\Enums\SupportTicketStatus;
 use App\Models\Concerns\BelongsToTenant;
 use App\Observers\SupportTicketObserver;
 use Database\Factories\SupportTicketFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
-#[Fillable([
-    'tenant_id',
-    'store_id',
+#[Fillable(['store_id',
     'requester_id',
     'assigned_to_id',
     'ticket_number',

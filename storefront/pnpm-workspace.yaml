@@ -8,4 +8,12 @@ allowBuilds:
 # nested copy) to the patched release. Overrides in package.json were not
 # honored by the resolver; workspace-level overrides are.
 overrides:
-  postcss: 8.5.28
+  postcss: 8.5.29
+  source-map-js: 1.2.2
+  postcss-selector-parser: 7.1.6
+
+# pnpm 11.x reads audit ignore list from workspace config (ignoreGhsas key).
+# Package.json pnpm.auditConfig.ignoredVulnerabilities is not yet supported.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-vfj7-8cjw-p6xm

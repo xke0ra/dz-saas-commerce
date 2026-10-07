@@ -5,17 +5,16 @@ namespace App\Models;
 use App\Enums\ProductStatus;
 use App\Models\Concerns\BelongsToTenant;
 use Database\Factories\ProductVariantFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable([
-    'tenant_id',
-    'product_id',
+#[Fillable(['product_id',
     'sku',
     'option_signature',
     'title',
@@ -99,5 +98,46 @@ class ProductVariant extends Model
         }
 
         return (int) $this->product?->price_minor;
+    }
+
+    /**
+     * Scope a query to only include active (non-archived) variants.
+     *
+     * @param  Builder<ProductVariant>  $query
+     * @return Builder<ProductVariant>
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('status', ProductStatus::Active);
+    }
+
+    /**
+     * Scope a query to include all variants except archived.
+     *
+     * @param  Builder<ProductVariant>  $query
+     * @return Builder<ProductVariant>
+     */
+    public function scopeNotArchived(Builder $query): Builder
+    {
+        return $query->where('status', '!=', ProductStatus::Archived);
+    }
+
+    /**
+     * Determine if the variant is archived.
+     */
+    public function isArchived(): bool
+    {
+        return $this->status === ProductStatus::Archived;
+    }
+
+    /**
+     * Archive the variant (soft delete pattern).
+     * This is the recommended approach instead of hard deletion,
+     * which is prevented by RESTRICT foreign keys on order_items.
+     */
+    public function archive(): bool
+    {
+        $this->status = ProductStatus::Archived;
+        return $this->save();
     }
 }

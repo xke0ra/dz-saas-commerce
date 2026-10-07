@@ -7,11 +7,11 @@ use App\Enums\ProductType;
 use App\Models\Concerns\BelongsToTenant;
 use App\Observers\ProductObserver;
 use Database\Factories\ProductFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -19,9 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Collection;
 use Laravel\Scout\Searchable;
 
-#[Fillable([
-    'tenant_id',
-    'category_id',
+#[Fillable(['category_id',
     'name',
     'slug',
     'sku',
@@ -159,6 +157,47 @@ class Product extends Model
     public function isVariable(): bool
     {
         return $this->type === ProductType::Variable;
+    }
+
+    /**
+     * Scope a query to only include active (non-archived) products.
+     *
+     * @param  Builder<Product>  $query
+     * @return Builder<Product>
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('status', ProductStatus::Active);
+    }
+
+    /**
+     * Scope a query to include all products except archived.
+     *
+     * @param  Builder<Product>  $query
+     * @return Builder<Product>
+     */
+    public function scopeNotArchived(Builder $query): Builder
+    {
+        return $query->where('status', '!=', ProductStatus::Archived);
+    }
+
+    /**
+     * Determine if the product is archived.
+     */
+    public function isArchived(): bool
+    {
+        return $this->status === ProductStatus::Archived;
+    }
+
+    /**
+     * Archive the product (soft delete pattern).
+     * This is the recommended approach instead of hard deletion,
+     * which is prevented by RESTRICT/NO ACTION foreign keys on variants, options, and inventory.
+     */
+    public function archive(): bool
+    {
+        $this->status = ProductStatus::Archived;
+        return $this->save();
     }
 
     /**

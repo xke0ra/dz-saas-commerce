@@ -7,6 +7,7 @@ use App\Enums\TenantStatus;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Support\Tenancy\CurrentTenant;
 use App\Support\Tenancy\TenantResolver;
 use Illuminate\Support\Str;
 
@@ -31,10 +32,11 @@ it('can create a tenant', function (): void {
 it('creates stores that belong to tenants', function (): void {
     $tenant = Tenant::factory()->create();
 
+    app(\App\Support\Tenancy\CurrentTenant::class)->set($tenant);
+
     $store = Store::query()->create([
-        'tenant_id' => $tenant->id,
         'name' => 'Alger Shop',
-        'slug' => 'alger-shop',
+        'slug' => 'alger-shop-'.Str::lower(Str::random(6)),
         'subdomain' => 'alger-shop-'.Str::lower(Str::random(6)),
         'status' => StoreStatus::Active,
         'locale' => 'ar',

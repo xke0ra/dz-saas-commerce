@@ -5,15 +5,15 @@ namespace App\Models;
 use App\Enums\CategoryStatus;
 use App\Models\Concerns\BelongsToTenant;
 use Database\Factories\CategoryFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['tenant_id', 'parent_id', 'name', 'slug', 'description', 'status', 'sort_order', 'metadata'])]
+#[Fillable(['parent_id', 'name', 'slug', 'description', 'status', 'sort_order', 'metadata'])]
 class Category extends Model
 {
     /** @use HasFactory<CategoryFactory> */

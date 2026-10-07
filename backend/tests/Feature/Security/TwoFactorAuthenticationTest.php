@@ -315,6 +315,139 @@ it('audits enable disable and recovery code regeneration without storing raw cod
         ->and($auditMetadata)->not->toContain($secret);
 });
 
+it('revokes all active sessions when an operator resets a user two factor via resetForUser', function (): void {
+    $target = twoFactorUser(User::factory()->superAdmin()->create());
+    $actor = User::factory()->superAdmin()->create();
+
+    // Create some sessions for the target user
+    DB::table('sessions')->insert([
+        ['id' => 'session-1', 'user_id' => $target->id, 'ip_address' => '127.0.0.1', 'user_agent' => 'test', 'payload' => 'YTozOntzOjY6Il90b2tlbiI7czo0MDoidGVzdCI7czo5OiJwcmV2aW91cyI7YToxOntzOjM6InVybCI7czoyMToiaHR0cDovL2xvY2FsaG9zdCI7fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fX0=', 'last_activity' => time()],
+        ['id' => 'session-2', 'user_id' => $target->id, 'ip_address' => '127.0.0.1', 'user_agent' => 'test', 'payload' => 'YTozOntzOjY6Il90b2tlbiI7czo0MDoidGVzdDIiO3M6OToicHJldmlvdXMiO2E6MTp7czozOiJ1cmwiO3M6MjE6Imh0dHA6Ly9sb2NhbGhvc3QiO31zOjY6Il9mbGFzaCI7YToyOntzOjM6Im9sZCI7YTowOnt9czozOiJuZXciO2E6MDp7fX19', 'last_activity' => time()],
+    ]);
+
+    // Verify sessions exist before reset
+    expect(DB::table('sessions')->where('user_id', $target->id)->count())->toBe(2);
+
+    $originalRememberToken = $target->remember_token;
+
+    app(TwoFactorAuthentication::class)->resetForUser(
+        target: $target,
+        actor: $actor,
+        reason: 'test emergency reset',
+        source: 'test',
+    );
+
+    // All sessions for target user should be deleted
+    expect(DB::table('sessions')->where('user_id', $target->id)->count())->toBe(0);
+
+    // remember_token should be cycled
+    $target->refresh();
+    expect($target->remember_token)->not->toBe($originalRememberToken)
+        ->and($target->remember_token)->toHaveLength(60)
+        ->and($target->two_factor_secret)->toBeNull()
+        ->and($target->two_factor_recovery_codes)->toBeNull()
+        ->and($target->two_factor_confirmed_at)->toBeNull()
+        ->and($target->two_factor_disabled_at)->not->toBeNull();
+
+    // Audit log should record the invalidation
+    $auditLog = AuditLog::query()
+        ->where('event', 'two_factor_reset_by_operator')
+        ->where('auditable_id', $target->getKey())
+        ->first();
+
+    expect($auditLog)->not->toBeNull()
+        ->and($auditLog->metadata['sessions_invalidated'])->toBe(2)
+        ->and($auditLog->metadata['remember_token_cycled'])->toBeTrue()
+        ->and($auditLog->metadata['reason'])->toBe('test emergency reset')
+        ->and($auditLog->actor_id)->toBe($actor->getKey());
+});
+
+it('revokes sessions and cycles remember_token when user disables their own 2FA via saveAppAuthenticationSecret(null)', function (): void {
+    $user = twoFactorUser(User::factory()->superAdmin()->create());
+
+    // Create a session for the user
+    DB::table('sessions')->insert([
+        ['id' => 'session-user', 'user_id' => $user->id, 'ip_address' => '127.0.0.1', 'user_agent' => 'test', 'payload' => 'test', 'last_activity' => time()],
+    ]);
+
+    expect(DB::table('sessions')->where('user_id', $user->id)->count())->toBe(1);
+
+    $originalRememberToken = $user->remember_token;
+
+    // User disables their own 2FA
+    $user->saveAppAuthenticationSecret(null);
+
+    // Session should be deleted
+    expect(DB::table('sessions')->where('user_id', $user->id)->count())->toBe(0);
+
+    // remember_token should be cycled
+    $user->refresh();
+    expect($user->remember_token)->not->toBe($originalRememberToken)
+        ->and($user->remember_token)->toHaveLength(60)
+        ->and($user->two_factor_secret)->toBeNull()
+        ->and($user->two_factor_confirmed_at)->toBeNull()
+        ->and($user->two_factor_disabled_at)->not->toBeNull();
+
+    // Audit log should record the disable event
+    $auditLog = AuditLog::query()
+        ->where('event', 'two_factor_disabled')
+        ->where('auditable_id', $user->getKey())
+        ->first();
+
+    expect($auditLog)->not->toBeNull();
+});
+
+it('does not fail when resetForUser is called on a user with no active sessions', function (): void {
+    $target = twoFactorUser(User::factory()->superAdmin()->create());
+    $actor = User::factory()->superAdmin()->create();
+
+    // Ensure no sessions exist
+    DB::table('sessions')->where('user_id', $target->id)->delete();
+
+    expect(DB::table('sessions')->where('user_id', $target->id)->count())->toBe(0);
+
+    $originalRememberToken = $target->remember_token;
+
+    // Should not throw
+    app(TwoFactorAuthentication::class)->resetForUser(
+        target: $target,
+        actor: $actor,
+        reason: 'test emergency reset',
+        source: 'test',
+    );
+
+    $target->refresh();
+
+    expect($target->remember_token)->not->toBe($originalRememberToken)
+        ->and($target->two_factor_secret)->toBeNull()
+        ->and($target->two_factor_recovery_codes)->toBeNull();
+});
+
+it('resetForUser is idempotent - calling it twice does not error', function (): void {
+    $target = twoFactorUser(User::factory()->superAdmin()->create());
+    $actor = User::factory()->superAdmin()->create();
+
+    app(TwoFactorAuthentication::class)->resetForUser(
+        target: $target,
+        actor: $actor,
+        reason: 'first reset',
+        source: 'test',
+    );
+
+    // Second call should not error
+    app(TwoFactorAuthentication::class)->resetForUser(
+        target: $target,
+        actor: $actor,
+        reason: 'second reset',
+        source: 'test',
+    );
+
+    $target->refresh();
+
+    expect($target->two_factor_secret)->toBeNull()
+        ->and($target->two_factor_recovery_codes)->toBeNull();
+});
+
 /**
  * @param  array<string>  $recoveryCodes
  */

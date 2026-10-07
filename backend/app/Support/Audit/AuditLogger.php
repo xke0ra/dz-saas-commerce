@@ -29,7 +29,8 @@ class AuditLogger
         $request = request();
         $actor ??= Auth::user();
 
-        return AuditLog::query()->create([
+        $auditLog = new AuditLog();
+        $auditLog->forceFill([
             'tenant_id' => $tenantId ?? $this->tenantIdFor($auditable),
             'actor_id' => $actor?->id,
             'event' => $event,
@@ -41,6 +42,9 @@ class AuditLogger
             'ip_address' => app()->runningInConsole() ? null : $request->ip(),
             'user_agent' => app()->runningInConsole() ? null : $request->userAgent(),
         ]);
+        $auditLog->save();
+
+        return $auditLog;
     }
 
     private function tenantIdFor(?Model $auditable): ?string

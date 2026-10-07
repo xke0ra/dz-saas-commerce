@@ -121,7 +121,111 @@ it('allows platform support users to access only the support panel', function ()
         ->and($support->canAccessPanel(Filament::getPanel('admin')))->toBeFalse()
         ->and($support->canAccessPanel(Filament::getPanel('vendor')))->toBeFalse()
         ->and($superAdmin->canAccessPanel(Filament::getPanel('support')))->toBeTrue()
-        ->and($superAdmin->canAccessPanel(Filament::getPanel('admin')))->toBeTrue();
+        ->and($superAdmin->canAccessPanel(Filament::getPanel('admin')))->toBeTrue()
+        ->and($superAdmin->canAccessPanel(Filament::getPanel('vendor')))->toBeTrue();
+});
+
+it('rejects creating a support ticket for a tenant the requester does not belong to', function (): void {
+    $requester = User::factory()->create();
+    $tenantA = Tenant::factory()->create();
+    $tenantB = Tenant::factory()->create();
+    $storeA = Store::factory()->for($tenantA)->create();
+
+    $tenantA->users()->attach($requester, [
+        'role' => TenantRole::Owner->value,
+        'permissions' => null,
+    ]);
+
+    $this->actingAs($requester);
+
+    expect(fn () => app(CreateSupportTicket::class)->handle([
+        'tenant_id' => $tenantB->id, // Different tenant!
+        'store_id' => $storeA->id,
+        'subject' => 'Cross-tenant ticket',
+        'description' => 'This should fail tenant authorization.',
+    ], $requester))->toThrow(ValidationException::class);
+});
+
+it('rejects creating a support ticket for a tenant the requester lacks permission for', function (): void {
+    $requester = User::factory()->create();
+    $tenant = Tenant::factory()->create();
+    $store = Store::factory()->for($tenant)->create();
+
+    $tenant->users()->attach($requester, [
+        'role' => TenantRole::StoreStaff->value,
+        'permissions' => json_encode([
+            TenantPermission::SupportTicketsCreate->value => false,
+        ]),
+    ]);
+
+    $this->actingAs($requester);
+
+    expect(fn () => app(CreateSupportTicket::class)->handle([
+        'tenant_id' => $tenant->id,
+        'store_id' => $store->id,
+        'subject' => 'No permission',
+        'description' => 'This should fail permission check.',
+    ], $requester))->toThrow(ValidationException::class);
+});
+
+it('allows super admin to create tickets for any tenant', function (): void {
+    $superAdmin = User::factory()->superAdmin()->create();
+    $tenantA = Tenant::factory()->create();
+    $tenantB = Tenant::factory()->create();
+    $storeA = Store::factory()->for($tenantA)->create();
+    $storeB = Store::factory()->for($tenantB)->create();
+
+    $this->actingAs($superAdmin);
+
+    // Super admin can create for tenantA using storeA
+    $ticketA = app(CreateSupportTicket::class)->handle([
+        'tenant_id' => $tenantA->id,
+        'store_id' => $storeA->id,
+        'subject' => 'Super admin ticket for tenant A',
+        'description' => 'Super admin can create for any tenant.',
+    ], $superAdmin);
+
+    expect($ticketA->tenant_id)->toBe($tenantA->id);
+
+    // Super admin can create for tenantB using storeB
+    $ticketB = app(CreateSupportTicket::class)->handle([
+        'tenant_id' => $tenantB->id,
+        'store_id' => $storeB->id,
+        'subject' => 'Super admin ticket for tenant B',
+        'description' => 'Super admin can create for any tenant.',
+    ], $superAdmin);
+
+    expect($ticketB->tenant_id)->toBe($tenantB->id);
+});
+
+it('allows platform support to create tickets for any tenant', function (): void {
+    $support = User::factory()->platformSupport()->create();
+    $tenantA = Tenant::factory()->create();
+    $tenantB = Tenant::factory()->create();
+    $storeA = Store::factory()->for($tenantA)->create();
+    $storeB = Store::factory()->for($tenantB)->create();
+
+    $this->actingAs($support);
+
+    // Platform support can create for tenantA using storeA
+    $ticketA = app(CreateSupportTicket::class)->handle([
+        'tenant_id' => $tenantA->id,
+        'store_id' => $storeA->id,
+        'subject' => 'Platform support ticket for tenant A',
+        'description' => 'Platform support can create for any tenant.',
+    ], $support);
+
+    expect($ticketA->tenant_id)->toBe($tenantA->id);
+
+    // Platform support can create for tenantB using storeB
+    $ticketB = app(CreateSupportTicket::class)->handle([
+        'tenant_id' => $tenantB->id,
+        'store_id' => $storeB->id,
+        'subject' => 'Platform support ticket for tenant B',
+        'description' => 'Platform support can create for any tenant.',
+    ], $support);
+
+    expect($ticketB->tenant_id)->toBe($tenantB->id);
 });
 
 function withSupportTicketTenant(Tenant $tenant, Closure $callback): void

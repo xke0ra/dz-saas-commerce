@@ -5,18 +5,28 @@ namespace App\Models;
 use App\Enums\TenantRole;
 use App\Models\Concerns\BelongsToTenant;
 use App\Observers\TenantUserObserver;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['tenant_id', 'user_id', 'role', 'permissions'])]
+#[Fillable(['user_id', 'role', 'permissions'])]
 #[ObservedBy([TenantUserObserver::class])]
 class TenantUser extends Model
 {
     use BelongsToTenant;
 
     protected $table = 'tenant_user';
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $fillable = [
+        'user_id',
+        'role',
+        'permissions',
+    ];
 
     /**
      * Get the attributes that should be cast.

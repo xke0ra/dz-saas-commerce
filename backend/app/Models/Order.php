@@ -6,20 +6,20 @@ use App\Enums\DeliveryType;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Models\Concerns\BelongsToTenant;
+use App\Models\Customer;
 use App\Observers\OrderObserver;
 use Database\Factories\OrderFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Validation\ValidationException;
 
-#[Fillable([
-    'tenant_id',
-    'store_id',
+#[Fillable(['store_id',
     'customer_id',
     'coupon_id',
     'order_number',
@@ -37,6 +37,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'currency',
     'confirmed_at',
     'metadata',
+    'customer_name',
+    'customer_phone',
+    'customer_wilaya_id',
+    'customer_commune_id',
+    'customer_address',
 ])]
 #[ObservedBy([OrderObserver::class])]
 class Order extends Model
@@ -155,5 +160,41 @@ class Order extends Model
     public function scopeNewest(Builder $query): Builder
     {
         return $query->orderByDesc('created_at')->orderByDesc('id');
+    }
+
+    /**
+     * Boot the model.
+     */
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::saving(function (Order $order): void {
+            if ($order->customer_id !== null) {
+                $tenantId = $order->tenant_id ?? app(\App\Support\Tenancy\CurrentTenant::class)->id();
+                
+                if ($tenantId === null) {
+                    $validator = app('validator')->make(
+                        ['customer_id' => $order->customer_id],
+                        ['customer_id' => 'required']
+                    );
+                    $validator->getMessageBag()->add('customer_id', 'Unable to determine tenant context for order.');
+                    throw new \Illuminate\Validation\ValidationException($validator);
+                }
+
+                $customer = \App\Models\Customer::withoutGlobalScope('current_tenant')
+                    ->where('id', $order->customer_id)
+                    ->where('tenant_id', $tenantId)
+                    ->first();
+
+                if (! $customer) {
+                    $validator = app('validator')->make(
+                        ['customer_id' => $order->customer_id],
+                        ['customer_id' => 'exists:customers,id,tenant_id,' . $tenantId]
+                    );
+                    throw new \Illuminate\Validation\ValidationException($validator);
+                }
+            }
+        });
     }
 }

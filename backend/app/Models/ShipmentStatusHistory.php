@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['tenant_id', 'shipment_id', 'from_status', 'to_status', 'comment', 'changed_by_id'])]
+#[Fillable(['shipment_id', 'from_status', 'to_status', 'comment', 'changed_by_id'])]
 class ShipmentStatusHistory extends Model
 {
     use BelongsToTenant, HasUlids;

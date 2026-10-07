@@ -5,17 +5,15 @@ namespace App\Models;
 use App\Enums\DomainStatus;
 use App\Models\Concerns\BelongsToTenant;
 use Database\Factories\DomainFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
-#[Fillable([
-    'tenant_id',
-    'store_id',
+#[Fillable(['store_id',
     'hostname',
     'status',
     'verification_token',

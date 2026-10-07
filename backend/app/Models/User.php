@@ -14,13 +14,15 @@ use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 #[Fillable(['name', 'email', 'password', 'platform_role'])]
 #[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
@@ -79,24 +81,25 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
         $wasEnabled = $this->hasTwoFactorAuthenticationEnabled();
         $timestamp = now();
 
-        $this->forceFill($secret === null ? [
-            'two_factor_secret' => null,
-            'two_factor_recovery_codes' => null,
-            'two_factor_confirmed_at' => null,
-            'two_factor_enabled_at' => null,
-            'two_factor_disabled_at' => $timestamp,
-            'two_factor_last_challenged_at' => null,
-        ] : [
-            'two_factor_secret' => $secret,
-            'two_factor_confirmed_at' => $timestamp,
-            'two_factor_enabled_at' => $this->two_factor_enabled_at ?? $timestamp,
-            'two_factor_disabled_at' => null,
-            'two_factor_last_challenged_at' => $timestamp,
-        ])->save();
-
-        $twoFactor = app(TwoFactorAuthentication::class);
-
         if ($secret === null) {
+            // Disabling 2FA - invalidate sessions and cycle remember_token
+            DB::table('sessions')
+                ->where('user_id', $this->getKey())
+                ->delete();
+
+            $newRememberToken = Str::random(60);
+
+            $this->forceFill([
+                'two_factor_secret' => null,
+                'two_factor_recovery_codes' => null,
+                'two_factor_confirmed_at' => null,
+                'two_factor_enabled_at' => null,
+                'two_factor_disabled_at' => $timestamp,
+                'two_factor_last_challenged_at' => null,
+                'remember_token' => $newRememberToken,
+            ])->save();
+
+            $twoFactor = app(TwoFactorAuthentication::class);
             $twoFactor->forgetSession(request());
 
             if ($wasEnabled) {
@@ -106,6 +109,15 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
             return;
         }
 
+        $this->forceFill([
+            'two_factor_secret' => $secret,
+            'two_factor_confirmed_at' => $timestamp,
+            'two_factor_enabled_at' => $this->two_factor_enabled_at ?? $timestamp,
+            'two_factor_disabled_at' => null,
+            'two_factor_last_challenged_at' => $timestamp,
+        ])->save();
+
+        $twoFactor = app(TwoFactorAuthentication::class);
         $twoFactor->confirmSession(request(), $this);
 
         if (! $wasEnabled) {
